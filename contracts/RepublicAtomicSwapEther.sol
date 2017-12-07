@@ -2,16 +2,16 @@ pragma solidity ^0.4.4;
 
 contract RepublicAtomicSwapEther {
 
-  struct trade{
+  struct Trade {
     address trader;
     address tradee;
     uint value;
     uint time;
   }
   mapping (bytes32 => bool) status;
-  mapping (bytes32 => trade) locker;
+  mapping (bytes32 => Trade) locker;
 
-  function depositEther(address to, bytes32 secretLock) payable {
+  function depositEther(address to, bytes32 secretLock) public payable {
     require(!status[secretLock]);
     locker[secretLock].value = msg.value;
     locker[secretLock].tradee = to;
@@ -19,21 +19,21 @@ contract RepublicAtomicSwapEther {
     locker[secretLock].time = now;  
   } 
 
-  function check(bytes32 secretLock) constant returns (uint) {
+  function check(bytes32 secretLock) public constant returns (uint) {
     if (locker[secretLock].tradee == msg.sender) {
       return locker[secretLock].value;
     }
   }
 
-  function withdrawEther(bytes secretKey) {
-    bytes32 secretLock = sha3(secretKey);
+  function withdrawEther(bytes secretKey) public {
+    bytes32 secretLock = keccak256(secretKey);
     if (locker[secretLock].value > 0 && locker[secretLock].tradee == msg.sender) {
       msg.sender.transfer(locker[secretLock].value);
       locker[secretLock].value = 0;
     }
   }
 
-  function revertEther(bytes32 secretLock) {
+  function revertEther(bytes32 secretLock) public {
     if (now - locker[secretLock].time >= 1 days) {
       msg.sender.transfer(locker[secretLock].value);
       locker[secretLock].value = 0;

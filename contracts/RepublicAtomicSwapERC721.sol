@@ -16,7 +16,7 @@ contract RepublicAtomicSwapERC721 {
   mapping (bytes32 => bool) public status;
   mapping (bytes32 => Trade) locker;
 
-  function depositERC721(address to, address contractAddress, uint tokenID, bytes32 secretLock) payable {
+  function depositERC721(address to, address contractAddress, uint tokenID, bytes32 secretLock) public payable {
     require(!status[secretLock]);
     erc721 = ERC721(contractAddress);
     erc721.transferFrom(msg.sender, address(this), tokenID);
@@ -28,13 +28,13 @@ contract RepublicAtomicSwapERC721 {
     status[secretLock] = true;
   } 
 
-  function check(bytes32 secretLock) constant returns (uint, address) {
+  function check(bytes32 secretLock) public constant returns (uint, address) {
     require(locker[secretLock].tradee == msg.sender || locker[secretLock].trader == msg.sender);
     return (locker[secretLock].tokenID, locker[secretLock].contractAddress);
   }
 
-  function withdrawErc721(bytes secretKey) {
-    bytes32 secretLock = sha3(secretKey);
+  function withdrawErc721(bytes secretKey) public {
+    bytes32 secretLock = keccak256(secretKey);
     Trade memory t = locker[secretLock];
     require(status[secretLock]);
     require(t.tradee == msg.sender);
@@ -43,7 +43,7 @@ contract RepublicAtomicSwapERC721 {
     status[secretLock] = false;
   }
 
-  function revertEther(bytes32 secretLock) {
+  function revertEther(bytes32 secretLock) public {
     Trade memory t = locker[secretLock];
     require(now - t.time >= 1 days);
     require(status[secretLock]);

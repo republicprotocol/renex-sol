@@ -2,42 +2,55 @@ pragma solidity ^0.4.4;
 
 contract RepublicAtomicSwapEther {
 
-  struct Trade {
-    address trader;
-    address tradee;
+  struct Swap {
+    address to;
+    address from;
     uint value;
     uint time;
+    bytes32 secretKey;
   }
-  mapping (bytes32 => bool) status;
-  mapping (bytes32 => Trade) locker;
+  mapping (bytes32 => bool) public status;
+  mapping (bytes32 => Swap) lockbox;
 
-  function depositEther(address to, bytes32 secretLock) public payable {
+  function deposit(address to, bytes32 secretLock) public payable {
     require(!status[secretLock]);
-    locker[secretLock].value = msg.value;
-    locker[secretLock].tradee = to;
-    locker[secretLock].trader = msg.sender;
-    locker[secretLock].time = now;  
+    lockbox[secretLock].to = to;
+    lockbox[secretLock].from = msg.sender;
+    lockbox[secretLock].value = msg.value;
+    lockbox[secretLock].time = now;
+    lockbox[secretLock].secretKey = 0x0;
+    status[secretLock] = true;
   } 
 
-  function check(bytes32 secretLock) public constant returns (uint) {
-    if (locker[secretLock].tradee == msg.sender) {
-      return locker[secretLock].value;
-    }
+  function checkValue(bytes32 secretLock) public constant returns (uint) {
+    require(lockbox[secretLock].to == msg.sender || lockbox[secretLock].from == msg.sender);
+    return lockbox[secretLock].value;
   }
 
-  function withdrawEther(bytes secretKey) public {
-    bytes32 secretLock = keccak256(secretKey);
-    if (locker[secretLock].value > 0 && locker[secretLock].tradee == msg.sender) {
-      msg.sender.transfer(locker[secretLock].value);
-      locker[secretLock].value = 0;
-    }
+  function checkSecretKey(bytes32 secretLock) public constant returns (bytes32) {
+    require(lockbox[secretLock].to == msg.sender || lockbox[secretLock].from == msg.sender);
+    return lockbox[secretLock].secretKey;
   }
 
-  function revertEther(bytes32 secretLock) public {
-    if (now - locker[secretLock].time >= 1 days) {
-      msg.sender.transfer(locker[secretLock].value);
-      locker[secretLock].value = 0;
-    }
+  function withdraw(bytes32 secretKey) public {
+    bytes32 secretLock = sha256(secretKey);
+    require(status[secretLock]);
+
+    lockbox[secretLock].to.transfer(lockbox[secretLock].value);
+
+    lockbox[secretLock].value = 0;
+    lockbox[secretLock].secretKey = secretKey;
+    status[secretLock] = false;
+  }
+
+  function expire(bytes32 secretLock) public {
+    require(status[secretLock]);
+    require(now - lockbox[secretLock].time >= 1 days);
+
+    lockbox[secretLock].from.transfer(lockbox[secretLock].value);
+
+    lockbox[secretLock].value = 0;
+    status[secretLock] = false;
   }
 
 }

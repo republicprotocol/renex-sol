@@ -1,61 +1,71 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.4.18;
 
-import "./TestERC20.sol";
+import "./ERC20.sol";
 
 contract AtomicSwapEtherToErc20 {
 
-struct Swap {
-  address ethTrader;
-  address erc20Trader;
-  uint256 value;
-  uint256 erc20Value;
-  address erc20ContractAddress;
-  uint256 timestamp;
-}  
+  struct Swap {
+    uint256 timestamp;
+    uint256 value;
+    address ethTrader;
+    uint256 erc20Value;
+    address erc20Trader;
+    address erc20ContractAddress;
+  }
 
-enum States {
-  NOT_INITIATED,
-  OPEN,
-  CLOSED,
-  EXPIRED
-}
+  enum States {
+    OPEN,
+    CLOSED,
+    EXPIRED
+  }
 
-mapping (bytes32 => Swap) Swaps;
-mapping (bytes32 => States) SwapStates;
+  mapping (bytes32 => Swap) private swaps;
+  mapping (bytes32 => States) private swapStates;
 
-function open(bytes32 _matchID, address _erc20TraderAddress, uint256 _erc20Value, address _erc20ContractAddress) public payable {
-  Swap memory order = Swap({
-    ethTrader: msg.sender,
-    erc20Trader: _erc20TraderAddress,
-    value: msg.value,
-    erc20Value: _erc20Value,
-    erc20ContractAddress: _erc20ContractAddress,
-    timestamp: now
-  });
-  Swaps[_matchID] = order;
-  SwapStates[_matchID] = States.OPEN;
-}
+  modifier onlyOpenSwaps(bytes32 _swapID) {
+    if (swapStates[_swapID] == States.OPEN) {
+      _;
+    }
+  }
 
-function close(bytes32 _matchID) public {
-  Swap memory order = Swaps[_matchID];
-  require(SwapStates[_matchID] == States.OPEN);
-  TestERC20 erc20Token = TestERC20(order.erc20ContractAddress);
-  require(order.erc20Value <= erc20Token.allowance(order.erc20Trader, address(this)));
-  require(erc20Token.transferFrom(order.erc20Trader, order.ethTrader, order.erc20Value));
-  order.erc20Trader.transfer(order.value);
-  SwapStates[_matchID] = States.CLOSED;
-}
+  modifier onlyExpirableSwaps(bytes32 _swapID) {
+    if (swaps[_swapID].timestamp - now >= 2 days) {
+      _;
+    }
+  }
 
-function check(bytes32 _matchID) view public returns (uint256 value, uint256 erc20Value, address erc20Address, address toAddress) {
-  Swap memory order = Swaps[_matchID];
-  return(order.value, order.erc20Value, order.erc20ContractAddress, order.erc20Trader);
-}
+  function open(bytes32 _swapID, uint256 _erc20Value, address _erc20TraderAddress, address _erc20ContractAddress) public payable {
+    Swap memory swap = Swap({
+      timestamp: now,
+      value: msg.value,
+      ethTrader: msg.sender,
+      erc20Value: _erc20Value,
+      erc20Trader: _erc20TraderAddress,
+      erc20ContractAddress: _erc20ContractAddress
+    });
+    swaps[_swapID] = swap;
+    swapStates[_swapID] = States.OPEN;
+  }
 
-function expire(bytes32 _matchID) public {
-  Swap memory order = Swaps[_matchID];
-  require(order.timestamp - now >= 2 days && SwapStates[_matchID] == States.OPEN);
-  order.ethTrader.transfer(order.value);
-  SwapStates[_matchID] = States.EXPIRED;
-}
+  function close(bytes32 _swapID) public onlyOpenSwaps(_swapID) {
+    Swap memory swap = swaps[_swapID];
 
+    ERC20 erc20Contract = ERC20(swap.erc20ContractAddress);
+    require(swap.erc20Value <= erc20Contract.allowance(swap.erc20Trader, address(this)));
+
+    swapStates[_swapID] = States.CLOSED;
+    swap.erc20Trader.transfer(swap.value);
+    require(erc20Contract.transferFrom(swap.erc20Trader, swap.ethTrader, swap.erc20Value));
+  }
+
+  function expire(bytes32 _swapID) public onlyOpenSwaps(_swapID) onlyExpirableSwaps(_swapID) {
+    Swap memory swap = swaps[_swapID];
+    swapStates[_swapID] = States.EXPIRED;
+    swap.ethTrader.transfer(swap.value);
+  }
+
+  function check(bytes32 _swapID) public view returns (uint256 timestamp, uint256 value, uint256 erc20Value, address erc20Trader, address erc20ContractAddress) {
+    Swap memory swap = swaps[_swapID];
+    return (swap.timestamp, swap.value, swap.erc20Value, swap.erc20Trader, swap.erc20ContractAddress);
+  }
 }

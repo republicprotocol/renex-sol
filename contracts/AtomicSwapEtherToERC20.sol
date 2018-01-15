@@ -1,6 +1,6 @@
 pragma solidity 0.4.18;
 
-import "./TestERC20.sol";
+import "./ERC20.sol";
 
 contract AtomicSwapEtherToErc20 {
 
@@ -50,7 +50,7 @@ contract AtomicSwapEtherToErc20 {
   function close(bytes32 _swapID) public onlyOpenSwaps(_swapID) {
     Swap memory swap = swaps[_swapID];
 
-    TestERC20 erc20Contract = TestERC20(swap.erc20ContractAddress);
+    ERC20 erc20Contract = ERC20(swap.erc20ContractAddress);
     require(swap.erc20Value <= erc20Contract.allowance(swap.erc20Trader, address(this)));
 
     swapStates[_swapID] = States.CLOSED;

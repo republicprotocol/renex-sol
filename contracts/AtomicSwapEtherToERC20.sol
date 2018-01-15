@@ -2,7 +2,7 @@ pragma solidity 0.4.18;
 
 import "./ERC20.sol";
 
-contract AtomicSwapEtherToErc20 {
+contract AtomicSwapEtherToERC20 {
 
   struct Swap {
     uint256 timestamp;
@@ -34,13 +34,14 @@ contract AtomicSwapEtherToErc20 {
     }
   }
 
-  function open(bytes32 _swapID, uint256 _erc20Value, address _erc20TraderAddress, address _erc20ContractAddress) public payable {
+  function open(bytes32 _swapID, uint256 _erc20Value, address _erc20Trader, address _erc20ContractAddress) public payable {
+    // Store the details of the swap.
     Swap memory swap = Swap({
       timestamp: now,
       value: msg.value,
       ethTrader: msg.sender,
       erc20Value: _erc20Value,
-      erc20Trader: _erc20TraderAddress,
+      erc20Trader: _erc20Trader,
       erc20ContractAddress: _erc20ContractAddress
     });
     swaps[_swapID] = swap;
@@ -48,24 +49,30 @@ contract AtomicSwapEtherToErc20 {
   }
 
   function close(bytes32 _swapID) public onlyOpenSwaps(_swapID) {
+    // Close the swap.
     Swap memory swap = swaps[_swapID];
+    swapStates[_swapID] = States.CLOSED;
 
+    // Transfer the ERC20 funds from the ERC20 trader to the ETH trader.
     ERC20 erc20Contract = ERC20(swap.erc20ContractAddress);
     require(swap.erc20Value <= erc20Contract.allowance(swap.erc20Trader, address(this)));
-
-    swapStates[_swapID] = States.CLOSED;
-    swap.erc20Trader.transfer(swap.value);
     require(erc20Contract.transferFrom(swap.erc20Trader, swap.ethTrader, swap.erc20Value));
+
+    // Transfer the ETH funds from this contract to the ERC20 trader.
+    swap.erc20Trader.transfer(swap.value);
   }
 
   function expire(bytes32 _swapID) public onlyOpenSwaps(_swapID) onlyExpirableSwaps(_swapID) {
+    // Expire the swap.
     Swap memory swap = swaps[_swapID];
     swapStates[_swapID] = States.EXPIRED;
+
+    // Transfer the ETH value from this contract back to the ETH trader.
     swap.ethTrader.transfer(swap.value);
   }
 
-  function check(bytes32 _swapID) public view returns (uint256 timestamp, uint256 value, uint256 erc20Value, address erc20Trader, address erc20ContractAddress) {
+  function check(bytes32 _swapID) public view returns (uint256 timeRemaining, uint256 value, uint256 erc20Value, address erc20Trader, address erc20ContractAddress) {
     Swap memory swap = swaps[_swapID];
-    return (swap.timestamp, swap.value, swap.erc20Value, swap.erc20Trader, swap.erc20ContractAddress);
+    return (swap.timestamp-now, swap.value, swap.erc20Value, swap.erc20Trader, swap.erc20ContractAddress);
   }
 }

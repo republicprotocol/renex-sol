@@ -1,17 +1,17 @@
 # Ethereum Atomic Swap
 
-The Ethereum Atomic Swap library is an official reference implementation of atomic swaps on Ethereum for the Republic Protocol, written in Solidity. This library supports atomic swaps between Ether and ERC20 pairs, as well as the Ether and ERC20 side of cross-chain atomic swaps.
+The Ethereum Atomic Swap library is an official reference implementation of atomic swaps on Ethereum for the Republic Protocol, written in Solidity. This library supports Ether and ERC20 atomic swaps, cross-chain Ether atomic swaps, and cross-chain ERC20 atomic swaps. Currently, the Republic Protocol only provides support for cross-chain trading with Bitcoin.
 
 ## Smart contracts
 
-The Ethereum Atomic Swap library is made up of several different smart contracts that work together to implement the required on-chain functionality. These smart contracts are used by off-chain miners and traders to provide secure decentralized order matching computations.
+The Ethereum Atomic Swap library is made up of several different smart contracts that work together to implement atomic swaps. These smart contracts are used by traders after the Republic Protocol has successfully matched their orders.
 
-1. The Ren ERC20 contract implements the Republic Token, used to provide economic incentives.
-2. The Miner Registrar contract implements miner registrations and epochs.
-3. The Trader Registrar contract implements trader registrations.
-4. The Order Book contract implements the opening, closing, and expiration of orders.
+1. The Ether contract implements cross-chain atomic swaps where Ether is being used.
+2. The ERC20 contract implements cross-chain atomic swaps where an ERC20 token is being used.
+3. The EtherToERC20 contract implements atomic swaps between Ether and an ERC20 token.
+4. The ERC20ToERC20 contract implements atomic swaps between two ERC20 tokens.
 
-None of the contract expose orders, including the Order Book, which only holds order IDs. Orders are never passed to the Republic network under any circumstances, and order fragments are never passed to the blockchain.
+None of the contract expose orders. Orders are never passed to the Republic network under any circumstances, and order fragments are never passed to the blockchain. The `_swapID` used by the contracts are only for identifying the swap, and is negotiated between traders. This maintains privacy between traders that have matched on the order book, and atomic swaps that have been executed.
 
 ## Tests
 

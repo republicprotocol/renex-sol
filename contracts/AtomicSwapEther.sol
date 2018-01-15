@@ -8,9 +8,9 @@ contract AtomicSwapEtherToERC20 {
     uint256 timestamp;
     uint256 value;
     address ethTrader;
-    uint256 erc20Value;
-    address erc20Trader;
-    address erc20ContractAddress;
+    address withdrawTrader;
+    bytes32 secretLock;
+    bytes secretKey;
   }
 
   enum States {
@@ -28,38 +28,46 @@ contract AtomicSwapEtherToERC20 {
     }
   }
 
+  modifier onlyClosedSwaps(bytes32 _swapID) {
+    if (swapStates[_swapID] == States.CLOSED) {
+      _;
+    }
+  }
+
   modifier onlyExpirableSwaps(bytes32 _swapID) {
     if (swaps[_swapID].timestamp - now >= 1 days) {
       _;
     }
   }
 
-  function open(bytes32 _swapID, uint256 _erc20Value, address _erc20Trader, address _erc20ContractAddress) public payable {
+  modifier onlyWithSecretKey(bytes32 _swapID, bytes _secretKey) {
+    if (swaps[_swapID].secretLock == sha256(_secretKey)) {
+      _;
+    }
+  }
+
+  function open(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock) public payable {
     // Store the details of the swap.
     Swap memory swap = Swap({
       timestamp: now,
       value: msg.value,
       ethTrader: msg.sender,
-      erc20Value: _erc20Value,
-      erc20Trader: _erc20Trader,
-      erc20ContractAddress: _erc20ContractAddress
+      withdrawTrader: _withdrawTrader,
+      secretLock: _secretLock,
+      secretKey: new bytes(0)
     });
     swaps[_swapID] = swap;
     swapStates[_swapID] = States.OPEN;
   }
 
-  function close(bytes32 _swapID) public onlyOpenSwaps(_swapID) {
+  function close(bytes32 _swapID, bytes _secretKey) public onlyOpenSwaps(_swapID) onlyWithSecretKey(_swapID, _secretKey) {
     // Close the swap.
     Swap memory swap = swaps[_swapID];
+    swap.secretKey = _secretKey;
     swapStates[_swapID] = States.CLOSED;
 
-    // Transfer the ERC20 funds from the ERC20 trader to the ETH trader.
-    ERC20 erc20Contract = ERC20(swap.erc20ContractAddress);
-    require(swap.erc20Value <= erc20Contract.allowance(swap.erc20Trader, address(this)));
-    require(erc20Contract.transferFrom(swap.erc20Trader, swap.ethTrader, swap.erc20Value));
-
-    // Transfer the ETH funds from this contract to the ERC20 trader.
-    swap.erc20Trader.transfer(swap.value);
+    // Transfer the ETH funds from this contract to the withdrawing trader.
+    swap.withdrawTrader.transfer(swap.value);
   }
 
   function expire(bytes32 _swapID) public onlyOpenSwaps(_swapID) onlyExpirableSwaps(_swapID) {
@@ -71,8 +79,13 @@ contract AtomicSwapEtherToERC20 {
     swap.ethTrader.transfer(swap.value);
   }
 
-  function check(bytes32 _swapID) public view returns (uint256 timeRemaining, uint256 value, uint256 erc20Value, address erc20Trader, address erc20ContractAddress) {
+  function check(bytes32 _swapID) public view returns (uint256 timeRemaining, uint256 value, address withdrawTrader, bytes32 secretLock) {
     Swap memory swap = swaps[_swapID];
-    return (swap.timestamp-now, swap.value, swap.erc20Value, swap.erc20Trader, swap.erc20ContractAddress);
+    return (swap.timestamp-now, swap.value, swap.withdrawTrader, swap.secretLock);
+  }
+
+  function checkSecretKey(bytes32 _swapID) public view onlyClosedSwaps(_swapID) returns (bytes secretKey) {
+    Swap memory swap = swaps[_swapID];
+    return swap.secretKey;
   }
 }

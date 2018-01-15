@@ -30,7 +30,7 @@ contract AtomicSwapERC20ToERC20 {
   }
 
   modifier onlyExpirableSwaps(bytes32 _swapID) {
-    if (swaps[_swapID].timestamp - now >= 2 days) {
+    if (swaps[_swapID].timestamp - now >= 1 days) {
       _;
     }
   }

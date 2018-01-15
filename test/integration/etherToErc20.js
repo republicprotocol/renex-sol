@@ -9,7 +9,6 @@ contract('Atomic swap between ether and erc20', (accounts) => {
   const lock = "0x261c74f7dd1ed6a069e18375ab2bee9afcb1095613f53b07de11829ac66cdfcc";
   const key = "0x42a990655bffe188c9823a2f914641a32dcbb1b28e8586bd29af291db7dcd4e8";
 
-
   it("Alice deposits ether into the contract", async () => {
     const rase = await rasETH.deployed();
     await rase.deposit(bob,lock, {from:alice, value: 50000});
@@ -30,30 +29,26 @@ contract('Atomic swap between ether and erc20', (accounts) => {
     await token.approve(rase.address, 100000, {from: bob});
     var allowance = await token.allowance(bob,rase.address);
     assert.equal(100000,allowance)
-    await rase.deposit(alice,lock,token.address,{from:bob});
+    await rase.deposit(alice,lock,token.address,allowance,{from:bob});
   })
 
   it("Alice checks the erc20 tokens in the lock box", async () => {
     const token = await testERC20.deployed();
     const raser = await rasERC20.deployed();
-    var status = await raser.status(lock);
-    assert.equal(status,true);
-    var result = await raser.checkValue(lock,{from:alice});
-    assert.equal(result[0].toNumber(),100000);
-    assert.equal(result[1].toString(),token.address);
+    var result = await raser.peek(lock,{from:alice});
+    assert.equal(result[4].toString(),token.address);
   })
 
   it("Alice withdraws her tokens revealing the secret", async () => {
     const raser = await rasERC20.deployed();
     const token = await testERC20.deployed();
     const initialBalance = await token.balanceOf(alice);
-    await raser.withdraw(key);
+    await raser.withdraw(key,{from: alice});
     const finalBalance = await token.balanceOf(alice);
     assert.equal(finalBalance.toNumber()-initialBalance.toNumber(), 100000)
   });
 
   it("Bob withdraws his ether after knowing the secret", async () => {
-
     const rase = await rasETH.deployed();
     const initialBalance = bob.balance;
     await rase.withdraw(key);

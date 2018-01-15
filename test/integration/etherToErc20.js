@@ -1,59 +1,50 @@
-var rasETH = artifacts.require("./RepublicAtomicSwapEther.sol");
-var rasERC20 = artifacts.require("./RepublicAtomicSwapERC20.sol");
+var atomicSwap = artifacts.require("./AtomicSwapEtherToERC20.sol");
 var testERC20 = artifacts.require("./TestERC20.sol");
 const Web3 = require('web3');
+const web3 = new Web3( new Web3.providers.HttpProvider("http://localhost:8545"));
 
 contract('Atomic swap between ether and erc20', (accounts) => {
   const alice = accounts[3];
   const bob = accounts[4];
-  const lock = "0x261c74f7dd1ed6a069e18375ab2bee9afcb1095613f53b07de11829ac66cdfcc";
-  const key = "0x42a990655bffe188c9823a2f914641a32dcbb1b28e8586bd29af291db7dcd4e8";
+  const matchID = "0x42a990655bffe188c9823a2f914641a32dcbb1b28e8586bd29af291db7dcd4e8";
+  // Expected Trade:
 
-  it("Alice deposits ether into the contract", async () => {
-    const rase = await rasETH.deployed();
-    await rase.deposit(bob,lock, {from:alice, value: 50000});
-  });
+  const etherValue = 5000000;
+  const erc20Value = 100000;
 
-  it("Bob checks the ether in the lock box", async () => {
-    const rase = await rasETH.deployed();
-    var status = await rase.status(lock);
-    assert.equal(status,true);
-    var result = await rase.checkValue(lock,{from:bob});
-    assert.equal(result.toNumber(),50000);
-  })
-
-  it("Bob deposits erc20 tokens to the contract", async() => {
-    const rase = await rasERC20.deployed();
+  it("Swap is successful", async() => {
+    const swap = await atomicSwap.deployed();
     const token = await testERC20.deployed();
     await token.transfer(bob, 100000, {from: accounts[0]})
-    await token.approve(rase.address, 100000, {from: bob});
-    var allowance = await token.allowance(bob,rase.address);
-    assert.equal(100000,allowance)
-    await rase.deposit(alice,lock,token.address,allowance,{from:bob});
+
+    const aliceInitialEtherBalance = await web3.eth.getBalance(alice);
+    const bobInitialEtherBalance = await web3.eth.getBalance(bob);
+    const aliceErc20Balance = await token.balanceOf(alice);
+    const aliceInitialErc20Balance = aliceErc20Balance.toNumber();
+    const bobErc20Balance = await token.balanceOf(bob);
+    const bobInitialErc20Balance = bobErc20Balance.toNumber();
+
+    await swap.open(matchID, bob, erc20Value, token.address, {from:alice, value: etherValue});
+    const result  = await swap.check(matchID);
+    assert.equal(result[0].toNumber(),etherValue);
+    assert.equal(result[1].toNumber(),erc20Value);
+    assert.equal(result[2].toString(),token.address);
+    assert.equal(result[3].toString(),bob);
+    await token.approve(swap.address, 100000, {from: bob});
+    await swap.close(matchID);
+    
+    const aliceFinalEtherBalance = await web3.eth.getBalance(alice);
+    const bobFinalEtherBalance = await web3.eth.getBalance(bob);
+    const aliceErc20Balance2 = await token.balanceOf(alice);
+    const aliceFinalErc20Balance = aliceErc20Balance2.toNumber();
+    const bobErc20Balance2 = await token.balanceOf(bob);
+    const bobFinalErc20Balance = bobErc20Balance2.toNumber();
+
+    // Ether values cannot be asserted as we have gas value.
+    // assert(aliceInitialEtherBalance - aliceFinalEtherBalance, etherValue)
+    // assert(bobFinalEtherBalance - bobInitialEtherBalance, etherValue)
+    assert.equal(bobInitialErc20Balance - bobFinalErc20Balance, erc20Value)
+    assert.equal(aliceFinalErc20Balance - aliceInitialErc20Balance, erc20Value)
+
   })
-
-  it("Alice checks the erc20 tokens in the lock box", async () => {
-    const token = await testERC20.deployed();
-    const raser = await rasERC20.deployed();
-    var result = await raser.peek(lock,{from:alice});
-    assert.equal(result[4].toString(),token.address);
-  })
-
-  it("Alice withdraws her tokens revealing the secret", async () => {
-    const raser = await rasERC20.deployed();
-    const token = await testERC20.deployed();
-    const initialBalance = await token.balanceOf(alice);
-    await raser.withdraw(key,{from: alice});
-    const finalBalance = await token.balanceOf(alice);
-    assert.equal(finalBalance.toNumber()-initialBalance.toNumber(), 100000)
-  });
-
-  it("Bob withdraws his ether after knowing the secret", async () => {
-    const rase = await rasETH.deployed();
-    const initialBalance = bob.balance;
-    await rase.withdraw(key);
-    const finalBalance = bob.balance;
-    // assert.equal(finalBalance-initialBalance, 50000)
-  });
-
 });

@@ -51,7 +51,7 @@ contract('Atomic swap between ether and erc20', (accounts) => {
     const openToken = await openTestERC20.deployed();  
     const closeToken = await closeTestERC20.deployed();  
     await openToken.approve(swap.address, openValue);
-    await swap.open(swapID_swap, openValue, openToken.address, closeValue, bob, closeToken.address, {from:alice});
+    await swap.open(swapID_expiry, openValue, openToken.address, closeValue, bob, closeToken.address, {from:alice});
   });
 
   it("Alice withdraws after expiry", async () => {

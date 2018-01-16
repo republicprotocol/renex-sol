@@ -1,6 +1,6 @@
 const atomicSwap = artifacts.require("./AtomicSwapEther.sol");
 
-contract('AtomicSwapEther', (accounts) => {
+contract('Cross Chain Atomic Swap with Ether', (accounts) => {
 
   const lock = "0x261c74f7dd1ed6a069e18375ab2bee9afcb1095613f53b07de11829ac66cdfcc";
   const key = "0x42a990655bffe188c9823a2f914641a32dcbb1b28e8586bd29af291db7dcd4e8";

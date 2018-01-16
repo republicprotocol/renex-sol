@@ -44,7 +44,7 @@ contract('Cross Chain Atomic Swap with ERC20', (accounts) => {
     const swap = await atomicSwap.deployed();
     const token = await testERC20.deployed();
     await token.approve(swap.address, 10000);
-    await swap.open(swapID_swap, 10000, token.address, accounts[0], lock, {from: accounts[0]})
+    await swap.open(swapID_expiry, 10000, token.address, accounts[0], lock, {from: accounts[0]})
   })
 
   it("Withdraw after expiry", async () => {

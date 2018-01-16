@@ -3,7 +3,7 @@ var testERC20 = artifacts.require("./TestERC20.sol");
 const Web3 = require('web3');
 const web3 = new Web3( new Web3.providers.HttpProvider("http://localhost:8545"));
 
-contract('Atomic swap between ether and erc20', (accounts) => {
+contract('Atomic swap between ether and erc20 FULL SWAP', (accounts) => {
   const alice = accounts[3];
   const bob = accounts[4];
   const matchID = "0x42a990655bffe188c9823a2f914641a32dcbb1b28e8586bd29af291db7dcd4e8";

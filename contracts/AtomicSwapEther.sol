@@ -12,6 +12,7 @@ contract AtomicSwapEther {
   }
 
   enum States {
+    INVALID,
     OPEN,
     CLOSED,
     EXPIRED
@@ -19,6 +20,12 @@ contract AtomicSwapEther {
 
   mapping (bytes32 => Swap) private swaps;
   mapping (bytes32 => States) private swapStates;
+
+  modifier onlyInvalidSwaps(bytes32 _swapID) {
+    if (swapStates[_swapID] == States.INVALID) {
+      _;
+    }
+  }
 
   modifier onlyOpenSwaps(bytes32 _swapID) {
     if (swapStates[_swapID] == States.OPEN) {
@@ -44,7 +51,7 @@ contract AtomicSwapEther {
     }
   }
 
-  function open(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock) public payable {
+  function open(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock) public onlyInvalidSwaps(_swapID) payable {
     // Store the details of the swap.
     Swap memory swap = Swap({
       timestamp: now,

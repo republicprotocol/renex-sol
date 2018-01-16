@@ -15,6 +15,7 @@ contract AtomicSwapERC20 {
   }
 
   enum States {
+    INVALID,
     OPEN,
     CLOSED,
     EXPIRED
@@ -22,6 +23,12 @@ contract AtomicSwapERC20 {
 
   mapping (bytes32 => Swap) private swaps;
   mapping (bytes32 => States) private swapStates;
+
+  modifier onlyInvalidSwaps(bytes32 _swapID) {
+    if (swapStates[_swapID] == States.INVALID) {
+      _;
+    }
+  }
 
   modifier onlyOpenSwaps(bytes32 _swapID) {
     if (swapStates[_swapID] == States.OPEN) {
@@ -47,7 +54,8 @@ contract AtomicSwapERC20 {
     }
   }
 
-  function open(bytes32 _swapID, uint256 _erc20Value, address _erc20ContractAddress, address _withdrawTrader, bytes32 _secretLock) public {
+  function open(bytes32 _swapID, uint256 _erc20Value, address _erc20ContractAddress, address _withdrawTrader, bytes32 _secretLock) public onlyInvalidSwaps(_swapID) {
+    require(swapStates[_swapID] == States.INVALID);
     // Transfer value from the ERC20 trader to this contract.
     ERC20 erc20Contract = ERC20(_erc20ContractAddress);
     require(_erc20Value <= erc20Contract.allowance(msg.sender, address(this)));

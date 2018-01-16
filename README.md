@@ -4,7 +4,7 @@ The Ethereum Atomic Swap library is an official reference implementation of atom
 
 ## Smart contracts
 
-The Ethereum Atomic Swap library is made up of several different smart contracts that work together to implement atomic swaps. These smart contracts are used by traders after the Republic Protocol has successfully matched their orders.
+The Ethereum Atomic Swap library is made up of several different smart contracts that work together to implement atomic swaps. These smart contracts are used by traders after the Republic Protocol has successfully matched their orders. However, traders are not required to use the Republic Protocol to use the Ethereum Atomic Swap contracts.
 
 1. The EtherToERC20 contract implements atomic swaps between Ether and an ERC20 token.
 2. The ERC20ToERC20 contract implements atomic swaps between two ERC20 tokens.
@@ -15,7 +15,7 @@ None of the contract expose orders. Orders are never passed to the Republic netw
 
 ## How it works
 
-These contracts are used by the Republic Protocol, but can also be used by any traders that are looking to perform a cross-chain atomic swaps; the Republic Protocol does not need to be used to use the Ethereum Atomic Swap contracts.
+These contracts are used by the Republic Protocol, but can also be used by any traders that are looking to perform a cross-chain atomic swaps. Traders are not required to use the Republic Protocol to use the Ethereum Atomic Swap contracts.
 
 ### Ether to ERC20
 

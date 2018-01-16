@@ -77,6 +77,7 @@ contract AtomicSwapERC20 {
     });
     swaps[_swapID] = swap;
     swapStates[_swapID] = States.OPEN;
+    Open(_swapID, _withdrawTrader, _secretLock);
   }
 
   function close(bytes32 _swapID, bytes _secretKey) public onlyOpenSwaps(_swapID) onlyWithSecretKey(_swapID, _secretKey) {
@@ -88,6 +89,8 @@ contract AtomicSwapERC20 {
     // Transfer the ERC20 funds from this contract to the withdrawing trader.
     ERC20 erc20Contract = ERC20(swap.erc20ContractAddress);
     require(erc20Contract.transfer(swap.withdrawTrader, swap.erc20Value));
+
+    Close(_swapID, _secretKey);    
   }
 
   function expire(bytes32 _swapID) public onlyOpenSwaps(_swapID) onlyExpirableSwaps(_swapID) {
@@ -98,6 +101,8 @@ contract AtomicSwapERC20 {
     // Transfer the ERC20 value from this contract back to the ERC20 trader.
     ERC20 erc20Contract = ERC20(swap.erc20ContractAddress);
     require(erc20Contract.transfer(swap.erc20Trader, swap.erc20Value));
+
+    Expire(_swapID);
   }
 
   function check(bytes32 _swapID) public view returns (uint256 timeRemaining, uint256 erc20Value, address erc20ContractAddress, address withdrawTrader, bytes32 secretLock) {

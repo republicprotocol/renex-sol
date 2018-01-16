@@ -1,14 +1,15 @@
-var swap = artifacts.require("./AtomicSwapEtherToERC20.sol");
-var RASEther = artifacts.require("./RepublicAtomicSwapEther.sol");
-var RASERC721 = artifacts.require("./RepublicAtomicSwapERC721.sol");
+var Ether2ERC20 = artifacts.require("./AtomicSwapEtherToERC20.sol");
+var Ether = artifacts.require("./AtomicSwapEther.sol");
+var ERC202ERC20 = artifacts.require("./AtomicSwapERC20ToERC20.sol");
+var ERC20 = artifacts.require("./AtomicSwapERC20.sol");
 var TestERC20 = artifacts.require("./TestERC20.sol");
-var den = artifacts.require("./den.sol");
-var TestERC721 = artifacts.require("./TestERC721.sol");
+var Test2ERC20 = artifacts.require("./Test2ERC20.sol");
+
 module.exports = function(deployer) {
-  deployer.deploy(RASEther);
-  deployer.deploy(swap);
-  deployer.deploy(den);
-  deployer.deploy(RASERC721);
+  deployer.deploy(Ether2ERC20);
+  deployer.deploy(Ether);
+  deployer.deploy(ERC202ERC20);
+  deployer.deploy(ERC20);
   deployer.deploy(TestERC20);
-  deployer.deploy(TestERC721);
+  deployer.deploy(Test2ERC20);
 };

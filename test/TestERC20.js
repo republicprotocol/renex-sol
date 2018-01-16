@@ -1,4 +1,4 @@
-var Token = artifacts.require("Den");
+var Token = artifacts.require("./TestERC20.sol");
 
 contract("Token", function(accounts) {
 	it("should return the initial balances", async function() {

@@ -22,9 +22,9 @@ contract AtomicSwapEtherToERC20 {
   mapping (bytes32 => Swap) private swaps;
   mapping (bytes32 => States) private swapStates;
 
-  event Open(bytes32 _swapID, address _withdrawTrader,bytes32 _secretLock);
+  event Open(bytes32 _swapID, address _closeTrader);
   event Expire(bytes32 _swapID);
-  event Close(bytes32 _swapID, bytes _secretKey);
+  event Close(bytes32 _swapID);
 
   modifier onlyInvalidSwaps(bytes32 _swapID) {
     if (swapStates[_swapID] == States.INVALID) {
@@ -49,6 +49,8 @@ contract AtomicSwapEtherToERC20 {
     });
     swaps[_swapID] = swap;
     swapStates[_swapID] = States.OPEN;
+
+    Open(_swapID, _erc20Trader);
   }
 
   function close(bytes32 _swapID) public onlyOpenSwaps(_swapID) {
@@ -63,6 +65,8 @@ contract AtomicSwapEtherToERC20 {
 
     // Transfer the ETH funds from this contract to the ERC20 trader.
     swap.erc20Trader.transfer(swap.value);
+    
+    Close(_swapID);
   }
 
   function expire(bytes32 _swapID) public onlyOpenSwaps(_swapID) {
@@ -72,6 +76,7 @@ contract AtomicSwapEtherToERC20 {
 
     // Transfer the ETH value from this contract back to the ETH trader.
     swap.ethTrader.transfer(swap.value);
+    Expire(_swapID);
   }
 
   function check(bytes32 _swapID) public view returns (uint256 value, uint256 erc20Value, address erc20Trader, address erc20ContractAddress) {

@@ -19,10 +19,10 @@ These contracts are used by the Republic Protocol, but can also be used by any t
 
 ### Ether to ERC20
 
-When performing an atomic swap between Ether and an ERC20 token, the `AtomicSwapEtherToERC20` contract should be used. For this example, Alice holds Ether and Bob holds ERC20 tokens. Alice is looking to give Ether to Bob in exchange for his ERC20 tokens.
+When performing an atomic swap between Ether and ERC20 tokens, the `AtomicSwapEtherToERC20` contract should be used. For this example, Alice holds Ether and Bob holds ERC20 tokens. Alice is looking to give Ether to Bob in exchange for his ERC20 tokens.
 
-1. Alice calls `open`, using a unique `_swapID` that has been negotiated between both traders. This is a payable call and Alice must send her Ether when she makes this call.
-2. Bob calls `check`, verifying the details of the trade. If he does not agree, then he does not need to do anything. At any point, Alice can call `expire`, getting a refund of her Ether. Doing this cancels the swap.
+1. Alice calls `open` using a unique `_swapID` that has been negotiated between both traders. This is a payable call and Alice must send her Ether when she makes this call.
+2. Bob calls `check` to verify the details of the trade. If he does not agree then he does not need to do anything. At any point, Alice can call `expire` and get a refund of her Ether. Doing this cancels the swap.
 3. Bob provides an allowance to the `AtomicSwapEtherToERC20` contract, using his ERC20 contract to do so.
 4. Bob calls `close`, which will check the allowance and use it to transfer his ERC20 tokens to Alice. At the same time, it will transfer Alice's Ether to Bob. Alice can no longer expire the swap.
 
@@ -31,8 +31,8 @@ When performing an atomic swap between Ether and an ERC20 token, the `AtomicSwap
 When performing an atomic swap between Ether and an ERC20 token, the `AtomicSwapERC20ToERC20` contract should be used. For this example, Alice holds ERC20 tokens and Bob also holds ERC20 tokens. Alice is looking to give her ERC20 tokens to Bob in exchange for his ERC20 tokens, and Alice has agreed to initiate the atomic swap.
 
 1. Alice provides an allowance to the `AtomicSwapERC20ToERC20` contract, using her ERC20 contract to do so.
-1. Alice calls `open`, using a unique `_swapID` that has been negotiated between both traders. The allowance will be checked and used to transfer Alice's ERC20 tokens to the `AtomicSwapERC20ToERC20` contract.
-2. Bob calls `check`, verifying the details of the trade. If he does not agree, then he does not need to do anything. At any point, Alice can call `expire`, getting a refund of her ERC20 tokens. Doing this cancels the swap.
+1. Alice calls `open` using a unique `_swapID` that has been negotiated between both traders. The allowance will be checked and used to transfer Alice's ERC20 tokens to the `AtomicSwapERC20ToERC20` contract.
+2. Bob calls `check` to verify the details of the trade. If he does not agree then he does not need to do anything. At any point, Alice can call `expire` and get a refund of her ERC20 tokens. Doing this cancels the swap.
 3. Bob provides an allowance to the `AtomicSwapERC20ToERC20` contract, using his ERC20 contract to do so.
 4. Bob calls `close`, which will check the allowance and use it to transfer his ERC20 tokens to Alice. At the same time, it will transfer Alice's ERC20 tokens to Bob. Alice can no longer expire the swap.
 
@@ -42,12 +42,12 @@ When performing an atomic swap between Ether and an ERC20 token, the `AtomicSwap
 
 When performing an atomic swap between Ether and Bitcoin, the `AtomicSwapEther` contract should be used. For this example, Alice holds Ether and Bob also holds Bitcoin. Alice is looking to give her Ether to Bob in exchange for his Bitcoins.
 
-1. Bob generates a random secret key, and hashes it using SHA256 to generate a secret lock.
-2. Bob uses the secret lock, and a Bitcoin Script, to setup a transaction to Alice, on the condition that she produces the secret key. If she does not do so within 48 hours then Bob can withdraw the funds.
+1. Bob generates a random secret key and hashes it using SHA256 to generate a secret lock.
+2. Bob uses the secret lock, and a Bitcoin Script, to setup a transaction to Alice on the condition that she produces the secret key. If she does not do so within 48 hours then Bob can withdraw the funds.
 3. Bob sends the secret lock to Alice along with the address of his transaction on the Bitcoin blockchain.
 4. Alice checks Bob's transaction, verifying the details of the trade. If she does not agree then she does not need to do anything. After 48 hours, Bob can withdraw his funds.
-5. Alice calls `open`, using a unique `_swapID` that has been negotiated between both traders. She also uses the secret lock that was provided by Bob. This is a payable call and Alice must send her Ether when she makes this call.
-6. Bob calls `check`, verifying the details of the trade. If he does not agree, then he does not need to do anything. After 24 hours, Alice can call `expire`, getting a refund of her Ether.
+5. Alice calls `open` using a unique `_swapID` that has been negotiated between both traders. She also uses the secret lock that was provided by Bob. This is a payable call and Alice must send her Ether when she makes this call.
+6. Bob calls `check` to verify the details of the trade. If he does not agree, then he does not need to do anything. After 24 hours, Alice can call `expire`, getting a refund of her Ether.
 7. Bob calls `close`, which requires that he submits the secret key associated with the secret lock. If he has provided the correct secret key, it will transfer Alice's Ether to Bob and store the secret key.
 8. Alice calls `checkSecretKey`, acquiring the secret key.
 9. Alice provides the secret key to Bob's Bitcoin Script, and receives his Bitcoin.
@@ -58,13 +58,13 @@ When performing an atomic swap between Ether and Bitcoin, the `AtomicSwapEther` 
 
 When performing an atomic swap between ERC20 and Bitcoin, the `AtomicSwapERC20` contract should be used. For this example, Alice holds ERC20 tokens and Bob also holds Bitcoin. Alice is looking to give her ERC20 tokens to Bob in exchange for his Bitcoins.
 
-1. Bob generates a random secret key, and hashes it using SHA256 to generate a secret lock.
-2. Bob uses the secret lock, and a Bitcoin Script, to setup a transaction to Alice, on the condition that she produces the secret key. If she does not do so within 48 hours then Bob can withdraw the funds.
+1. Bob generates a random secret key and hashes it using SHA256 to generate a secret lock.
+2. Bob uses the secret lock, and a Bitcoin Script, to setup a transaction to Alice on the condition that she produces the secret key. If she does not do so within 48 hours then Bob can withdraw the funds.
 3. Bob sends the secret lock to Alice along with the address of his transaction on the Bitcoin blockchain.
 4. Alice checks Bob's transaction, verifying the details of the trade. If she does not agree then she does not need to do anything. After 48 hours, Bob can withdraw his funds.
 5. Alice provides an allowance to the `AtomicSwapERC20` contract, using her ERC20 contract to do so.
-6. Alice calls `open`, using a unique `_swapID` that has been negotiated between both traders. She also uses the secret lock that was provided by Bob. The allowance will be checked and used to transfer Alice's ERC20 tokens to the `AtomicSwapERC20` contract.
-7. Bob calls `check`, verifying the details of the trade. If he does not agree, then he does not need to do anything. After 24 hours, Alice can call `expire`, getting a refund of her ERC20 tokens.
+6. Alice calls `open` using a unique `_swapID` that has been negotiated between both traders. She also uses the secret lock that was provided by Bob. The allowance will be checked and used to transfer Alice's ERC20 tokens to the `AtomicSwapERC20` contract.
+7. Bob calls `check` to verify the details of the trade. If he does not agree, then he does not need to do anything. After 24 hours, Alice can call `expire`, getting a refund of her ERC20 tokens.
 8. Bob calls `close`, which requires that he submits the secret key associated with the secret lock. If he has provided the correct secret key, it will transfer Alice's ERC20 tokens to Bob and store the secret key.
 9. Alice calls `checkSecretKey`, acquiring the secret key.
 10. Alice provides the secret key to Bob's Bitcoin Script, and receives his Bitcoin.

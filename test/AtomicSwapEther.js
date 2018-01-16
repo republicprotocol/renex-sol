@@ -1,4 +1,4 @@
-var atomicSwap = artifacts.require("./AtomicSwapEther.sol");
+const atomicSwap = artifacts.require("./AtomicSwapEther.sol");
 
 contract('AtomicSwapEther', (accounts) => {
 
@@ -24,6 +24,12 @@ contract('AtomicSwapEther', (accounts) => {
   it("Withdraw the ether from the lockbox", async () => {
     const swap = await atomicSwap.deployed();
     await swap.close(swapID_swap, key);
+  })
+
+  it("Get secret key from the contract", async () => {
+    const swap = await atomicSwap.deployed();
+    const secretkey = await swap.checkSecretKey(swapID_swap);
+    assert.equal(secretkey.toString(), key);
   })
 
   it("Deposit ether into the contract", async () => {

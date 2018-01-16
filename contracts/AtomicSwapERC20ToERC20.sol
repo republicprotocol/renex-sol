@@ -24,6 +24,10 @@ contract AtomicSwapERC20ToERC20 {
   mapping (bytes32 => Swap) private swaps;
   mapping (bytes32 => States) private swapStates;
 
+  event Open(bytes32 _swapID, address _withdrawTrader,bytes32 _secretLock);
+  event Expire(bytes32 _swapID);
+  event Close(bytes32 _swapID, bytes _secretKey);
+  
   modifier onlyInvalidSwaps(bytes32 _swapID) {
     if (swapStates[_swapID] == States.INVALID) {
       _;

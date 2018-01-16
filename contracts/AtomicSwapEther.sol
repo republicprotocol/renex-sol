@@ -21,6 +21,10 @@ contract AtomicSwapEther {
   mapping (bytes32 => Swap) private swaps;
   mapping (bytes32 => States) private swapStates;
 
+  event Open(bytes32 _swapID, address _withdrawTrader,bytes32 _secretLock);
+  event Expire(bytes32 _swapID);
+  event Close(bytes32 _swapID, bytes _secretKey);
+
   modifier onlyInvalidSwaps(bytes32 _swapID) {
     if (swapStates[_swapID] == States.INVALID) {
       _;
@@ -40,7 +44,7 @@ contract AtomicSwapEther {
   }
 
   modifier onlyExpirableSwaps(bytes32 _swapID) {
-    if (swaps[_swapID].timestamp - now >= 1 days) {
+    if (swaps[_swapID].timestamp - now >= 1 minutes) {
       _;
     }
   }
@@ -63,6 +67,9 @@ contract AtomicSwapEther {
     });
     swaps[_swapID] = swap;
     swapStates[_swapID] = States.OPEN;
+
+    // Trigger open event.
+    Open(_swapID, _withdrawTrader, _secretLock);
   }
 
   function close(bytes32 _swapID, bytes _secretKey) public onlyOpenSwaps(_swapID) onlyWithSecretKey(_swapID, _secretKey) {
@@ -73,6 +80,9 @@ contract AtomicSwapEther {
 
     // Transfer the ETH funds from this contract to the withdrawing trader.
     swap.withdrawTrader.transfer(swap.value);
+
+    // Trigger close event.
+    Close(_swapID, _secretKey);
   }
 
   function expire(bytes32 _swapID) public onlyOpenSwaps(_swapID) onlyExpirableSwaps(_swapID) {
@@ -82,6 +92,9 @@ contract AtomicSwapEther {
 
     // Transfer the ETH value from this contract back to the ETH trader.
     swap.ethTrader.transfer(swap.value);
+
+     // Trigger expire event.
+    Expire(_swapID);
   }
 
   function check(bytes32 _swapID) public view returns (uint256 timeRemaining, uint256 value, address withdrawTrader, bytes32 secretLock) {

@@ -5,7 +5,6 @@ import "./ERC20.sol";
 contract AtomicSwapEtherToERC20 {
 
   struct Swap {
-    uint256 timestamp;
     uint256 value;
     address ethTrader;
     uint256 erc20Value;
@@ -39,16 +38,9 @@ contract AtomicSwapEtherToERC20 {
     }
   }
 
-  modifier onlyExpirableSwaps(bytes32 _swapID) {
-    if (swaps[_swapID].timestamp - now >= 1 days) {
-      _;
-    }
-  }
-
   function open(bytes32 _swapID, uint256 _erc20Value, address _erc20Trader, address _erc20ContractAddress) public onlyInvalidSwaps(_swapID) payable {
     // Store the details of the swap.
     Swap memory swap = Swap({
-      timestamp: now,
       value: msg.value,
       ethTrader: msg.sender,
       erc20Value: _erc20Value,
@@ -73,7 +65,7 @@ contract AtomicSwapEtherToERC20 {
     swap.erc20Trader.transfer(swap.value);
   }
 
-  function expire(bytes32 _swapID) public onlyOpenSwaps(_swapID) onlyExpirableSwaps(_swapID) {
+  function expire(bytes32 _swapID) public onlyOpenSwaps(_swapID) {
     // Expire the swap.
     Swap memory swap = swaps[_swapID];
     swapStates[_swapID] = States.EXPIRED;
@@ -82,8 +74,8 @@ contract AtomicSwapEtherToERC20 {
     swap.ethTrader.transfer(swap.value);
   }
 
-  function check(bytes32 _swapID) public view returns (uint256 timeRemaining, uint256 value, uint256 erc20Value, address erc20Trader, address erc20ContractAddress) {
+  function check(bytes32 _swapID) public view returns (uint256 value, uint256 erc20Value, address erc20Trader, address erc20ContractAddress) {
     Swap memory swap = swaps[_swapID];
-    return (swap.timestamp-now, swap.value, swap.erc20Value, swap.erc20Trader, swap.erc20ContractAddress);
+    return  (swap.value, swap.erc20Value, swap.erc20Trader, swap.erc20ContractAddress);
   }
 }

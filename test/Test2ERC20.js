@@ -1,4 +1,4 @@
-const Token = artifacts.require("./TestERC20.sol");
+const Token = artifacts.require("./Test2ERC20.sol");
 
 contract("Token", function(accounts) {
 	it("should return the initial balances", async function() {

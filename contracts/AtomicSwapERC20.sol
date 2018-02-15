@@ -5,7 +5,7 @@ import "./ERC20.sol";
 contract AtomicSwapERC20 {
 
   struct Swap {
-    uint256 timestamp;
+    uint256 timelock;
     uint256 erc20Value;
     address erc20Trader;
     address erc20ContractAddress;
@@ -47,7 +47,7 @@ contract AtomicSwapERC20 {
   }
 
   modifier onlyExpirableSwaps(bytes32 _swapID) {
-    if (swaps[_swapID].timestamp - now >= 1 days) {
+    if (swaps[_swapID].timelock <= now) {
       _;
     }
   }
@@ -58,7 +58,7 @@ contract AtomicSwapERC20 {
     }
   }
 
-  function open(bytes32 _swapID, uint256 _erc20Value, address _erc20ContractAddress, address _withdrawTrader, bytes32 _secretLock) public onlyInvalidSwaps(_swapID) {
+  function open(bytes32 _swapID, uint256 _erc20Value, address _erc20ContractAddress, address _withdrawTrader, bytes32 _secretLock, uint256 _timelock) public onlyInvalidSwaps(_swapID) {
     require(swapStates[_swapID] == States.INVALID);
     // Transfer value from the ERC20 trader to this contract.
     ERC20 erc20Contract = ERC20(_erc20ContractAddress);
@@ -67,7 +67,7 @@ contract AtomicSwapERC20 {
 
     // Store the details of the swap.
     Swap memory swap = Swap({
-      timestamp: now,
+      timelock: _timelock,
       erc20Value: _erc20Value,
       erc20Trader: msg.sender,
       erc20ContractAddress: _erc20ContractAddress,
@@ -105,9 +105,9 @@ contract AtomicSwapERC20 {
     Expire(_swapID);
   }
 
-  function check(bytes32 _swapID) public view returns (uint256 timeRemaining, uint256 erc20Value, address erc20ContractAddress, address withdrawTrader, bytes32 secretLock) {
+  function check(bytes32 _swapID) public view returns (uint256 timelock, uint256 erc20Value, address erc20ContractAddress, address withdrawTrader, bytes32 secretLock) {
     Swap memory swap = swaps[_swapID];
-    return (swap.timestamp-now, swap.erc20Value, swap.erc20ContractAddress, swap.withdrawTrader, swap.secretLock);
+    return (swap.timelock, swap.erc20Value, swap.erc20ContractAddress, swap.withdrawTrader, swap.secretLock);
   }
 
   function checkSecretKey(bytes32 _swapID) public view onlyClosedSwaps(_swapID) returns (bytes secretKey) {

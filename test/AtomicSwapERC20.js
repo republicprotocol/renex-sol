@@ -14,8 +14,9 @@ contract('Cross Chain Atomic Swap with ERC20', (accounts) => {
   it("Deposit erc20 tokens into the contract", async () => {
     const swap = await atomicSwap.deployed();
     const token = await testERC20.deployed();
+    const timeout = 100; // seconds
     await token.approve(swap.address, 10000);
-    await swap.open(swapID_swap, 10000, token.address, accounts[0], lock, {from: accounts[0]})
+    await swap.open(swapID_swap, 10000, token.address, accounts[0], lock, timeout, {from: accounts[0]})
   })
 
   it("Check the erc20 tokens in the lock box", async () => {
@@ -43,8 +44,9 @@ contract('Cross Chain Atomic Swap with ERC20', (accounts) => {
   it("Deposit erc20 tokens into the contract", async () => {
     const swap = await atomicSwap.deployed();
     const token = await testERC20.deployed();
+    const timeout = 2; // seconds
     await token.approve(swap.address, 10000);
-    await swap.open(swapID_expiry, 10000, token.address, accounts[0], lock, {from: accounts[0]})
+    await swap.open(swapID_expiry, 10000, token.address, accounts[0], lock, timeout, {from: accounts[0]})
   })
 
   it("Withdraw after expiry", async () => {
@@ -56,7 +58,7 @@ contract('Cross Chain Atomic Swap with ERC20', (accounts) => {
       } catch (err) {
         reject(err);
       }
-    }, 90000));
+    }, 2 * 1000));
   })
 });
 

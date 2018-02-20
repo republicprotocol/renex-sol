@@ -1,5 +1,8 @@
 # Ethereum Atomic Swap
 
+[![Build Status](https://travis-ci.org/republicprotocol/eth-atomic-swap.svg?branch=master)](https://travis-ci.org/republicprotocol/eth-atomic-swap)
+[![Coverage Status](https://coveralls.io/repos/github/republicprotocol/eth-atomic-swap/badge.svg?branch=master)](https://coveralls.io/github/republicprotocol/eth-atomic-swap?branch=master)
+
 The Ethereum Atomic Swap library is an official reference implementation of atomic swaps on Ethereum for the Republic Protocol, written in Solidity. This library supports Ether and ERC20 atomic swaps, cross-chain Ether atomic swaps, and cross-chain ERC20 atomic swaps. Currently, the Republic Protocol only provides support for cross-chain trading with Bitcoin.
 
 ## Smart contracts

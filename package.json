@@ -22,5 +22,8 @@
   "homepage": "https://github.com/republicprotocol/atomic-swap#readme",
   "devDependencies": {
     "solidity-coverage": "^0.4.8"
+  },
+  "dependencies": {
+    "coveralls": "^3.0.0"
   }
 }

@@ -10,7 +10,6 @@ cache:
 before_script:
   - npm install --global truffle
   - npm install --global ganache-cli
-  - npm install
   - truffle version
 script:
   - npm run coverage

@@ -1,9 +1,9 @@
-pragma solidity 0.4.18;
+pragma solidity ^0.4.18;
 
 contract AtomicSwapEther {
 
   struct Swap {
-    uint256 timestamp;
+    uint256 timelock;
     uint256 value;
     address ethTrader;
     address withdrawTrader;
@@ -44,21 +44,22 @@ contract AtomicSwapEther {
   }
 
   modifier onlyExpirableSwaps(bytes32 _swapID) {
-    if (swaps[_swapID].timestamp - now >= 1 minutes) {
+    if (now >= swaps[_swapID].timelock) {
       _;
     }
   }
 
   modifier onlyWithSecretKey(bytes32 _swapID, bytes _secretKey) {
+    // TODO: Require _secretKey length to conform to the spec
     if (swaps[_swapID].secretLock == sha256(_secretKey)) {
       _;
     }
   }
 
-  function open(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock) public onlyInvalidSwaps(_swapID) payable {
+  function open(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock, uint256 _timelock) public onlyInvalidSwaps(_swapID) payable {
     // Store the details of the swap.
     Swap memory swap = Swap({
-      timestamp: now,
+      timelock: _timelock,
       value: msg.value,
       ethTrader: msg.sender,
       withdrawTrader: _withdrawTrader,
@@ -97,9 +98,9 @@ contract AtomicSwapEther {
     Expire(_swapID);
   }
 
-  function check(bytes32 _swapID) public view returns (uint256 timeRemaining, uint256 value, address withdrawTrader, bytes32 secretLock) {
+  function check(bytes32 _swapID) public view returns (uint256 timelock, uint256 value, address withdrawTrader, bytes32 secretLock) {
     Swap memory swap = swaps[_swapID];
-    return (swap.timestamp-now, swap.value, swap.withdrawTrader, swap.secretLock);
+    return (swap.timelock, swap.value, swap.withdrawTrader, swap.secretLock);
   }
 
   function checkSecretKey(bytes32 _swapID) public view onlyClosedSwaps(_swapID) returns (bytes secretKey) {

@@ -53,6 +53,7 @@ contract AtomicSwapERC20 {
   }
 
   modifier onlyWithSecretKey(bytes32 _swapID, bytes _secretKey) {
+    // TODO: Require _secretKey length to conform to the spec
     if (swaps[_swapID].secretLock == sha256(_secretKey)) {
       _;
     }

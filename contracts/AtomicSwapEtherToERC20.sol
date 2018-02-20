@@ -27,15 +27,13 @@ contract AtomicSwapEtherToERC20 {
   event Close(bytes32 _swapID);
 
   modifier onlyInvalidSwaps(bytes32 _swapID) {
-    if (swapStates[_swapID] == States.INVALID) {
-      _;
-    }
+    require (swapStates[_swapID] == States.INVALID);
+    _;
   }
 
   modifier onlyOpenSwaps(bytes32 _swapID) {
-    if (swapStates[_swapID] == States.OPEN) {
-      _;
-    }
+    require (swapStates[_swapID] == States.OPEN);
+    _;
   }
 
   function open(bytes32 _swapID, uint256 _erc20Value, address _erc20Trader, address _erc20ContractAddress) public onlyInvalidSwaps(_swapID) payable {

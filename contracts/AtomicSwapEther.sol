@@ -26,34 +26,29 @@ contract AtomicSwapEther {
   event Close(bytes32 _swapID, bytes _secretKey);
 
   modifier onlyInvalidSwaps(bytes32 _swapID) {
-    if (swapStates[_swapID] == States.INVALID) {
-      _;
-    }
+    require (swapStates[_swapID] == States.INVALID);
+    _;
   }
 
   modifier onlyOpenSwaps(bytes32 _swapID) {
-    if (swapStates[_swapID] == States.OPEN) {
-      _;
-    }
+    require (swapStates[_swapID] == States.OPEN);
+    _;
   }
 
   modifier onlyClosedSwaps(bytes32 _swapID) {
-    if (swapStates[_swapID] == States.CLOSED) {
-      _;
-    }
+    require (swapStates[_swapID] == States.CLOSED);
+    _;
   }
 
   modifier onlyExpirableSwaps(bytes32 _swapID) {
-    if (now >= swaps[_swapID].timelock) {
-      _;
-    }
+    require (now >= swaps[_swapID].timelock);
+    _;
   }
 
   modifier onlyWithSecretKey(bytes32 _swapID, bytes _secretKey) {
     // TODO: Require _secretKey length to conform to the spec
-    if (swaps[_swapID].secretLock == sha256(_secretKey)) {
-      _;
-    }
+    require (swaps[_swapID].secretLock == sha256(_secretKey));
+    _;
   }
 
   function open(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock, uint256 _timelock) public onlyInvalidSwaps(_swapID) payable {

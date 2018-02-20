@@ -1,7 +1,5 @@
 const atomicSwap = artifacts.require("./AtomicSwapEtherToERC20.sol");
 const testERC20 = artifacts.require("./TestERC20.sol");
-const Web3 = require('web3');
-const web3 = new Web3( new Web3.providers.HttpProvider("http://localhost:8545"));
 
 contract('Atomic swap between ether and erc20', (accounts) => {
   const alice = accounts[3];

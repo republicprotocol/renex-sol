@@ -9,7 +9,8 @@ contract('Cross Chain Atomic Swap with Ether', (accounts) => {
   
   it("Deposit ether into the contract", async () => {
     const swap = await atomicSwap.deployed();
-    await swap.open(swapID_swap, accounts[0], lock, {from: accounts[0], value: 50000})
+    const timeout = 100; // seconds
+    await swap.open(swapID_swap, accounts[0], lock, timeout, {from: accounts[0], value: 50000})
   });
 
   it("Check the ether in the lock box", async () => {
@@ -34,7 +35,8 @@ contract('Cross Chain Atomic Swap with Ether', (accounts) => {
 
   it("Deposit ether into the contract", async () => {
     const swap = await atomicSwap.deployed();
-    await swap.open(swapID_expiry, accounts[0], lock, {from: accounts[0], value: 50000})
+    const timeout = 2; // seconds
+    await swap.open(swapID_expiry, accounts[0], lock, timeout, {from: accounts[0], value: 50000})
   });
 
   it("Withdraw after expiry", async () => {
@@ -46,7 +48,7 @@ contract('Cross Chain Atomic Swap with Ether', (accounts) => {
       } catch (err) {
         reject(err);
       }
-    }, 90000));
+    }, 2 * 1000));
   });
 
 });

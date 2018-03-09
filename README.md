@@ -31,7 +31,7 @@ When performing an atomic swap between Ether and ERC20 tokens, the `AtomicSwapEt
 
 ### ERC20 to ERC20
 
-When performing an atomic swap between Ether and an ERC20 token, the `AtomicSwapERC20ToERC20` contract should be used. For this example, Alice holds ERC20 tokens and Bob also holds ERC20 tokens. Alice is looking to give her ERC20 tokens to Bob in exchange for his ERC20 tokens, and Alice has agreed to initiate the atomic swap.
+When performing an atomic swap between ERC20 and an ERC20 token, the `AtomicSwapERC20ToERC20` contract should be used. For this example, Alice holds ERC20 tokens and Bob also holds ERC20 tokens. Alice is looking to give her ERC20 tokens to Bob in exchange for his ERC20 tokens, and Alice has agreed to initiate the atomic swap.
 
 1. Alice provides an allowance to the `AtomicSwapERC20ToERC20` contract, using her ERC20 contract to do so.
 1. Alice calls `open` using a unique `_swapID` that has been negotiated between both traders. The allowance will be checked and used to transfer Alice's ERC20 tokens to the `AtomicSwapERC20ToERC20` contract.

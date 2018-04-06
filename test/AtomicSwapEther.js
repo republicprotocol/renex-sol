@@ -17,9 +17,9 @@ contract('Cross Chain Atomic Swap with Ether', (accounts) => {
     const swap = await atomicSwap.deployed();
     const result  = await swap.check(swapID_swap);
 
-    assert.equal(result[1].toNumber(),50000);
-    assert.equal(result[2].toString(),accounts[0]);
-    assert.equal(result[3].toString(),lock);
+    result[1].should.be.bignumber.equal(50000);
+    result[2].toString().should.equal(accounts[0]);
+    result[3].toString().should.equal(lock);
   })
 
   it("Withdraw the ether from the lockbox", async () => {
@@ -30,7 +30,7 @@ contract('Cross Chain Atomic Swap with Ether', (accounts) => {
   it("Get secret key from the contract", async () => {
     const swap = await atomicSwap.deployed();
     const secretkey = await swap.checkSecretKey(swapID_swap);
-    assert.equal(secretkey.toString(), key);
+    secretkey.toString().should.equal(key);
   })
 
   it("Deposit ether into the contract", async () => {

@@ -1,3 +1,8 @@
+const chai = require("chai");
+chai.use(require('chai-as-promised'));
+chai.use(require('chai-bignumber')());
+chai.should();
+
 const atomicSwap = artifacts.require("./AtomicSwapERC20ToERC20.sol");
 const openTestERC20 = artifacts.require("./TestERC20.sol");
 const closeTestERC20 = artifacts.require("./Test2ERC20.sol");
@@ -26,11 +31,11 @@ contract('Atomic swap between ether and erc20', (accounts) => {
     const closeToken = await closeTestERC20.deployed();  
     const result  = await swap.check(swapID_swap);
     
-    assert.equal(result[0].toNumber(),openValue);
-    assert.equal(result[1].toString(),openToken.address);
-    assert.equal(result[2].toNumber(),closeValue);
-    assert.equal(result[3].toString(),bob);
-    assert.equal(result[4].toString(),closeToken.address);
+    result[0].should.be.bignumber.equal(openValue);
+    result[1].toString().should.equal(openToken.address);
+    result[2].should.be.bignumber.equal(closeValue);
+    result[3].toString().should.equal(bob);
+    result[4].toString().should.equal(closeToken.address);
   })
 
   it("Bob closes the swap", async() => {
@@ -40,7 +45,7 @@ contract('Atomic swap between ether and erc20', (accounts) => {
     await closeToken.transfer(bob, 100000, {from: alice})
     await closeToken.approve(swap.address, 100000, {from: bob});
     const allowance = await closeToken.allowance(bob,swap.address);
-    assert.equal(100000,allowance)
+    allowance.should.equal(100000);
     await swap.close(swapID_swap);
   })
   

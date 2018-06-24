@@ -13,7 +13,7 @@ contract AtomWallet {
 
     mapping (bytes32=>Match) public getSettlementDetails;
 
-    function setSettlementDetails(bytes32 _buyID, bytes32 _sellID, uint32 _buyToken, uint32 _sellToken, uint256 _buyValue, uint32 _sellValue) public {
+    function setSettlementDetails(bytes32 _buyID, bytes32 _sellID, uint32 _buyToken, uint32 _sellToken, uint256 _buyValue, uint256 _sellValue) public {
         getSettlementDetails[_buyID] = Match({
             buyID: _buyID,
             sellID: _sellID,

@@ -11,10 +11,10 @@ contract AtomWallet {
         uint256 sellValue;
     }
 
-    mapping (bytes32=>Match) public getSettlementDetails;
+    mapping (bytes32=>Match) Matches;
 
     function setSettlementDetails(bytes32 _buyID, bytes32 _sellID, uint32 _buyToken, uint32 _sellToken, uint256 _buyValue, uint256 _sellValue) public {
-        getSettlementDetails[_buyID] = Match({
+        Matches[_buyID] = Match({
             buyID: _buyID,
             sellID: _sellID,
             buyToken: _buyToken,
@@ -23,7 +23,7 @@ contract AtomWallet {
             sellValue: _sellValue
         });
 
-        getSettlementDetails[_sellID] = Match({
+        Matches[_sellID] = Match({
             buyID: _sellID,
             sellID: _buyID,
             buyToken: _sellToken,
@@ -33,4 +33,7 @@ contract AtomWallet {
         });
     }
 
+    function getSettlementDetails(bytes32 orderID) public view returns(bytes32, bytes32, uint32, uint32, uint256, uint256) {
+        return (Matches[orderID].buyID, Matches[orderID].sellID, Matches[orderID].buyToken, Matches[orderID].sellToken, Matches[orderID].buyValue, Matches[orderID].sellValue);
+    }
 }

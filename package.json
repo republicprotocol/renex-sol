@@ -1,0 +1,27 @@
+{
+  "name": "atom-sol",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "merge": "sol-merger \"./contracts/**/*.sol\" ./.merged"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/republicprotocol/atom-sol.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/republicprotocol/atom-sol/issues"
+  },
+  "homepage": "https://github.com/republicprotocol/atom-sol#readme",
+  "dependencies": {
+    "openzeppelin-solidity": "1.10.0"
+  }
+}

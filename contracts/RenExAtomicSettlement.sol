@@ -332,9 +332,9 @@ contract RenExAtomicSettlement is Ownable {
         uint8 _parity,
         uint64 _expiry,
         uint64 _tokens,
-        uint256 _priceC, uint256 _priceQ,
-        uint256 _volumeC, uint256 _volumeQ,
-        uint256 _minimumVolumeC, uint256 _minimumVolumeQ,
+        uint64 _priceC, uint64 _priceQ,
+        uint64 _volumeC, uint64 _volumeQ,
+        uint64 _minimumVolumeC, uint64 _minimumVolumeQ,
         uint256 _nonceHash
     ) public withGasPriceLimit(submissionGasPriceLimit) {
         Order memory order = Order({

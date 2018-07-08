@@ -509,7 +509,7 @@ contract RenExAtomicSettlement is Ownable {
         return tupleToPrice(midPriceC, midPriceQ, sellTokenDecimals);
     }
 
-    function setMatchDetails(bytes32 _buyID, bytes32 _sellID, uint32 _buyToken, uint32 _sellToken, uint256 _lowTokenValue, uint256 _highTokenValue) private {
+    function setMatchDetails(bytes32 _buyID, bytes32 _sellID, uint32 _buyToken, uint32 _sellToken, uint256 _lowTokenValue, uint256 _highTokenValue) public {
         getMatchDetails[_buyID] = MatchDetails({
             personalOrder: _buyID,
             foreignOrder: _sellID,

@@ -22,9 +22,13 @@
   },
   "homepage": "https://github.com/republicprotocol/atom-sol#readme",
   "dependencies": {
+    "openzeppelin-solidity": "1.10.0",
+    "republic-sol": "0.0.3"
+  },
+  "devDependencies": {
     "crypto-js": "^3.1.9-1",
     "js-sha256": "^0.9.0",
-    "republic-sol": "0.0.3",
+    "solc": "^0.4.24",
     "solc-js": "^0.4.20-browser.1"
   }
 }

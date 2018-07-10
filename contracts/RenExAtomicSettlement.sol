@@ -57,9 +57,9 @@ contract RenExAtomicSettlement is Ownable {
         bytes32 personalOrder;
         bytes32 foreignOrder;
         uint256 sendValue;
-        uint256 recieveValue;
+        uint256 receiveValue;
         uint32 sendCurrency;
-        uint32 recieveCurrency;
+        uint32 receiveCurrency;
     }
 
     // Events
@@ -332,9 +332,9 @@ contract RenExAtomicSettlement is Ownable {
         uint8 _parity,
         uint64 _expiry,
         uint64 _tokens,
-        uint64 _priceC, uint64 _priceQ,
-        uint64 _volumeC, uint64 _volumeQ,
-        uint64 _minimumVolumeC, uint64 _minimumVolumeQ,
+        uint16 _priceC, uint16 _priceQ,
+        uint16 _volumeC, uint16 _volumeQ,
+        uint16 _minimumVolumeC, uint16 _minimumVolumeQ,
         uint256 _nonceHash
     ) public withGasPriceLimit(submissionGasPriceLimit) {
         Order memory order = Order({
@@ -440,7 +440,7 @@ contract RenExAtomicSettlement is Ownable {
             sellToken
         );
 
-        payFees(_buyID, _sellID, buyToken, sellToken, lowTokenValue, highTokenValue);
+        // payFees(_buyID, _sellID, buyToken, sellToken, lowTokenValue, highTokenValue);
         setMatchDetails(_buyID, _sellID, buyToken, sellToken, lowTokenValue, highTokenValue);
 
         orderStatuses[_buyID] = OrderStatus.Matched;
@@ -509,35 +509,36 @@ contract RenExAtomicSettlement is Ownable {
         return tupleToPrice(midPriceC, midPriceQ, sellTokenDecimals);
     }
 
+    // TODO: Set to private before testnet deployment
     function setMatchDetails(bytes32 _buyID, bytes32 _sellID, uint32 _buyToken, uint32 _sellToken, uint256 _lowTokenValue, uint256 _highTokenValue) public {
         getMatchDetails[_buyID] = MatchDetails({
             personalOrder: _buyID,
             foreignOrder: _sellID,
             sendValue: _lowTokenValue,
-            recieveValue: _highTokenValue,
+            receiveValue: _highTokenValue,
             sendCurrency: _sellToken,
-            recieveCurrency: _buyToken
+            receiveCurrency: _buyToken
         });
 
         getMatchDetails[_sellID] = MatchDetails({
             personalOrder: _sellID,
             foreignOrder: _buyID,
             sendValue: _highTokenValue,
-            recieveValue: _lowTokenValue,
+            receiveValue: _lowTokenValue,
             sendCurrency: _buyToken,
-            recieveCurrency: _sellToken
+            receiveCurrency: _sellToken
         });
     }
 
-    function payFees(bytes32 _personalID, bytes32 _foreignID, uint32 _sendToken, uint32 _recieveToken, uint256 _sendValue, uint256 _recieveValue) private {
+    function payFees(bytes32 _personalID, bytes32 _foreignID, uint32 _sendToken, uint32 _receiveToken, uint256 _sendValue, uint256 _receiveValue) private {
         uint256 fee;
         address tokenAddress;
         if (isEthereumBased(_sendToken)) {
             tokenAddress = getTokenAddress(_sendToken);
             fee = calculateFee(_sendValue);
-        } else if (isEthereumBased(_recieveToken)) {
-            tokenAddress = getTokenAddress(_recieveToken);
-            fee = calculateFee(_recieveValue);
+        } else if (isEthereumBased(_receiveToken)) {
+            tokenAddress = getTokenAddress(_receiveToken);
+            fee = calculateFee(_receiveValue);
         } else {
             return;
         }

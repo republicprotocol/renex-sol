@@ -1,6 +1,6 @@
 const RenExTokens = artifacts.require("RenExTokens");
 const RenExBalances = artifacts.require("RenExBalances");
-const RenExSettlement = artifacts.require("RenExAtomicSettlement");
+const RenExSettlement = artifacts.require("RenExSettlement");
 const RewardVault = artifacts.require("RewardVault");
 const Orderbook = artifacts.require("Orderbook");
 const RepublicToken = artifacts.require("RepublicToken");
@@ -19,10 +19,14 @@ chai.should();
 
 const GWEI = 1000000000;
 
+const submitOrderTo = async (contracts, params) => {
+    for (contract of contracts) {
+        await contract.submitOrder(...params);
+    }
+}
+
 contract("RenExSettlement", function (accounts) {
 
-    const buyer = accounts[0];
-    const seller = accounts[1];
     const darknode = accounts[2];
     const broker = accounts[3];
     let tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens;
@@ -75,25 +79,10 @@ contract("RenExSettlement", function (accounts) {
         (await renExSettlement.submissionGasPriceLimit()).toNumber().should.equal(100 * GWEI);
     })
 
-    it("should reject submitOrder with gas price", async () => {
-        await renExSettlement.submitOrder(
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x000000000000000000000000000000000000000000000000000000005b2a43a2",
-            "0x0000000000000000000000000000000000000000000000000000000100010001",
-            "0x00000000000000000000000000000000000000000000000000000000000000e6",
-            "0x0000000000000000000000000000000000000000000000000000000000000023",
-            "0x0000000000000000000000000000000000000000000000000000000000000005",
-            "0x000000000000000000000000000000000000000000000000000000000000000f",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x8d981922c65b85a257f457ba3c29831aa4c3b1bd45dc3b280590fd5c89c69dc2",
-            { gasPrice: 100 * GWEI + 1 } // Above limit
-        ).should.be.rejected;
-    });
-
     it("submitOrder", async () => {
+        // sellID_1?
         await renExSettlement.submitOrder(
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x000000000000000000000000000000000000000000000000000000005b2a43a2",
@@ -107,7 +96,9 @@ contract("RenExSettlement", function (accounts) {
             "0x8d981922c65b85a257f457ba3c29831aa4c3b1bd45dc3b280590fd5c89c69dc2",
         );
 
+        // buyID_1?
         await renExSettlement.submitOrder(
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x000000000000000000000000000000000000000000000000000000005b2ae1b5",
@@ -121,7 +112,9 @@ contract("RenExSettlement", function (accounts) {
             "0x242efbba437ce0c8b22392130c3f688ca01492792a3a04899d66dce0ffa31b72",
         );
 
+        // sellID_2?
         await renExSettlement.submitOrder(
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x000000000000000000000000000000000000000000000000000000005b298e47",
@@ -135,7 +128,9 @@ contract("RenExSettlement", function (accounts) {
             "0xccd3dd4361d50a9df13af30388e2574b5e9e875c638bdfd15efb47395686ac3d",
         );
 
+        // buyID_2?
         await renExSettlement.submitOrder(
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x000000000000000000000000000000000000000000000000000000005b2a2706",
@@ -147,13 +142,13 @@ contract("RenExSettlement", function (accounts) {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x799f3c0f186049d0e59e51bd145d23b30a6a7657ef591ce345ab6f89ef9cbad7",
-        )
-
+        );
     });
 
     it("submitOrder (rejected)", async () => {
         // Can't submit order twice:
         await renExSettlement.submitOrder(
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x000000000000000000000000000000000000000000000000000000005b2ae1b5",
@@ -170,6 +165,7 @@ contract("RenExSettlement", function (accounts) {
         // Can't submit order that's not in orderbook (different timestamp):
         await renExSettlement.submitOrder(
             "0x0000000000000000000000000000000000000000000000000000000000000001",
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x000000000000000000000000000000000000000000000000000000005b2ae1b6",
             "0x0000000000000000000000000000000000000000000000000000000100010001",
@@ -185,6 +181,7 @@ contract("RenExSettlement", function (accounts) {
         // Can't submit order that's not confirmed
         await renExSettlement.submitOrder(
             "0x0000000000000000000000000000000000000000000000000000000000000001",
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x000000000000000000000000000000000000000000000000000000005b29a423",
             "0x0000000000000000000000000000000000000000000000000000000100010000",
@@ -198,51 +195,40 @@ contract("RenExSettlement", function (accounts) {
         ).should.be.rejected;
     });
 
-    it("verifyOrder", async () => {
-        // Can verify valid match
-        await renExSettlement.verifyOrder(buyID_1);
-        await renExSettlement.verifyOrder(buyID_2);
-        await renExSettlement.verifyOrder(sellID_1);
-        await renExSettlement.verifyOrder(sellID_2);
-        await renExSettlement.verifyOrder(buyID_1.replace("a", "b"))
-            .should.be.rejected;
-        await renExSettlement.verifyOrder(sellID_1.replace("a", "b"))
-            .should.be.rejected;
-    });
+    // it("verifyOrder", async () => {
+    //     // await settlementTest.verifyOrder(buyID_1.replace("a", "b"))
+    //     //     .should.be.rejected;
+    //     // await settlementTest.verifyOrder(sellID_1.replace("a", "b"))
+    //     //     .should.be.rejected;
+    // });
 
-    it("verifyMatch", async () => {
-        // Can verify valid match
-        await renExSettlement.verifyMatch(
-            buyID_2,
-            sellID_2,
-        );
-
+    it("submitMatch", async () => {
         // Two buys
-        await renExSettlement.verifyMatch(
+        await renExSettlement.submitMatch(
             buyID_1,
             buyID_1,
         ).should.be.rejected;
 
         // Two sells
-        await renExSettlement.verifyMatch(
+        await renExSettlement.submitMatch(
             sellID_1,
             sellID_1,
         ).should.be.rejected;
 
         // Orders that aren't matched to one another
-        await renExSettlement.verifyMatch(
+        await renExSettlement.submitMatch(
             buyID_2,
             sellID_1,
         ).should.be.rejected;
 
         // Buy token that is not registered
-        await renExSettlement.verifyMatch(
+        await renExSettlement.submitMatch(
             buyID_1,
             sellID_1,
         ).should.be.rejected;
 
         await renExTokens.deregisterToken(ETH);
-        await renExSettlement.verifyMatch(
+        await renExSettlement.submitMatch(
             buyID_2,
             sellID_2,
         ).should.be.rejected;

@@ -290,4 +290,23 @@ contract RenExSettlement is Ownable, Settlement {
         uint256 newValue = (value * (DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
         return (newValue, value - newValue);
     }
+
+    function getMatchDetails(bytes32 _orderID) public view returns (uint256, uint256, uint32, uint32) {
+        bytes32 matchedID = orderbookContract.orderMatch(_orderID)[0];
+        bytes32 matchID;
+        MatchDetails memory details;
+        if (orderDetails[_orderID].parity == uint8(OrderParity.Buy)) {
+            matchID = keccak256(abi.encodePacked(_orderID, matchedID));
+
+            details = matchDetails[matchID];
+
+            return (details.highTokenVolume, details.lowTokenVolume, details.highToken, details.lowToken);
+        } else {
+            matchID = keccak256(abi.encodePacked(matchedID, _orderID));
+
+            details = matchDetails[matchID];
+
+            return (details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken);
+        }
+    }
 }

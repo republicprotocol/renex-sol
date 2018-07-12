@@ -9,6 +9,6 @@ contract AtomicInfo {
     }
 
     function setOwnerAddress(bytes32 _orderID, bytes _owner) public {
-       getOwnerAddress[_orderID] = _owner;
+        getOwnerAddress[_orderID] = _owner;
     }
 }

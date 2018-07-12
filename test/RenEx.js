@@ -264,19 +264,10 @@ const OrderParity = {
     SELL: 1,
 };
 let prefix = web3.toHex("Republic Protocol: open: ");
-const symbols = {
-    [BTC]: "BTC",
-    [ETH]: "ETH",
-    [DGX]: "DGX",
-    [REN]: "REN",
-}
 
 const market = (low, high) => {
     return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
 }
-
-
-
 
 
 function parseOutput(scraped) {
@@ -540,19 +531,10 @@ function priceToTuple(priceI) {
     return tuple;
 }
 
-const getPriceStep = (price) => {
-    return getStep(price, 0.005);
-}
-
 const tupleToPrice = (t) => {
     const e = new BigNumber(10).pow(t.q - 26 - 12 - 3);
     return new BigNumber(t.c).times(5).times(e);
 }
-
-const normalizePrice = (p) => {
-    return tupleToPrice(priceToTuple(p));
-}
-
 
 function volumeToTuple(volumeI) {
     const volume = new BigNumber(volumeI);
@@ -565,20 +547,10 @@ function volumeToTuple(volumeI) {
     return tuple;
 }
 
-
-const getVolumeStep = (volume) => {
-    return getStep(volume, 0.2);
-}
-
 const tupleToVolume = (t) => {
     const e = new BigNumber(10).pow(t.q - 12);
     return new BigNumber(t.c).times(0.2).times(e);
 }
-
-const normalizeVolume = (v) => {
-    return tupleToVolume(volumeToTuple(v));
-}
-
 
 function floatToTuple(shift, exponentOffset, step, value, max) {
     const shifted = value.times(shift);

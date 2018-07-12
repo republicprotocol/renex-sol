@@ -24,5 +24,5 @@ contract("AtomicInfo", function () {
     await info.setOwnerAddress(id, addr)
     assert.equal((await info.getOwnerAddress(id)), addr);
   });
- 
+
 });

@@ -8,22 +8,13 @@ const DarknodeRegistry = artifacts.require("DarknodeRegistry");
 const BitcoinMock = artifacts.require("BitcoinMock");
 const DGXMock = artifacts.require("DGXMock");
 
-// Two big number libraries are used - BigNumber decimal support
-// while BN has better bitwise operations
 const BigNumber = require("bignumber.js");
-const BN = require('bn.js');
 
 const chai = require("chai");
 chai.use(require("chai-as-promised"));
 chai.should();
 
 const GWEI = 1000000000;
-
-const submitOrderTo = async (contracts, params) => {
-    for (contract of contracts) {
-        await contract.submitOrder(...params);
-    }
-}
 
 contract("RenExSettlement", function (accounts) {
 
@@ -268,23 +259,6 @@ const BTC = 0x0;
 const ETH = 0x1;
 const DGX = 0x100;
 const REN = 0x10000;
-const OrderParity = {
-    BUY: 0,
-    SELL: 1,
-};
-let prefix = web3.toHex("Republic Protocol: open: ");
-const symbols = {
-    [BTC]: "BTC",
-    [ETH]: "ETH",
-    [DGX]: "DGX",
-    [REN]: "REN",
-}
-
-const market = (low, high) => {
-    return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
-}
-
-
 
 async function setup(darknode, broker) {
     const tokenAddresses = {

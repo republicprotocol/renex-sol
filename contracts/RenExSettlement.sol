@@ -5,7 +5,6 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "republic-sol/contracts/Orderbook.sol";
-import "republic-sol/contracts/Settlement.sol";
 import "republic-sol/contracts/SettlementUtils.sol";
 
 import "./RenExBalances.sol";
@@ -16,7 +15,7 @@ import "./RenExTokens.sol";
 order values
 @author Republic Protocol
 */
-contract RenExSettlement is Ownable, Settlement {
+contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
     /**
@@ -291,7 +290,7 @@ contract RenExSettlement is Ownable, Settlement {
         return (newValue, value - newValue);
     }
 
-    function getMatchDetails(bytes32 _orderID) public view returns (uint256, uint256, uint32, uint32) {
+    function getMatchDetails(bytes32 _orderID) public view returns (bytes32, bytes32, uint256, uint256, uint32, uint32) {
         bytes32 matchedID = orderbookContract.orderMatch(_orderID)[0];
         bytes32 matchID;
         MatchDetails memory details;
@@ -300,13 +299,13 @@ contract RenExSettlement is Ownable, Settlement {
 
             details = matchDetails[matchID];
 
-            return (details.highTokenVolume, details.lowTokenVolume, details.highToken, details.lowToken);
+            return (_orderID, matchID, details.highTokenVolume, details.lowTokenVolume, details.highToken, details.lowToken);
         } else {
             matchID = keccak256(abi.encodePacked(matchedID, _orderID));
 
             details = matchDetails[matchID];
 
-            return (details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken);
+            return (_orderID, matchID, details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken);
         }
     }
 }

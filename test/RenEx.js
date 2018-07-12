@@ -414,8 +414,8 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
 
     // const matchID = web3.sha3(buy.orderID + sell.orderID.slice(2), { encoding: 'hex' });
     const match = await renExSettlement.getMatchDetails(buy.orderID);
-    const highSum = new BigNumber(match[0]);
-    const lowSum = new BigNumber(match[1]);
+    const highSum = new BigNumber(match[2]);
+    const lowSum = new BigNumber(match[3]);
 
     const buyerLowAfter = await renExBalances.traderBalances(buyer, lowTokenInstance.address);
     const buyerHighAfter = await renExBalances.traderBalances(buyer, highTokenInstance.address);

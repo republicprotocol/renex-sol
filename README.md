@@ -5,7 +5,9 @@ RenEx Contracts
 [![Build Status](https://travis-ci.org/republicprotocol/renex-sol.svg?branch=master)](https://travis-ci.org/republicprotocol/renex-sol)
 [![Coverage Status](https://coveralls.io/repos/github/republicprotocol/renex-sol/badge.svg?branch=master)](https://coveralls.io/github/republicprotocol/renex-sol?branch=master)
 
-The RenEx Sol is a Solidity implementation of RenEx (Ren Exchange), the official Republic Protocol dark pool.
+RenEx Sol is a Solidity implementation of the RenEx smart contracts.
+
+RenEx (Ren Exchange) is the official Republic Protocol dark pool.
 
 
 Dependencies

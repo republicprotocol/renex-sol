@@ -28,7 +28,7 @@
   "homepage": "https://github.com/republicprotocol/atom-sol#readme",
   "dependencies": {
     "openzeppelin-solidity": "1.10.0",
-    "republic-sol": "0.0.3"
+    "republic-sol": "^0.1.0"
   },
   "devDependencies": {
     "bignumber.js": "^7.2.1",

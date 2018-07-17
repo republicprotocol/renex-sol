@@ -144,8 +144,30 @@ contract AtomicSwap {
         return swap.secretKey;
     }
 
-    // Helper function
-    function hash(bytes32 secret) public pure returns (bytes32) {
-        return sha256(secret);
+    /**
+      * @notice Checks whether a swap is refundable or not.
+      *
+      * @param _swapID The unique atomic swap id.
+    */
+    function refundable(bytes32 _swapID) public view returns (bool) {
+        return (now >= swaps[_swapID].timelock && swapStates[_swapID] == States.OPEN);
     }
+
+    /**
+      * @notice Checks whether a swap is initiatable or not.
+      *
+      * @param _swapID The unique atomic swap id.
+    */
+    function initiatable(bytes32 _swapID) public view returns (bool) {
+        return (swapStates[_swapID] == States.INVALID);
+    }
+
+    /**
+      * @notice Checks whether a swap is redeemable or not.
+      *
+      * @param _swapID The unique atomic swap id.
+    */
+    function redeemable(bytes32 _swapID) public view returns (bool) {
+        return (swapStates[_swapID] == States.OPEN);
+    }    
 }

@@ -1,0 +1,51 @@
+{
+  "name": "atom-sol",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "truffle test",
+    "coverage": "solidity-coverage",
+    "merge": "sol-merger \"./contracts/**/*.sol\"",
+    "development": "truffle migrate --network development --reset",
+    "nightly": "npm run merge ./.merged/nightly && truffle migrate --network nightly --reset",
+    "falcon": "npm run merge ./.merged/falcon && truffle migrate --network falcon --reset",
+    "f0": "npm run merge ./.merged/f0 && truffle migrate --network f0 --reset"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/republicprotocol/atom-sol.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/republicprotocol/atom-sol/issues"
+  },
+  "homepage": "https://github.com/republicprotocol/atom-sol#readme",
+  "dependencies": {
+    "openzeppelin-solidity": "1.10.0",
+    "republic-sol": "^0.1.0"
+  },
+  "devDependencies": {
+    "bignumber.js": "^7.2.1",
+    "bn.js": "^4.11.8",
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "coveralls": "^3.0.1",
+    "crypto-js": "^3.1.9-1",
+    "dotenv": "^6.0.0",
+    "eslint": "^4.19.1",
+    "ganache-cli": "^6.1.3",
+    "js-sha256": "^0.9.0",
+    "sol-merger": "^0.1.2",
+    "solc": "^0.4.24",
+    "solc-js": "^0.4.20-browser.1",
+    "solidity-coverage": "^0.5.5",
+    "truffle": "^4.1.13",
+    "truffle-hdwallet-provider": "0.0.5"
+  }
+}

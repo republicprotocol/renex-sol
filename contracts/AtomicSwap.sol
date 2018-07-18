@@ -67,7 +67,7 @@ contract AtomicSwap {
     @notice Throws if the secret key is not valid
     */
     modifier onlyWithSecretKey(bytes32 _swapID, bytes32 _secretKey) {
-        require(swaps[_swapID].secretLock == sha256(_secretKey));
+        require(swaps[_swapID].secretLock == sha256(abi.encodePacked(_secretKey)));
         _;
     }
 
@@ -169,5 +169,5 @@ contract AtomicSwap {
     */
     function redeemable(bytes32 _swapID) public view returns (bool) {
         return (swapStates[_swapID] == States.OPEN);
-    }    
+    }
 }

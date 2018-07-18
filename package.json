@@ -1,11 +1,6 @@
 {
-  "name": "atom-sol",
-  "version": "1.0.0",
-  "description": "",
-  "main": "truffle-config.js",
-  "directories": {
-    "test": "test"
-  },
+  "name": "renex-sol",
+  "version": "0.0.0",
   "scripts": {
     "test": "truffle test",
     "coverage": "solidity-coverage",
@@ -17,15 +12,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/republicprotocol/atom-sol.git"
+    "url": "git+https://github.com/republicprotocol/rexen-sol.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/republicprotocol/atom-sol/issues"
-  },
-  "homepage": "https://github.com/republicprotocol/atom-sol#readme",
+  "license": "GPLv3",
   "dependencies": {
     "openzeppelin-solidity": "1.10.0",
     "republic-sol": "^0.1.0"

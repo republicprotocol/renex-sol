@@ -277,10 +277,6 @@ contract RenExSettlement is Ownable {
         renExBalancesContract.incrementBalance(orderTrader[_buyID], matchDetails[matchID].highTokenAddress, highTokenFinal);
     }
 
-    function getTokenAddress(uint32 _token) private view returns (address) {
-        return renExTokensContract.tokenAddresses(_token);
-    }
-
     function isEthereumBased(address _tokenAddress) private pure returns (bool) {
         return (_tokenAddress != address(0x0));
     }
@@ -291,21 +287,21 @@ contract RenExSettlement is Ownable {
     }
 
     function getMatchDetails(bytes32 _orderID) public view returns (bytes32, bytes32, uint256, uint256, uint32, uint32) {
-        bytes32 matchedID = orderbookContract.orderMatch(_orderID)[0];
+        bytes32 matchingOrderID = orderbookContract.orderMatch(_orderID)[0];
         bytes32 matchID;
         MatchDetails memory details;
         if (orderDetails[_orderID].parity == uint8(OrderParity.Buy)) {
-            matchID = keccak256(abi.encodePacked(_orderID, matchedID));
+            matchID = keccak256(abi.encodePacked(_orderID, matchingOrderID));
 
             details = matchDetails[matchID];
 
-            return (_orderID, matchID, details.highTokenVolume, details.lowTokenVolume, details.highToken, details.lowToken);
+            return (_orderID, matchingOrderID, details.highTokenVolume, details.lowTokenVolume, details.highToken, details.lowToken);
         } else {
-            matchID = keccak256(abi.encodePacked(matchedID, _orderID));
+            matchID = keccak256(abi.encodePacked(matchingOrderID, _orderID));
 
             details = matchDetails[matchID];
 
-            return (_orderID, matchID, details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken);
+            return (_orderID, matchingOrderID, details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken);
         }
     }
 }

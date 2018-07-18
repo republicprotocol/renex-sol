@@ -172,6 +172,15 @@ contract("RenExSettlement", function (accounts) {
             .should.eql([2 /* ETH */, 2.001e-15 /* REN */]);
     });
 
+    it("atomic swap", async () => {
+        const tokens = market(DGX, REN);
+        const buy = { settlement: 2, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* REN */ };
+
+        (await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false))
+            .should.eql([0.975 /* DGX */, 1 /* REN */]);
+    });
+
     it("invalid orders should revert", async () => {
         const tokens = market(DGX, REN);
         let buy = { tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 2 /* REN */ };
@@ -293,7 +302,7 @@ function getLine(scraped, lineno) {
 
 
 
-async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook) {
+async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, verify = true) {
 
     (sell.parity === undefined || sell.parity !== buy.parity).should.be.true;
     if (buy.parity === 1) {
@@ -301,6 +310,9 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
     }
     buy.parity = OrderParity.BUY;
     sell.parity = OrderParity.SELL;
+
+    buy.settlement = buy.settlement !== undefined ? buy.settlement : 1;
+    sell.settlement = sell.settlement !== undefined ? sell.settlement : 1;
 
     for (const order of [buy, sell]) {
         if (order.price !== undefined) {
@@ -402,8 +414,8 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
 
     await orderbook.confirmOrder(buy.orderID, [sell.orderID], { from: darknode });
 
-    await renExSettlement.submitOrder(1, buy.type, buy.parity, buy.expiry, buy.tokens, buy.priceC, buy.priceQ, buy.volumeC, buy.volumeQ, buy.minimumVolumeC, buy.minimumVolumeQ, buy.nonceHash);
-    await renExSettlement.submitOrder(1, sell.type, sell.parity, sell.expiry, sell.tokens, sell.priceC, sell.priceQ, sell.volumeC, sell.volumeQ, sell.minimumVolumeC, sell.minimumVolumeQ, sell.nonceHash);
+    await renExSettlement.submitOrder(buy.settlement, buy.type, buy.parity, buy.expiry, buy.tokens, buy.priceC, buy.priceQ, buy.volumeC, buy.volumeQ, buy.minimumVolumeC, buy.minimumVolumeQ, buy.nonceHash);
+    await renExSettlement.submitOrder(sell.settlement, sell.type, sell.parity, sell.expiry, sell.tokens, sell.priceC, sell.priceQ, sell.volumeC, sell.volumeQ, sell.minimumVolumeC, sell.minimumVolumeQ, sell.nonceHash);
 
     const buyerLowBefore = await renExBalances.traderBalances(buyer, lowTokenInstance.address);
     const buyerHighBefore = await renExBalances.traderBalances(buyer, highTokenInstance.address);
@@ -412,32 +424,43 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
 
     await renExSettlement.submitMatch(buy.orderID, sell.orderID);
 
-    // const matchID = web3.sha3(buy.orderID + sell.orderID.slice(2), { encoding: 'hex' });
-    const match = await renExSettlement.getMatchDetails(buy.orderID);
-    const highSum = new BigNumber(match[2]);
-    const lowSum = new BigNumber(match[3]);
+    const buyMatch = await renExSettlement.getMatchDetails(buy.orderID);
+    const highSum = new BigNumber(buyMatch[2]);
+    const lowSum = new BigNumber(buyMatch[3]);
 
-    const buyerLowAfter = await renExBalances.traderBalances(buyer, lowTokenInstance.address);
-    const buyerHighAfter = await renExBalances.traderBalances(buyer, highTokenInstance.address);
-    const sellerLowAfter = await renExBalances.traderBalances(seller, lowTokenInstance.address);
-    const sellerHighAfter = await renExBalances.traderBalances(seller, highTokenInstance.address);
+    if (verify) {
+        const sellMatch = await renExSettlement.getMatchDetails(sell.orderID);
+        buyMatch[0].should.equal(buy.orderID);
+        buyMatch[1].should.equal(sell.orderID);
+        sellMatch[0].should.equal(sell.orderID);
+        sellMatch[1].should.equal(buy.orderID);
+        buyMatch[2].toFixed().should.equal(sellMatch[3].toFixed());
+        buyMatch[3].toFixed().should.equal(sellMatch[2].toFixed());
+        buyMatch[4].toFixed().should.equal(sellMatch[5].toFixed());
+        buyMatch[5].toFixed().should.equal(sellMatch[4].toFixed());
 
-    buyerLowBefore.sub(lowSum).toFixed().should.equal(buyerLowAfter.toFixed());
-    // buyerHighBefore.add(highMatched).toFixed().should.equal(buyerHighAfter.toFixed());
-    // sellerLowBefore.add(lowMatched).toFixed().should.equal(sellerLowAfter.toFixed());
-    sellerHighBefore.sub(highSum).toFixed().should.equal(sellerHighAfter.toFixed());
+        const buyerLowAfter = await renExBalances.traderBalances(buyer, lowTokenInstance.address);
+        const buyerHighAfter = await renExBalances.traderBalances(buyer, highTokenInstance.address);
+        const sellerLowAfter = await renExBalances.traderBalances(seller, lowTokenInstance.address);
+        const sellerHighAfter = await renExBalances.traderBalances(seller, highTokenInstance.address);
 
-    // const expectedLowFees = lowSum
-    //     .multipliedBy(2)
-    //     .dividedBy(1000)
-    //     .integerValue(BigNumber.ROUND_CEIL);
-    // const expectedHighFees = highSum
-    //     .multipliedBy(2)
-    //     .dividedBy(1000)
-    //     .integerValue(BigNumber.ROUND_CEIL);
+        buyerLowBefore.sub(lowSum).toFixed().should.equal(buyerLowAfter.toFixed());
+        // buyerHighBefore.add(highMatched).toFixed().should.equal(buyerHighAfter.toFixed());
+        // sellerLowBefore.add(lowMatched).toFixed().should.equal(sellerLowAfter.toFixed());
+        sellerHighBefore.sub(highSum).toFixed().should.equal(sellerHighAfter.toFixed());
 
-    // lowFee.toFixed().should.equal(expectedLowFees.toFixed());
-    // highFee.toFixed().should.equal(expectedHighFees.toFixed());
+        // const expectedLowFees = lowSum
+        //     .multipliedBy(2)
+        //     .dividedBy(1000)
+        //     .integerValue(BigNumber.ROUND_CEIL);
+        // const expectedHighFees = highSum
+        //     .multipliedBy(2)
+        //     .dividedBy(1000)
+        //     .integerValue(BigNumber.ROUND_CEIL);
+
+        // lowFee.toFixed().should.equal(expectedLowFees.toFixed());
+        // highFee.toFixed().should.equal(expectedHighFees.toFixed());
+    }
 
     return [
         lowSum.toNumber() / 10 ** lowDecimals,
@@ -495,7 +518,7 @@ function getOrderID(order) {
     const bytes = Buffer.concat([
         new BN(order.type).toArrayLike(Buffer, "be", 1),
         new BN(order.parity).toArrayLike(Buffer, "be", 1),
-        new BN(1).toArrayLike(Buffer, "be", 4), // RENEX
+        new BN(order.settlement).toArrayLike(Buffer, "be", 4), // RENEX
         new BN(order.expiry).toArrayLike(Buffer, "be", 8),
         new BN(order.tokens.slice(2), 'hex').toArrayLike(Buffer, "be", 8),
         new BN(order.priceC).toArrayLike(Buffer, "be", 8),

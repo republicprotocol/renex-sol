@@ -22,10 +22,10 @@ contract('Atomic swap between ether and erc20', (accounts) => {
     const token = await testERC20.deployed();
     const result  = await swap.check(swapID_swap);
     
-    assert.equal(result[0].toNumber(),etherValue);
-    assert.equal(result[1].toNumber(),erc20Value);
-    assert.equal(result[2].toString(),bob);
-    assert.equal(result[3].toString(),token.address);
+    result[0].should.be.bignumber.equal(etherValue);
+    result[1].should.be.bignumber.equal(erc20Value);
+    result[2].toString().should.equal(bob);
+    result[3].toString().should.equal(token.address);
   })
 
   it("Bob closes the swap", async() => {
@@ -34,7 +34,7 @@ contract('Atomic swap between ether and erc20', (accounts) => {
     await token.transfer(bob, 100000, {from: accounts[0]})
     await token.approve(swap.address, 100000, {from: bob});
     const allowance = await token.allowance(bob,swap.address);
-    assert.equal(100000,allowance)
+    allowance.should.equal(100000);
     await swap.close(swapID_swap);
   })
   

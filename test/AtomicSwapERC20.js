@@ -1,3 +1,8 @@
+const chai = require("chai");
+chai.use(require('chai-as-promised'));
+chai.use(require('chai-bignumber')());
+chai.should();
+
 const atomicSwap = artifacts.require("./AtomicSwapERC20.sol");
 const testERC20 = artifacts.require("./TestERC20.sol");
 
@@ -24,10 +29,10 @@ contract('Cross Chain Atomic Swap with ERC20', (accounts) => {
     const token = await testERC20.deployed();
     const result  = await swap.check(swapID_swap);
 
-    assert.equal(result[1].toNumber(),10000);
-    assert.equal(result[2].toString(),token.address);
-    assert.equal(result[3].toString(),accounts[0]);
-    assert.equal(result[4].toString(),lock);
+    result[1].should.be.bignumber.equal(10000);
+    result[2].toString().should.equal(token.address);
+    result[3].toString().should.equal(accounts[0]);
+    result[4].toString().should.equal(lock);
   })
 
   it("Withdraw the erc20 tokens from the lockbox", async () => {
@@ -38,7 +43,7 @@ contract('Cross Chain Atomic Swap with ERC20', (accounts) => {
   it("Get secret key from the contract", async () => {
     const swap = await atomicSwap.deployed();
     const secretkey = await swap.checkSecretKey(swapID_swap, {from: accounts[0]});
-    assert.equal(secretkey.toString(), key);
+    secretkey.toString().should.equal(key);
   })
 
   it("Deposit erc20 tokens into the contract", async () => {

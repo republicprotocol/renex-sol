@@ -10,8 +10,9 @@ const DGXMock = artifacts.require("DGXMock");
 
 const BigNumber = require("bignumber.js");
 
-const chai = require("chai");
-chai.use(require("chai-as-promised"));
+import * as chai from "chai";
+import * as chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
 chai.should();
 
 const GWEI = 1000000000;
@@ -23,6 +24,7 @@ contract("RenExSettlement", function (accounts) {
     let tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens;
     let buyID_1, sellID_1;
     let buyID_2, sellID_2;
+    let buyID_3;
 
     before(async function () {
         [tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens] = await setup(darknode, broker);
@@ -63,11 +65,11 @@ contract("RenExSettlement", function (accounts) {
 
     it("can update submission gas price limit", async () => {
         await renExSettlement.updateSubmissionGasPriceLimit(0x0);
-        (await renExSettlement.submissionGasPriceLimit()).toNumber().should.equal(0);
+        (await renExSettlement.submissionGasPriceLimit()).should.equal("0");
         await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI, { from: accounts[1] })
             .should.be.rejected;
         await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI);
-        (await renExSettlement.submissionGasPriceLimit()).toNumber().should.equal(100 * GWEI);
+        (await renExSettlement.submissionGasPriceLimit()).should.equal((100 * GWEI).toString());
     })
 
     it("submitOrder", async () => {
@@ -282,12 +284,12 @@ async function setup(darknode, broker) {
     await renExBalances.updateRenExSettlementContract(renExSettlement.address);
 
     await renExTokens.registerToken(ETH, tokenAddresses[ETH].address, 18);
-    await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, (await tokenAddresses[BTC].decimals()).toNumber());
-    await renExTokens.registerToken(DGX, tokenAddresses[DGX].address, (await tokenAddresses[DGX].decimals()).toNumber());
-    await renExTokens.registerToken(REN, tokenAddresses[REN].address, (await tokenAddresses[REN].decimals()).toNumber());
+    await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, (await tokenAddresses[BTC].decimals()));
+    await renExTokens.registerToken(DGX, tokenAddresses[DGX].address, (await tokenAddresses[DGX].decimals()));
+    await renExTokens.registerToken(REN, tokenAddresses[REN].address, (await tokenAddresses[REN].decimals()));
 
     // Register darknode
-    await dnr.register(darknode, "", 0, { from: darknode });
+    await dnr.register(darknode, "0x", 0, { from: darknode });
     await dnr.epoch();
 
     await tokenAddresses[REN].approve(orderbook.address, 100 * 1e18, { from: broker });

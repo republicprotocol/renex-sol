@@ -4,13 +4,15 @@ const RenExSettlement = artifacts.require("RenExSettlement");
 const RenExBalances = artifacts.require("RenExBalances");
 const WithdrawBlock = artifacts.require("WithdrawBlock");
 
-const chai = require("chai");
-chai.use(require("chai-as-promised"));
+import * as chai from "chai";
+import * as chaiAsPromised from "chai-as-promised";
+import BigNumber from "bignumber.js";
+chai.use(chaiAsPromised);
 chai.should();
 
 contract("RenExBalances", function (accounts) {
 
-    let renExBalances, renExSettlement;
+    let renExBalances, renExSettlement, rewardVault;
     let ETH, REN, TOKEN1, TOKEN2;
 
     beforeEach(async function () {
@@ -40,8 +42,8 @@ contract("RenExBalances", function (accounts) {
         const deposit2 = 50;
 
         // Get ERC20 balance for tokens
-        const previous1 = await TOKEN1.balanceOf(accounts[0]);
-        const previous2 = await TOKEN2.balanceOf(accounts[0]);
+        const previous1 = new BigNumber(await TOKEN1.balanceOf(accounts[0]));
+        const previous2 = new BigNumber(await TOKEN2.balanceOf(accounts[0]));
 
         // Approve and deposit
         await TOKEN1.approve(renExBalances.address, deposit1, { from: accounts[0] });
@@ -50,23 +52,23 @@ contract("RenExBalances", function (accounts) {
         await renExBalances.deposit(TOKEN2.address, deposit2, { from: accounts[0] });
 
         // Check that balance in renExBalances is updated
-        const [tokens, balances] = await renExBalances.getBalances.call(accounts[0]);
+        const { 0: tokens, 1: balances } = await renExBalances.getBalances.call(accounts[0]);
         tokens[0].should.equal(TOKEN1.address);
         tokens[1].should.equal(TOKEN2.address);
-        balances[0].toNumber().should.equal(deposit1);
-        balances[1].toNumber().should.equal(deposit2);
+        balances[0].should.equal(deposit1.toFixed());
+        balances[1].should.equal(deposit2.toFixed());
 
         // Check that the correct amount of tokens has been withdrawn
-        (await TOKEN1.balanceOf(accounts[0])).toFixed().should.equal(previous1.sub(deposit1).toFixed());
-        (await TOKEN2.balanceOf(accounts[0])).toFixed().should.equal(previous2.sub(deposit2).toFixed());
+        (await TOKEN1.balanceOf(accounts[0])).should.equal(previous1.minus(deposit1).toFixed());
+        (await TOKEN2.balanceOf(accounts[0])).should.equal(previous2.minus(deposit2).toFixed());
 
         // Withdraw
         await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] });
         await renExBalances.withdraw(TOKEN2.address, deposit2, { from: accounts[0] });
 
         // Check that the tokens have been returned
-        (await TOKEN1.balanceOf(accounts[0])).toFixed().should.equal(previous1.toFixed());
-        (await TOKEN2.balanceOf(accounts[0])).toFixed().should.equal(previous2.toFixed());
+        (await TOKEN1.balanceOf(accounts[0])).should.equal(previous1.toFixed());
+        (await TOKEN2.balanceOf(accounts[0])).should.equal(previous2.toFixed());
     })
 
     it("can hold tokens for multiple traders", async () => {
@@ -77,8 +79,8 @@ contract("RenExBalances", function (accounts) {
         await TOKEN1.transfer(accounts[1], deposit2 * 2);
 
         // Get ERC20 balance for TOKEN1 and TOKEN2
-        const previous1 = await TOKEN1.balanceOf(accounts[0]);
-        const previous2 = await TOKEN1.balanceOf(accounts[1]);
+        const previous1 = new BigNumber(await TOKEN1.balanceOf(accounts[0]));
+        const previous2 = new BigNumber(await TOKEN1.balanceOf(accounts[1]));
 
         // Approve and deposit
         await TOKEN1.approve(renExBalances.address, deposit1, { from: accounts[0] });
@@ -87,25 +89,25 @@ contract("RenExBalances", function (accounts) {
         await renExBalances.deposit(TOKEN1.address, deposit2, { from: accounts[1] });
 
         // Check that balance in renExBalances is updated
-        const [tokens1, balances1] = await renExBalances.getBalances(accounts[0]);
+        const { 0: tokens1, 1: balances1 } = await renExBalances.getBalances(accounts[0]);
         tokens1[0].should.equal(TOKEN1.address);
-        balances1[0].toNumber().should.equal(deposit1);
+        balances1[0].should.equal(deposit1.toFixed());
 
-        const [tokens2, balances2] = await renExBalances.getBalances(accounts[1]);
+        const { 0: tokens2, 1: balances2 } = await renExBalances.getBalances(accounts[1]);
         tokens2[0].should.equal(TOKEN1.address);
-        balances2[0].toNumber().should.equal(deposit2);
+        balances2[0].should.equal(deposit2.toFixed());
 
         // Check that the correct amount of tokens has been withdrawn
-        (await TOKEN1.balanceOf(accounts[0])).toFixed().should.equal(previous1.sub(deposit1).toFixed());
-        (await TOKEN1.balanceOf(accounts[1])).toFixed().should.equal(previous2.sub(deposit2).toFixed());
+        (await TOKEN1.balanceOf(accounts[0])).should.equal(previous1.minus(deposit1).toFixed());
+        (await TOKEN1.balanceOf(accounts[1])).should.equal(previous2.minus(deposit2).toFixed());
 
         // Withdraw
         await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] });
         await renExBalances.withdraw(TOKEN1.address, deposit2, { from: accounts[1] });
 
         // Check that the tokens have been returned
-        (await TOKEN1.balanceOf(accounts[0])).toFixed().should.equal(previous1.toFixed());
-        (await TOKEN1.balanceOf(accounts[1])).toFixed().should.equal(previous2.toFixed());
+        (await TOKEN1.balanceOf(accounts[0])).should.equal(previous1.toFixed());
+        (await TOKEN1.balanceOf(accounts[1])).should.equal(previous2.toFixed());
     })
 
     it("throws for invalid withdrawal", async () => {
@@ -150,20 +152,20 @@ contract("RenExBalances", function (accounts) {
     it("can hold ether for a trader", async () => {
         const deposit1 = 1;
 
-        const previous = await web3.eth.getBalance(accounts[0]);
+        const previous = new BigNumber(await web3.eth.getBalance(accounts[0]));
 
         // Approve and deposit
         const fee1 = await getFee(renExBalances.deposit(ETH.address, deposit1, { from: accounts[0], value: deposit1 }));
 
         // Balance should be (previous - fee1 - deposit1)
         const after = (await web3.eth.getBalance(accounts[0]));
-        after.toFixed().should.equal(previous.sub(fee1).sub(deposit1).toFixed());
+        after.should.equal(previous.minus(fee1).minus(deposit1).toFixed());
 
         // Withdraw
         const fee2 = await getFee(renExBalances.withdraw(ETH.address, deposit1, { from: accounts[0] }));
 
         // Balance should be (previous - fee1 - fee2)
-        (await web3.eth.getBalance(accounts[0])).toFixed().should.equal(previous.sub(fee1).sub(fee2).toFixed());
+        (await web3.eth.getBalance(accounts[0])).should.equal(previous.minus(fee1).minus(fee2).toFixed());
     })
 
     it("only the settlement contract can call `incrementBalance` and `decrementBalance`", async () => {
@@ -216,7 +218,7 @@ contract("RenExBalances", function (accounts) {
 
 async function getFee(txP) {
     const tx = await txP;
-    const gasAmount = tx.receipt.gasUsed;
-    const gasPrice = await web3.eth.getTransaction(tx.tx).gasPrice;
-    return gasPrice.mul(gasAmount);
+    const gasAmount = new BigNumber(tx.receipt.gasUsed);
+    const gasPrice = (await web3.eth.getTransaction(tx.tx)).gasPrice;
+    return new BigNumber(gasPrice).multipliedBy(gasAmount);
 }

@@ -1,12 +1,15 @@
 const Swap = artifacts.require("AtomicSwap");
-const chai = require("chai");
-const SHA256 = require("crypto-js/sha256");
-chai.use(require("chai-as-promised"));
+
+import * as chai from "chai";
+import * as chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
 chai.should();
+
+import * as SHA256 from "crypto-js/sha256";
 
 contract("AtomicSwap", function (accounts) {
 
-  let swap;
+  let swap, swapRefund, secretLock;
   const swapID = `0x${SHA256(Math.random().toString()).toString()}`;
   const alice = accounts[0];
   const bob = accounts[1];

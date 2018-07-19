@@ -3,8 +3,9 @@ const BitcoinMock = artifacts.require("BitcoinMock");
 const DGXMock = artifacts.require("DGXMock");
 const RenExTokens = artifacts.require("RenExTokens");
 
-const chai = require("chai");
-chai.use(require("chai-as-promised"));
+import * as chai from "chai";
+import * as chaiAsPromised from "chai-as-promised";
+chai.use(chaiAsPromised);
 chai.should();
 
 contract("RenExTokens", function (accounts) {

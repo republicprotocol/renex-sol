@@ -34,9 +34,7 @@ contract("AtomicSwap", function (accounts) {
         const swapID = random32Bytes(), secret = random32Bytes();
         const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
 
-        const ts = secondsFromNow(60 * 60 * 24);
-
-        await swap.initiate(swapID, bob, secretLock, ts, { from: alice, value: 100000 });
+        await swap.initiate(swapID, bob, secretLock, secondsFromNow(60 * 60 * 24), { from: alice, value: 100000 });
 
         await swap.audit(swapID);
 
@@ -58,22 +56,22 @@ contract("AtomicSwap", function (accounts) {
         const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
 
         // Can only initiate for INVALID swaps
-        await swap.initiate(swapID, bob, secretLock, 0, { from: alice, value: 100000 });
-        await swap.initiate(swapID, bob, secretLock, 0, { from: alice, value: 100000 })
-            .should.be.rejected;
+        await swap.initiate(swapID, bob, secretLock, secondsFromNow(1), { from: alice, value: 100000 });
+        await swap.initiate(swapID, bob, secretLock, secondsFromNow(1), { from: alice, value: 100000 })
+            .should.be.rejectedWith(null, /swap opened previously/);
 
         await swap.auditSecret(swapID)
             .should.be.rejected;
 
+        await swap.refund(swapID, { from: alice })
+            .should.be.rejectedWith(null, /swap not expirable/);
+
         // Can only redeem for OPEN swaps and with valid key
         await swap.redeem(swapID, secretLock, { from: bob })
-            .should.be.rejected; // because of invalid key
+            .should.be.rejectedWith(null, /invalid secret/);
         await swap.redeem(swapID, secret, { from: bob });
         await swap.redeem(swapID, secret, { from: bob })
-            .should.be.rejected; // because of invalid status
-
-        await swap.refund(swapID, { from: alice })
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /swap not open/);
     });
 
     it("can return details", async () => {

@@ -51,7 +51,7 @@ contract AtomicSwap {
     @notice Throws if the swap is not closed 
     */
     modifier onlyClosedSwaps(bytes32 _swapID) {
-        require(swapStates[_swapID] == States.CLOSED, "swap not closed");
+        require(swapStates[_swapID] == States.CLOSED, "swap not redeemed");
         _;
     }
 

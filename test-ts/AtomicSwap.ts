@@ -19,7 +19,7 @@ const secondsFromNow = (seconds: number) => {
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const second = 1000;
 
-contract.only("AtomicSwap", function (accounts) {
+contract("AtomicSwap", function (accounts) {
 
     let swap;
     const alice = accounts[1];

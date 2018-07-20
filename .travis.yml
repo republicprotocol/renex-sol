@@ -9,8 +9,6 @@ cache:
     - node_modules
 before_script:
   - npm install --global typescript
-  - npm install --global truffle
-  - npm install --global ganache-cli
   - truffle version
 script:
   - npm run coverage

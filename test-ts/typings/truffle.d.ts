@@ -2,14 +2,9 @@
 import { Suite, SuiteFunction } from "mocha";
 import Web3 from "web3";
 
-// Borrowed from https://github.com/biern/truffle-typescript-example (No License)
-
-declare type _contractTest = (accounts: string[]) => void;
-
-// (name: string, test: _contractTest): void;
-declare interface TransactionMeta {
-    from: string,
-}
+/**
+ * Define the type for the `contract` Mocha/Truffle suite function
+ */
 
 interface ContractFunction {
     (title: string, fn: (this: Suite, accounts?: string[]) => void): Suite;
@@ -34,13 +29,20 @@ interface Contract<T> {
     address: string,
 }
 
+/**
+ * Define the Artifacts interface for importing contracts
+ */
+
 interface Artifacts {
     require(name: string): Contract<any>,
 }
 
+/**
+ * Declare the global values provided by Truffle
+ */
+
 declare global {
-    var contract: ContractFunction;
-    var artifacts: Artifacts;
-    var web3: Web3;
-    var assert: any; // Fix
+    let contract: ContractFunction;
+    let artifacts: Artifacts;
+    let web3: Web3;
 }

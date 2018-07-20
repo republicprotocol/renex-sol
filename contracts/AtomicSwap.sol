@@ -35,7 +35,7 @@ contract AtomicSwap {
     @notice Throws if the swap is not invalid 
     */
     modifier onlyInvalidSwaps(bytes32 _swapID) {
-        require(swapStates[_swapID] == States.INVALID);
+        require(swapStates[_swapID] == States.INVALID, "swap opened previously");
         _;
     }
 
@@ -43,7 +43,7 @@ contract AtomicSwap {
     @notice Throws if the swap is not open 
     */
     modifier onlyOpenSwaps(bytes32 _swapID) {
-        require(swapStates[_swapID] == States.OPEN);
+        require(swapStates[_swapID] == States.OPEN, "swap not open");
         _;
     }
 
@@ -51,7 +51,7 @@ contract AtomicSwap {
     @notice Throws if the swap is not closed 
     */
     modifier onlyClosedSwaps(bytes32 _swapID) {
-        require(swapStates[_swapID] == States.CLOSED);
+        require(swapStates[_swapID] == States.CLOSED, "swap not closed");
         _;
     }
 
@@ -59,7 +59,7 @@ contract AtomicSwap {
     @notice Throws if the swap is not expirable 
     */
     modifier onlyExpirableSwaps(bytes32 _swapID) {
-        require(now >= swaps[_swapID].timelock);
+        require(now >= swaps[_swapID].timelock, "swap not expirable");
         _;
     }
     
@@ -67,7 +67,7 @@ contract AtomicSwap {
     @notice Throws if the secret key is not valid
     */
     modifier onlyWithSecretKey(bytes32 _swapID, bytes32 _secretKey) {
-        require(swaps[_swapID].secretLock == sha256(abi.encodePacked(_secretKey)));
+        require(swaps[_swapID].secretLock == sha256(abi.encodePacked(_secretKey)), "invalid secret");
         _;
     }
 

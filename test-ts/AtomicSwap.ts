@@ -5,42 +5,103 @@ import * as chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 chai.should();
 
-import * as SHA256 from "crypto-js/sha256";
+import { SHA256 } from "crypto-js";
+import * as HEX from "crypto-js/enc-hex";
 
-contract("AtomicSwap", function (accounts) {
+const random32Bytes = () => {
+    return `0x${SHA256(Math.random().toString()).toString()}`;
+}
 
-    let swap, swapRefund, secretLock;
-    const swapID = `0x${SHA256(Math.random().toString()).toString()}`;
-    const alice = accounts[0];
-    const bob = accounts[1];
-    const secret = `0x${SHA256('Secret').toString()}`;
+const secondsFromNow = (seconds: number) => {
+    return Math.round((new Date()).getTime() / 1000) + seconds;
+}
+
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export const second = 1000;
+
+contract.only("AtomicSwap", function (accounts) {
+
+    let swap;
+    const alice = accounts[1];
+    const bob = accounts[2];
+    const eve = accounts[3];
 
     before(async function () {
         swap = await Swap.new();
-        swapRefund = await Swap.new();
-        secretLock = secretLock = `0x${SHA256(SHA256('Secret')).toString()}`;
     });
 
-    it("can initiate an atomic swap", async () => {
-        var ts = Math.round((new Date()).getTime() / 1000) + 10000;
-        await swap.initiate(swapID, bob, secretLock, ts, { from: alice, value: 100000 }).should.not.be.rejected;
-    });
+    it("can perform atomic swap", async () => {
+        const swapID = random32Bytes(), secret = random32Bytes();
+        const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
 
-    it("can audit an atomic swap", async () => {
-        await swap.audit(swapID).should.not.be.rejected;
-    });
+        const ts = secondsFromNow(60 * 60 * 24);
 
-    it("can redeem an atomic swap", async () => {
-        await swap.redeem(swapID, secret, { from: bob }).should.not.be.rejected;
-    });
+        await swap.initiate(swapID, bob, secretLock, ts, { from: alice, value: 100000 });
 
-    it("can audit secret of an atomic swap", async () => {
-        await swap.auditSecret(swapID).should.not.be.rejected;
+        await swap.audit(swapID);
+
+        await swap.redeem(swapID, secret, { from: bob });
+
+        await swap.auditSecret(swapID);
     });
 
     it("can refund an atomic swap", async () => {
-        await swapRefund.initiate(swapID, bob, secretLock, 0, { from: alice, value: 100000 }).should.not.be.rejected;
-        await swapRefund.refund(swapID, { from: alice }).should.not.be.rejected;
+        const swapID = random32Bytes(), secret = random32Bytes();
+        const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
+
+        await swap.initiate(swapID, bob, secretLock, 0, { from: alice, value: 100000 });
+        await swap.refund(swapID, { from: alice });
     });
 
+    it("operations check order status", async () => {
+        const swapID = random32Bytes(), secret = random32Bytes();
+        const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
+
+        // Can only initiate for INVALID swaps
+        await swap.initiate(swapID, bob, secretLock, 0, { from: alice, value: 100000 });
+        await swap.initiate(swapID, bob, secretLock, 0, { from: alice, value: 100000 })
+            .should.be.rejected;
+
+        await swap.auditSecret(swapID)
+            .should.be.rejected;
+
+        // Can only redeem for OPEN swaps and with valid key
+        await swap.redeem(swapID, secretLock, { from: bob })
+            .should.be.rejected; // because of invalid key
+        await swap.redeem(swapID, secret, { from: bob });
+        await swap.redeem(swapID, secret, { from: bob })
+            .should.be.rejected; // because of invalid status
+
+        await swap.refund(swapID, { from: alice })
+            .should.be.rejected;
+    });
+
+    it("can return details", async () => {
+        const swapID = random32Bytes(), secret = random32Bytes();
+        const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
+
+        // Before initiating
+        (await swap.initiatable(swapID)).should.equal(true);
+        (await swap.refundable(swapID)).should.equal(false);
+        (await swap.redeemable(swapID)).should.equal(false);
+
+        await swap.initiate(swapID, bob, secretLock, secondsFromNow(1), { from: alice, value: 100000 });
+
+        (await swap.initiatable(swapID)).should.equal(false);
+        (await swap.refundable(swapID)).should.equal(false);
+        (await swap.redeemable(swapID)).should.equal(true);
+
+        await sleep(2 * second);
+
+        (await swap.initiatable(swapID)).should.equal(false);
+        (await swap.refundable(swapID)).should.equal(true);
+        (await swap.redeemable(swapID)).should.equal(true);
+
+        await swap.redeem(swapID, secret, { from: bob });
+
+        (await swap.initiatable(swapID)).should.equal(false);
+        (await swap.refundable(swapID)).should.equal(false);
+        (await swap.redeemable(swapID)).should.equal(false);
+
+    })
 });

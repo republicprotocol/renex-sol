@@ -18,14 +18,14 @@ context("AtomicInfo", function () {
         id = "0x1234";
         swap = "0x567890";
         await info.submitDetails(id, swap);
-        assert.equal((await info.swapDetails(id)), swap);
+        (await info.swapDetails(id)).should.equal(swap);
     });
 
     it("can submit and retreive addresses", async () => {
         id = "0x1234";
         addr = "0x567890";
         await info.setOwnerAddress(id, addr);
-        assert.equal((await info.getOwnerAddress(id)), addr);
+        (await info.getOwnerAddress(id)).should.equal(addr);
     });
 
 });

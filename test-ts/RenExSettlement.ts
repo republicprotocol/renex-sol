@@ -49,7 +49,7 @@ contract("RenExSettlement", function (accounts) {
         await renExSettlement.updateOrderbook(0x0);
         (await renExSettlement.orderbookContract()).should.equal("0x0000000000000000000000000000000000000000");
         await renExSettlement.updateOrderbook(orderbook.address, { from: accounts[1] })
-            .should.be.rejected;
+            .should.be.rejected; // not owner
         await renExSettlement.updateOrderbook(orderbook.address);
         (await renExSettlement.orderbookContract()).should.equal(orderbook.address);
     })
@@ -58,7 +58,7 @@ contract("RenExSettlement", function (accounts) {
         await renExSettlement.updateRenExBalances(0x0);
         (await renExSettlement.renExBalancesContract()).should.equal("0x0000000000000000000000000000000000000000");
         await renExSettlement.updateRenExBalances(renExBalances.address, { from: accounts[1] })
-            .should.be.rejected;
+            .should.be.rejected; // not owner
         await renExSettlement.updateRenExBalances(renExBalances.address);
         (await renExSettlement.renExBalancesContract()).should.equal(renExBalances.address);
     })
@@ -67,7 +67,7 @@ contract("RenExSettlement", function (accounts) {
         await renExSettlement.updateSubmissionGasPriceLimit(0x0);
         (await renExSettlement.submissionGasPriceLimit()).should.equal("0");
         await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI, { from: accounts[1] })
-            .should.be.rejected;
+            .should.be.rejected; // not owner
         await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI);
         (await renExSettlement.submissionGasPriceLimit()).should.equal((100 * GWEI).toString());
     })
@@ -153,7 +153,7 @@ contract("RenExSettlement", function (accounts) {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x242efbba437ce0c8b22392130c3f688ca01492792a3a04899d66dce0ffa31b72",
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /order already submitted/);
 
         // Can't submit order that's not in orderbook (different timestamp):
         await renExSettlement.submitOrder(
@@ -169,7 +169,7 @@ contract("RenExSettlement", function (accounts) {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x242efbba437ce0c8b22392130c3f688ca01492792a3a04899d66dce0ffa31b72",
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /uncofirmed order/);
 
         // Can't submit order that's not confirmed
         await renExSettlement.submitOrder(
@@ -185,7 +185,7 @@ contract("RenExSettlement", function (accounts) {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0a9e48cc69067083dabadb12d0ffeda12e1e9a014f9b3ad0277157f5d0b9d7e2",
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /uncofirmed order/);
     });
 
     // it("verifyOrder", async () => {
@@ -200,13 +200,13 @@ contract("RenExSettlement", function (accounts) {
         await renExSettlement.submitMatch(
             buyID_1,
             buyID_1,
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /invalid sell parity/);
 
         // Two sells
         await renExSettlement.submitMatch(
             sellID_1,
             sellID_1,
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /invalid buy parity/);
 
         // Orders that aren't matched to one another
         await renExSettlement.submitMatch(
@@ -233,6 +233,7 @@ contract("RenExSettlement", function (accounts) {
         await _renExSettlement.submitOrder(
             "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000001",
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x000000000000000000000000000000000000000000000000000000005b2a43a2",
             "0x0000000000000000000000000000000000000000000000000000000100010001",
             "0x00000000000000000000000000000000000000000000000000000000000000e6",
@@ -242,7 +243,7 @@ contract("RenExSettlement", function (accounts) {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x8d981922c65b85a257f457ba3c29831aa4c3b1bd45dc3b280590fd5c89c69dc2",
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /gas price too high/)
     });
 });
 

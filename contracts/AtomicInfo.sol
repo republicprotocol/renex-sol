@@ -50,9 +50,12 @@ contract AtomicInfo is Ownable {
 
     function submitDetails(bytes32 _orderID, bytes _swapDetails) public onlyAuthorisedSwapper(_orderID, msg.sender) {
         swapDetails[_orderID] = _swapDetails;
+        swapDetailsTimestamp[_orderID] = now;
     }
 
     function setOwnerAddress(bytes32 _orderID, bytes _owner) public onlyAuthorisedSwapper(_orderID, msg.sender) {
         getOwnerAddress[_orderID] = _owner;
+        ownerAddressTimestamp[_orderID] = now;
+
     }
 }

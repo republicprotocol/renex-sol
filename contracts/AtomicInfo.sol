@@ -29,24 +29,39 @@ contract AtomicInfo is Ownable {
         orderbookContract = _orderbookContract;
     }
 
+    /**
+     * @notice The owner of the contract can update the orderbook address
+     */
     function updateOrderbook(Orderbook _newOrderbookContract) public onlyOwner {
         emit OrderbookUpdated(orderbookContract, _newOrderbookContract);
         orderbookContract = _newOrderbookContract;
     }
 
+    /**
+     * @notice Restricts a function to only be called by an address that has
+     * been authorised by the trader who submitted the order
+     */
     modifier onlyAuthorisedSwapper(bytes32 _orderID, address _swapper) {
         address trader = orderbookContract.orderTrader(_orderID);
         require(authorisedSwapper[trader][_swapper] == true);
         _;
     }
 
+    /**
+     * @notice Permits the address to submit details for the message senders's
+     * atomic swaps
+     */
     function authoriseSwapper(address _swapper) public {
         authorisedSwapper[msg.sender][_swapper] = true;
     }
 
+    /**
+     * @notice Revokes the permissions allowed by `authoriseSwapper`
+     */
     function deauthoriseSwapper(address _swapper) public {
         authorisedSwapper[msg.sender][_swapper] = false;
     }
+
 
     function submitDetails(bytes32 _orderID, bytes _swapDetails) public onlyAuthorisedSwapper(_orderID, msg.sender) {
         swapDetails[_orderID] = _swapDetails;

@@ -491,7 +491,7 @@ async function setup(darknode) {
     const renExTokens = await RenExTokens.new();
     const GWEI = 1000000000;
     const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI);
-    await renExBalances.updateRenExSettlementContract(renExSettlement.address);
+    await renExBalances.setRenExSettlementContract(renExSettlement.address);
 
     await renExTokens.registerToken(ETH, tokenAddresses[ETH].address, 18);
     await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, (await tokenAddresses[BTC].decimals()));

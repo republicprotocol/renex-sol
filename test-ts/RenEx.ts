@@ -188,67 +188,67 @@ contract("RenEx", function (accounts) {
         let sell: any = { tokens, price: 1, volume: 1 /* REN */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /incompatible sell volume/);
 
         buy = { tokens, price: 1, volume: 1 /* DGX */ };
         sell = { tokens, price: 1, volume: 2 /* REN */, minimumVolume: 2 /* REN */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /incompatible buy volume/);
 
         buy = { tokens, price: 1, volume: 1 /* DGX */ };
         sell = { tokens, price: 1.05, volume: 1 /* REN */, minimumVolume: 1 /* DGX */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /incompatible pricepoints/);
 
         buy = { tokens, priceC: 200, priceQ: 38, volume: 1 /* DGX */ };
         sell = { tokens, priceC: 200, priceQ: 39, volume: 1 /* REN */, minimumVolume: 1 /* DGX */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /incompatible pricepoints/);
 
         // Invalid price (c component)
         buy = { tokens, priceC: 2000, priceQ: 38, volume: 1 /* DGX */ };
         sell = { tokens, priceC: 200, priceQ: 39, volume: 1 /* REN */, minimumVolume: 1 /* DGX */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /invalid order price coefficient/);
 
         // Invalid price (q component)
         buy = { tokens, priceC: 200, priceQ: 53, volume: 1 /* DGX */, minimumVolume: 1 };
         sell = { tokens, priceC: 200, priceQ: 39, volume: 1 /* REN */, minimumVolume: 1 /* DGX */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /invalid order price exponent/);
 
         // Invalid volume (c component)
         buy = { tokens, price: 1, volumeC: 50, volumeQ: 12 /* DGX */ };
         sell = { tokens, price: 1, volume: 1 /* REN */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /invalid order volume coefficient/);
 
         // Invalid volume (q component)
         buy = { tokens, price: 1, volumeC: 0, volumeQ: 53 /* DGX */, minimumVolumeC: 0, minimumVolumeQ: 0 };
         sell = { tokens, price: 1, volume: 1 /* REN */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /invalid order volume exponent/);
 
         // Invalid minimum volume (c component)
         buy = { tokens, price: 1, volume: 1, minimumVolumeC: 50, minimumVolumeQ: 12 /* DGX */ };
         sell = { tokens, price: 1, volume: 1 /* REN */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /invalid order minimum volume coefficient/);
 
         // Invalid minimum volume (q component)
         buy = { tokens, price: 1, volume: 1, minimumVolumeC: 5, minimumVolumeQ: 53 /* DGX */ };
         sell = { tokens, price: 1, volume: 1 /* REN */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /invalid order minimum volume exponent/);
 
     });
 });

@@ -32,7 +32,7 @@ contract("RenExBalances", function (accounts) {
         await renExBalances.updateRewardVault(0x0);
         (await renExBalances.rewardVaultContract()).should.equal("0x0000000000000000000000000000000000000000");
         await renExBalances.updateRewardVault(rewardVault.address, { from: accounts[1] })
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /revert/); // not owner
         await renExBalances.updateRewardVault(rewardVault.address);
         (await renExBalances.rewardVaultContract()).should.equal(rewardVault.address);
     })
@@ -119,12 +119,12 @@ contract("RenExBalances", function (accounts) {
 
         // Withdraw more than deposited amount
         await renExBalances.withdraw(TOKEN1.address, deposit1 * 2, { from: accounts[0] })
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /insufficient balance/);
 
         // Token transfer fails
         await TOKEN1.pause();
         await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] })
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /revert/); // ERC20 transfer fails
         await TOKEN1.unpause();
 
         // Withdraw
@@ -132,7 +132,7 @@ contract("RenExBalances", function (accounts) {
 
         // Withdraw again
         await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] })
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /insufficient balance/);
     })
 
     it("can deposit and withdraw multiple times", async () => {
@@ -174,7 +174,7 @@ contract("RenExBalances", function (accounts) {
             REN.address,
             1,
             { from: accounts[1] }
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /not authorised/);
 
         await renExBalances.decrementBalanceWithFee(
             accounts[1],
@@ -183,18 +183,18 @@ contract("RenExBalances", function (accounts) {
             0,
             accounts[1],
             { from: accounts[1] }
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /not authorised/);
     });
 
     it("deposits validates the transfer", async () => {
         // Token
         await TOKEN1.approve(renExBalances.address, 1, { from: accounts[1] });
         await renExBalances.deposit(TOKEN1.address, 2, { from: accounts[1] })
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /revert/); // ERC20 transfer fails
 
         // ETH
         await renExBalances.deposit(ETH.address, 2, { from: accounts[1], value: 1 })
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /mismatched value parameter and tx value/);
     });
 
     it("the RenExSettlement contract can approve and reject withdrawals", async () => {
@@ -207,7 +207,7 @@ contract("RenExBalances", function (accounts) {
 
         // Withdrawal should not go through
         await renExBalances.withdraw(TOKEN1.address, deposit, { from: accounts[0] })
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /withdraw blocked/);
 
         // Can withdraw after reverting settlement contract update
         await renExBalances.setRenExSettlementContract(renExSettlement.address);

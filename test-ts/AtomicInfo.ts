@@ -71,6 +71,18 @@ contract("AtomicInfo", function (accounts: string[]) {
         (await info.swapDetails(orderID)).should.equal(swap);
     });
 
+    it("can deauthorise another address to submit details", async () => {
+        const orderID = await openOrder(orderbook, trader);
+        await info.authoriseSwapper(box, { from: trader });
+        await info.deauthoriseSwapper(box, { from: trader });
+
+        swap = "0x567890";
+        await info.submitDetails(orderID, swap, { from: box })
+            .should.be.rejectedWith(null, /not authorised/);
+
+        chai.assert(await info.swapDetails(orderID) === null, "expected swap details to be null");
+    });
+
     it("non-authorised address can't submit details", async () => {
         const orderID = await openOrder(orderbook, trader);
 
@@ -79,5 +91,13 @@ contract("AtomicInfo", function (accounts: string[]) {
             .should.be.rejectedWith(null, /not authorised/);
         chai.assert(await info.swapDetails(orderID) === null, "expected swap details to be null");
     });
+
+    it("owner can update orderbook address", async () => {
+        await info.updateOrderbook(info.address, { from: attacker })
+            .should.be.rejectedWith(null, /revert/); // not owner
+
+        await info.updateOrderbook(info.address, { from: accounts[0] });
+        await info.updateOrderbook(orderbook.address, { from: accounts[0] });
+    })
 
 });

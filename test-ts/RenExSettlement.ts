@@ -49,7 +49,7 @@ contract("RenExSettlement", function (accounts) {
         await renExSettlement.updateOrderbook(0x0);
         (await renExSettlement.orderbookContract()).should.equal("0x0000000000000000000000000000000000000000");
         await renExSettlement.updateOrderbook(orderbook.address, { from: accounts[1] })
-            .should.be.rejected; // not owner
+            .should.be.rejectedWith(null, /revert/); // not owner
         await renExSettlement.updateOrderbook(orderbook.address);
         (await renExSettlement.orderbookContract()).should.equal(orderbook.address);
     })
@@ -58,7 +58,7 @@ contract("RenExSettlement", function (accounts) {
         await renExSettlement.updateRenExBalances(0x0);
         (await renExSettlement.renExBalancesContract()).should.equal("0x0000000000000000000000000000000000000000");
         await renExSettlement.updateRenExBalances(renExBalances.address, { from: accounts[1] })
-            .should.be.rejected; // not owner
+            .should.be.rejectedWith(null, /revert/); // not owner
         await renExSettlement.updateRenExBalances(renExBalances.address);
         (await renExSettlement.renExBalancesContract()).should.equal(renExBalances.address);
     })
@@ -67,7 +67,7 @@ contract("RenExSettlement", function (accounts) {
         await renExSettlement.updateSubmissionGasPriceLimit(0x0);
         (await renExSettlement.submissionGasPriceLimit()).should.equal("0");
         await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI, { from: accounts[1] })
-            .should.be.rejected; // not owner
+            .should.be.rejectedWith(null, /revert/); // not owner
         await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI);
         (await renExSettlement.submissionGasPriceLimit()).should.equal((100 * GWEI).toString());
     })
@@ -190,12 +190,22 @@ contract("RenExSettlement", function (accounts) {
 
     // it("verifyOrder", async () => {
     //     // await settlementTest.verifyOrder(buyID_1.replace("a", "b"))
-    //     //     .should.be.rejected;
+    //     //     .should.be.rejectedWith(null, /revert/); //
     //     // await settlementTest.verifyOrder(sellID_1.replace("a", "b"))
-    //     //     .should.be.rejected;
+    //     //     .should.be.rejectedWith(null, /revert/); //
     // });
 
     it("submitMatch", async () => {
+        await renExSettlement.submitMatch(
+            randomID(),
+            sellID_1,
+        ).should.be.rejectedWith(null, /invalid buy status/);
+
+        await renExSettlement.submitMatch(
+            buyID_1,
+            randomID(),
+        ).should.be.rejectedWith(null, /invalid sell status/);
+
         // Two buys
         await renExSettlement.submitMatch(
             buyID_1,
@@ -212,19 +222,19 @@ contract("RenExSettlement", function (accounts) {
         await renExSettlement.submitMatch(
             buyID_2,
             sellID_1,
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /invalid order pair/);
 
         // Buy token that is not registered
         await renExSettlement.submitMatch(
             buyID_1,
             sellID_1,
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /unregistered buy token/);
 
         await renExTokens.deregisterToken(ETH);
         await renExSettlement.submitMatch(
             buyID_2,
             sellID_2,
-        ).should.be.rejected;
+        ).should.be.rejectedWith(null, /unregistered sell token/);
         await renExTokens.registerToken(ETH, tokenAddresses[ETH].address, 18);
     });
 
@@ -256,7 +266,9 @@ contract("RenExSettlement", function (accounts) {
 
 
 
-
+const randomID = () => {
+    return web3.utils.sha3(Math.random().toString());
+}
 
 const BTC = 0x0;
 const ETH = 0x1;

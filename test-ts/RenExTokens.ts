@@ -45,14 +45,14 @@ contract("RenExTokens", function (accounts) {
                 tokenInstances[token].address,
                 await tokenInstances[token].decimals(),
                 { from: accounts[1] }
-            ).should.be.rejected;
+            ).should.be.rejectedWith(null, /revert/); // not owner
         }
 
         for (const token of tokens) {
             await renExTokens.deregisterToken(
                 token,
                 { from: accounts[1] }
-            ).should.be.rejected;
+            ).should.be.rejectedWith(null, /revert/); // not owner
         }
     })
 });

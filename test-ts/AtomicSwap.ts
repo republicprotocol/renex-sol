@@ -61,7 +61,7 @@ contract("AtomicSwap", function (accounts) {
             .should.be.rejectedWith(null, /swap opened previously/);
 
         await swap.auditSecret(swapID)
-            .should.be.rejected;
+            .should.be.rejectedWith(null, /revert/);
 
         await swap.refund(swapID, { from: alice })
             .should.be.rejectedWith(null, /swap not expirable/);

@@ -23,7 +23,7 @@ contract AtomicSwap {
     /********** Storage *****************************************************/
     mapping (bytes32 => Swap) private swaps;
     mapping (bytes32 => States) private swapStates;
-    mapping (bytes32 => bytes) public swapDetails;
+    mapping (bytes32 => uint256) public redeemedAt;
 
     /********** Events *****************************************************/
     event Open(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock);
@@ -105,6 +105,7 @@ contract AtomicSwap {
         Swap memory swap = swaps[_swapID];
         swaps[_swapID].secretKey = _secretKey;
         swapStates[_swapID] = States.CLOSED;
+        redeemedAt[_swapID] = now;
 
         // Transfer the ETH funds from this contract to the withdrawing trader.
         swap.withdrawTrader.transfer(swap.value);

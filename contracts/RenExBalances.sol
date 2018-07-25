@@ -45,7 +45,7 @@ contract RenExBalances is Ownable {
     @notice Throws if called by any account other than the RenExSettlement contract
     */
     modifier onlyRenExSettlementContract() {
-        require(msg.sender == address(settlementContract));
+        require(msg.sender == address(settlementContract), "not authorised");
         _;
     }
 
@@ -134,9 +134,9 @@ contract RenExBalances is Ownable {
         address trader = msg.sender;
 
         if (address(_token) == ETHEREUM) {
-            require(msg.value == _value);
+            require(msg.value == _value, "mismatched value parameter and tx value");
         } else {
-            require(_token.transferFrom(trader, this, _value));
+            require(_token.transferFrom(trader, this, _value), "token trasfer failed");
         }
         privateIncrementBalance(trader, _token, _value);
     }
@@ -150,16 +150,16 @@ contract RenExBalances is Ownable {
     function withdraw(ERC20 _token, uint256 _value) public {
         address trader = msg.sender;
 
-        require(traderBalances[trader][_token] >= _value);
+        require(traderBalances[trader][_token] >= _value, "insufficient balance");
 
         // Check if the trader is allowed to withdraw this token
-        require(settlementContract.traderCanWithdraw(trader, _token, _value));
+        require(settlementContract.traderCanWithdraw(trader, _token, _value), "withdraw blocked");
 
         privateDecrementBalance(trader, _token, _value);
         if (address(_token) == ETHEREUM) {
             trader.transfer(_value);
         } else {
-            require(_token.transfer(trader, _value));
+            require(_token.transfer(trader, _value), "token transfer failed");
         }
     }
 

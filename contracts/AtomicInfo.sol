@@ -43,7 +43,7 @@ contract AtomicInfo is Ownable {
      */
     modifier onlyAuthorisedSwapper(bytes32 _orderID, address _swapper) {
         address trader = orderbookContract.orderTrader(_orderID);
-        require(authorisedSwapper[trader][_swapper] == true);
+        require(_swapper == trader || authorisedSwapper[trader][_swapper] == true, "not authorised");
         _;
     }
 
@@ -62,12 +62,17 @@ contract AtomicInfo is Ownable {
         authorisedSwapper[msg.sender][_swapper] = false;
     }
 
-
+    /**
+     * @notice Provides the encoded swap details about an order
+     */
     function submitDetails(bytes32 _orderID, bytes _swapDetails) public onlyAuthorisedSwapper(_orderID, msg.sender) {
         swapDetails[_orderID] = _swapDetails;
         swapDetailsTimestamp[_orderID] = now;
     }
 
+    /**
+     * @notice Provides the address that will participate in the swap for the order
+     */
     function setOwnerAddress(bytes32 _orderID, bytes _owner) public onlyAuthorisedSwapper(_orderID, msg.sender) {
         getOwnerAddress[_orderID] = _owner;
         ownerAddressTimestamp[_orderID] = now;

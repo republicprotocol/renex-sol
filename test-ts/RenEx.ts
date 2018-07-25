@@ -174,7 +174,7 @@ contract("RenEx", function (accounts) {
     });
 
     it("atomic swap", async () => {
-        const tokens = market(DGX, REN);
+        const tokens = market(BTC, ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* REN */ };
 
@@ -250,6 +250,28 @@ contract("RenEx", function (accounts) {
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
             .should.be.rejectedWith(null, /invalid order minimum volume exponent/);
 
+        // Unsupported settlement
+        buy = { settlement: 3, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+        sell = { settlement: 3, tokens, price: 0.95, volume: 1 /* REN */ };
+
+        await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
+            .should.be.rejectedWith(null, /invalid settlement id/);
+    });
+
+    it("atomic fees are paid in ethereum-based token", async () => {
+        let tokens = market(ETH, BTC);
+        let buy = { settlement: 2, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+        let sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* REN */ };
+
+        (await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false))
+            .should.eql([0.975 /* DGX */, 1 /* REN */]);
+
+        tokens = market(BTC, BTC);
+        buy = { settlement: 2, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+        sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* REN */ };
+
+        (await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false))
+            .should.eql([0.975 /* DGX */, 1 /* REN */]);
     });
 });
 
@@ -304,7 +326,6 @@ function getLine(scraped, lineno) {
 
 
 async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, verify = true) {
-
     (sell.parity === undefined || sell.parity !== buy.parity).should.be.true;
     if (buy.parity === 1) {
         const tmp = sell;
@@ -391,31 +412,32 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
     const highDeposit = sell.volume * (10 ** highDecimals);
     const lowDeposit = buy.volume * (10 ** lowDecimals);
 
-    if (lowToken !== ETH) {
+    if (lowToken !== ETH && lowToken !== BTC) {
         await lowTokenInstance.transfer(buyer, lowDeposit);
         await lowTokenInstance.approve(renExBalances.address, lowDeposit, { from: buyer });
         await renExBalances.deposit(lowTokenInstance.address, lowDeposit, { from: buyer });
     } else {
-        await renExBalances.deposit(lowTokenInstance.address, lowDeposit, { from: buyer, value: lowDeposit });
+        const deposit = lowToken === BTC ? highDeposit : lowDeposit;
+        await renExBalances.deposit(tokenAddresses[ETH].address, deposit, { from: buyer, value: deposit });
     }
 
-    if (highToken !== ETH) {
+    if (highToken !== ETH && highToken !== BTC) {
         await highTokenInstance.transfer(seller, highDeposit);
         await highTokenInstance.approve(renExBalances.address, highDeposit, { from: seller });
         await renExBalances.deposit(highTokenInstance.address, highDeposit, { from: seller });
     } else {
-        await renExBalances.deposit(highTokenInstance.address, highDeposit, { from: seller, value: highDeposit });
+        const deposit = highToken === BTC ? lowDeposit : highDeposit;
+        await renExBalances.deposit(tokenAddresses[ETH].address, deposit, { from: seller, value: deposit });
     }
 
+    await orderbook.openBuyOrder(buy.signature, buy.orderID, { from: buyer }).should.not.be.rejected;
 
-    await orderbook.openBuyOrder(buy.signature, buy.orderID, { from: buyer });
-
-    await orderbook.openSellOrder(sellSignature, sell.orderID, { from: seller });
+    await orderbook.openSellOrder(sellSignature, sell.orderID, { from: seller }).should.not.be.rejected;
 
     (await orderbook.orderTrader(buy.orderID)).should.equal(buyer);
     (await orderbook.orderTrader(sell.orderID)).should.equal(seller);
 
-    await orderbook.confirmOrder(buy.orderID, [sell.orderID], { from: darknode });
+    await orderbook.confirmOrder(buy.orderID, [sell.orderID], { from: darknode }).should.not.be.rejected;
 
     await renExSettlement.submitOrder(buy.settlement, buy.type, buy.parity, buy.expiry, buy.tokens, buy.priceC, buy.priceQ, buy.volumeC, buy.volumeQ, buy.minimumVolumeC, buy.minimumVolumeQ, buy.nonceHash);
     await renExSettlement.submitOrder(sell.settlement, sell.type, sell.parity, sell.expiry, sell.tokens, sell.priceC, sell.priceQ, sell.volumeC, sell.volumeQ, sell.minimumVolumeC, sell.minimumVolumeQ, sell.nonceHash);
@@ -473,7 +495,7 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
 
 async function setup(darknode) {
     const tokenAddresses = {
-        [BTC]: await BitcoinMock.new(),
+        [BTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
         [ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
         [DGX]: await DGXMock.new(),
         [REN]: await RepublicToken.new(),
@@ -493,8 +515,8 @@ async function setup(darknode) {
     const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI);
     await renExBalances.setRenExSettlementContract(renExSettlement.address);
 
+    await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, 8);
     await renExTokens.registerToken(ETH, tokenAddresses[ETH].address, 18);
-    await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, (await tokenAddresses[BTC].decimals()));
     await renExTokens.registerToken(DGX, tokenAddresses[DGX].address, (await tokenAddresses[DGX].decimals()));
     await renExTokens.registerToken(REN, tokenAddresses[REN].address, (await tokenAddresses[REN].decimals()));
 

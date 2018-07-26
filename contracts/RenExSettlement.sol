@@ -60,6 +60,8 @@ contract RenExSettlement is Ownable {
     mapping(bytes32 => address) public orderSubmitter;
     // Match storage
     mapping(bytes32 => MatchDetails) public matchDetails;
+    // Slasher storage
+    mapping(bytes32 => bool) public slashedMatches;
 
 
     /**
@@ -231,6 +233,34 @@ contract RenExSettlement is Ownable {
 
         orderStatus[_buyID] = OrderStatus.Matched;
         orderStatus[_sellID] = OrderStatus.Matched;
+    }
+
+    function slash(
+        bytes32 _guiltyOrderID, bytes32 _innocentOrderID
+    ) public onlyOwner {
+        // bytes32 innocentOrderID = orderbookContract.orderMatch(_guiltyOrderID)[0];
+        bytes32 innocentOrderID = _innocentOrderID;
+        bytes32 matchID;
+        if (orderDetails[_guiltyOrderID].parity == uint8(OrderParity.Buy)) {
+            matchID = keccak256(abi.encodePacked(_guiltyOrderID, innocentOrderID));
+        } else {
+            matchID = keccak256(abi.encodePacked(innocentOrderID, _guiltyOrderID));
+        }
+        require(slashedMatches[matchID] == false, "match already slashed");
+        uint256 fee;
+        address tokenAddress;
+        if (isEthereumBased(matchDetails[matchID].highTokenAddress)) {
+            tokenAddress = matchDetails[matchID].highTokenAddress;
+            (,fee) = subtractDarknodeFee(matchDetails[matchID].highTokenVolume);
+        } else if (isEthereumBased(matchDetails[matchID].lowTokenAddress)) {
+            tokenAddress = matchDetails[matchID].lowTokenAddress;
+            (,fee) = subtractDarknodeFee(matchDetails[matchID].lowTokenVolume);
+        } else {
+            revert("non-eth tokens");
+        }
+        slashedMatches[matchID] = true;
+        renExBalancesContract.decrementBalanceWithFee(orderTrader[_guiltyOrderID], tokenAddress, fee, fee, msg.sender);
+        renExBalancesContract.incrementBalance(orderTrader[innocentOrderID], tokenAddress, fee);
     }
 
     function payFees(

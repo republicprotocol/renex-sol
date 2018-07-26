@@ -18,7 +18,7 @@ import * as chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 chai.should();
 
-contract.only("Slasher", function (accounts) {
+contract("Slasher", function (accounts) {
 
     const slasher = accounts[0];
     const buyer = accounts[1];

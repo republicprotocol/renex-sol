@@ -86,6 +86,25 @@ contract.only("Slasher", function (accounts) {
         guiltyBalanceDiff.should.eql(-fees * 2);
     });
 
+
+    it("should only slash bonds once", async () => {
+        const tokens = market(BTC, ETH);
+        const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
+        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
+
+        let [, , buyOrderID, sellOrderID] = await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false);
+        let guiltyOrderID = buyOrderID;
+        let innocentOrderID = sellOrderID;
+
+        // Slash the fees
+        await renExSettlement.slash(guiltyOrderID, { from: slasher });
+
+        await renExSettlement.slash(guiltyOrderID, { from: slasher })
+            .should.be.rejectedWith(null, /match already slashed/); // already slashed
+
+        await renExSettlement.slash(innocentOrderID, { from: slasher })
+            .should.be.rejectedWith(null, /match already slashed/); // already slashed
+    });
 });
 
 

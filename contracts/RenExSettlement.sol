@@ -235,6 +235,14 @@ contract RenExSettlement is Ownable {
         orderStatus[_sellID] = OrderStatus.Matched;
     }
 
+    /**
+      * @notice Slashes the bond of a guilty trader. This is called when an atomic
+      * swap is not executed successfully. The bond of the trader who caused the
+      * swap to fail has their bond taken from them and split between the innocent
+      * trader and the watchdog.
+      *
+      * @param _guiltyOrderID the 32 byte ID of the order of the guilty trader
+      */
     function slash(
         bytes32 _guiltyOrderID
     ) public onlyOwner {

@@ -236,10 +236,9 @@ contract RenExSettlement is Ownable {
     }
 
     function slash(
-        bytes32 _guiltyOrderID, bytes32 _innocentOrderID
+        bytes32 _guiltyOrderID
     ) public onlyOwner {
-        // bytes32 innocentOrderID = orderbookContract.orderMatch(_guiltyOrderID)[0];
-        bytes32 innocentOrderID = _innocentOrderID;
+        bytes32 innocentOrderID = orderbookContract.orderMatch(_guiltyOrderID)[0];
         bytes32 matchID;
         if (orderDetails[_guiltyOrderID].parity == uint8(OrderParity.Buy)) {
             matchID = keccak256(abi.encodePacked(_guiltyOrderID, innocentOrderID));

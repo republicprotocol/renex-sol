@@ -26,18 +26,17 @@ contract.only("Slasher", function (accounts) {
     const darknode = accounts[3];
 
     let tokenAddresses, orderbook, renExSettlement, renExBalances, rewardVault;
-    let eth_address, eth_decimals
+    let eth_address, eth_decimals;
 
 
     before(async function () {
         [tokenAddresses, orderbook, renExSettlement, renExBalances, rewardVault] = await setup(darknode);
         eth_address = tokenAddresses[ETH].address
         eth_decimals = new BigNumber(10).pow(tokenAddresses[ETH].decimals())
-        console.log('eth.decimals', eth_decimals)
     });
 
 
-    it("atomic swap", async () => {
+    it("should correctly relocate fees", async () => {
         const tokens = market(BTC, ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
@@ -46,16 +45,10 @@ contract.only("Slasher", function (accounts) {
         btcAmount.should.eql(0.975 /* BTC */);
         ethAmount.should.eql(1 /* ETH */);
 
-        // let ordersCount = await orderbook.getOrdersCount();
-        // let orderInfo = await orderbook.getOrders(ordersCount - 2, 2);
-        // let [guiltyOrderID, innocentOrderID] = orderInfo[0];
-        // let [guiltyAddress, innocentAddress] = orderInfo[1];
-        let guiltyOrderID = buyOrderID
-        let guiltyAddress = buyer
-        let innocentOrderID = sellOrderID
-        let innocentAddress = seller
-        console.log(guiltyOrderID);
-        console.log(innocentOrderID);
+        let guiltyOrderID = buyOrderID;
+        let guiltyAddress = buyer;
+        let innocentOrderID = sellOrderID;
+        let innocentAddress = seller;
         (await orderbook.orderMatch(guiltyOrderID))[0].should.eql(innocentOrderID);
         (await orderbook.orderMatch(innocentOrderID))[0].should.eql(guiltyOrderID);
 
@@ -63,9 +56,6 @@ contract.only("Slasher", function (accounts) {
         let feeDen = await renExSettlement.DARKNODE_FEES_DENOMINATOR();
         let weiAmount = eth_decimals.times(ethAmount);
         let fees = weiAmount / feeDen * feeNum
-        console.log("eth amount: ", ethAmount);
-        console.log("wei amount: ", weiAmount.toFixed(0));
-        console.log("fees are: ", fees);
 
         // Store the original balances
         let beforeSlasherBalance = await rewardVault.darknodeBalances(slasher, eth_address);
@@ -74,13 +64,8 @@ contract.only("Slasher", function (accounts) {
         let beforeGuiltyBalance = beforeGuiltyBalances[beforeGuiltyTokens.indexOf(eth_address)];
         let beforeInnocentBalance = beforeInnocentBalances[beforeInnocentTokens.indexOf(eth_address)];
 
-        console.log('before slasher balance:  ', beforeSlasherBalance);
-        console.log('before guilty balance:   ', beforeGuiltyBalance);
-        console.log('before innocent balance: ', beforeInnocentBalance);
-
         // Slash the fees
-        await renExSettlement.slash(guiltyOrderID, innocentOrderID, { from: slasher })
-        console.log('slashed');
+        await renExSettlement.slash(guiltyOrderID, { from: slasher });
 
         // Check the new balances
         let afterSlasherBalance = await rewardVault.darknodeBalances(slasher, eth_address);
@@ -93,12 +78,12 @@ contract.only("Slasher", function (accounts) {
         let slasherBalanceDiff = afterSlasherBalance - beforeSlasherBalance;
         let innocentBalanceDiff = afterInnocentBalance - beforeInnocentBalance;
         let guiltyBalanceDiff = afterGuiltyBalance - beforeGuiltyBalance;
-        console.log('we expect the slasher to have +0.002% fees')
-        slasherBalanceDiff.should.eql(fees)
-        console.log('we expect the innocent trader to have +0.002% fees')
-        innocentBalanceDiff.should.eql(fees)
-        console.log('we expect the guilty trader to have -0.004% fees')
-        guiltyBalanceDiff.should.eql(-fees * 2)
+        // We expect the slasher to have +0.002% fees
+        slasherBalanceDiff.should.eql(fees);
+        // We expect the innocent trader to have +0.002% fees
+        innocentBalanceDiff.should.eql(fees);
+        // We expect the guilty trader to have -0.004% fees
+        guiltyBalanceDiff.should.eql(-fees * 2);
     });
 
 });

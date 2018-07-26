@@ -86,8 +86,7 @@ contract("Slasher", function (accounts) {
         guiltyBalanceDiff.should.eql(-fees * 2);
     });
 
-
-    it("should only slash bonds once", async () => {
+    it("should not slash bonds more than once", async () => {
         const tokens = market(BTC, ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
@@ -104,6 +103,32 @@ contract("Slasher", function (accounts) {
 
         await renExSettlement.slash(innocentOrderID, { from: slasher })
             .should.be.rejectedWith(null, /match already slashed/); // already slashed
+    });
+
+    it("should handle orders if ETH is the low token", async () => {
+        const tokens = market(ETH, BTC);
+        const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
+        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
+
+        let [, , buyOrderID,] = await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false);
+        let guiltyOrderID = buyOrderID;
+
+        // Slash the fees
+        await renExSettlement.slash(guiltyOrderID, { from: slasher })
+            .should.not.be.rejected;
+    });
+
+    it("should not slash non-ETH atomic swaps", async () => {
+        const tokens = market(BTC, BTC);
+        const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
+        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
+
+        let [, , buyOrderID,] = await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false);
+        let guiltyOrderID = buyOrderID;
+
+        // Slash the fees
+        await renExSettlement.slash(guiltyOrderID, { from: slasher })
+            .should.be.rejectedWith(null, /non-eth tokens/);
     });
 
     it("should not slash non-atomic swap orders", async () => {

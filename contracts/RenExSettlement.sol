@@ -246,6 +246,8 @@ contract RenExSettlement is Ownable {
     function slash(
         bytes32 _guiltyOrderID
     ) public onlyOwner {
+        require(orderDetails[_guiltyOrderID].settlementID == RENEX_ATOMIC_SETTLEMENT_ID, "slashing non-atomic trade");
+
         bytes32 innocentOrderID = orderbookContract.orderMatch(_guiltyOrderID)[0];
         bytes32 matchID;
         if (orderDetails[_guiltyOrderID].parity == uint8(OrderParity.Buy)) {

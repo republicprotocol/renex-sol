@@ -105,6 +105,20 @@ contract("Slasher", function (accounts) {
         await renExSettlement.slash(innocentOrderID, { from: slasher })
             .should.be.rejectedWith(null, /match already slashed/); // already slashed
     });
+
+    it("should not slash non-atomic swap orders", async () => {
+        const tokens = market(ETH, REN);
+        // Highest possible price, lowest possible volume
+        const buy = { tokens, priceC: 1999, priceQ: 52, volumeC: 1, volumeQ: 13 /* ETH */, minimumVolumeC: 0, minimumVolumeQ: 0 };
+        const sell = { tokens, priceC: 1999, priceQ: 52, volume: 1 /* REN */, minimumVolumeC: 0, minimumVolumeQ: 0 };
+
+        let [ethAmount, renAmount, guiltyOrderID,] = await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook);
+        ethAmount.should.eql(2 /* ETH */);
+        renAmount.should.eql(2.001e-15 /* REN */);
+
+        await renExSettlement.slash(guiltyOrderID, { from: slasher })
+            .should.be.rejectedWith(null, /slashing non-atomic trade/);
+    });
 });
 
 

@@ -18,6 +18,8 @@ order values
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
+    address public slasherAddress;
+
     /**
       * @notice Fees are in RenEx are 0.2% and to represent this in integers it
       * is broken into a numerator and denominator.
@@ -75,12 +77,14 @@ contract RenExSettlement is Ownable {
         Orderbook _orderbookContract,
         RenExTokens _renExTokensContract,
         RenExBalances _renExBalancesContract,
-        uint256 _submissionGasPriceLimit
+        uint256 _submissionGasPriceLimit,
+        address _newSlasherAddress
     ) public {
         orderbookContract = _orderbookContract;
         renExTokensContract = _renExTokensContract;
         renExBalancesContract = _renExBalancesContract;
         submissionGasPriceLimit = _submissionGasPriceLimit;
+        slasherAddress = _newSlasherAddress;
     }
 
     /********** UPDATER FUNCTIONS *********************************************/
@@ -104,6 +108,11 @@ contract RenExSettlement is Ownable {
 
     modifier withGasPriceLimit(uint256 gasPriceLimit) {
         require(tx.gasprice <= gasPriceLimit, "gas price too high");
+        _;
+    }
+
+    modifier onlySlasher() {
+        require(msg.sender == slasherAddress, "unauthorised");
         _;
     }
 
@@ -244,7 +253,7 @@ contract RenExSettlement is Ownable {
       */
     function slash(
         bytes32 _guiltyOrderID
-    ) public onlyOwner {
+    ) public onlySlasher {
         require(orderDetails[_guiltyOrderID].settlementID == RENEX_ATOMIC_SETTLEMENT_ID, "slashing non-atomic trade");
 
         bytes32 innocentOrderID = orderbookContract.orderMatch(_guiltyOrderID)[0];

@@ -30,7 +30,7 @@ contract("Slasher", function (accounts) {
 
 
     before(async function () {
-        [tokenAddresses, orderbook, renExSettlement, renExBalances, rewardVault] = await setup(darknode);
+        [tokenAddresses, orderbook, renExSettlement, renExBalances, rewardVault] = await setup(darknode, slasher);
         eth_address = tokenAddresses[ETH].address
         eth_decimals = new BigNumber(10).pow(tokenAddresses[ETH].decimals())
     });
@@ -341,7 +341,7 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
     ];
 }
 
-async function setup(darknode) {
+async function setup(darknode, slasherAddress) {
     const tokenAddresses = {
         [BTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
         [ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
@@ -360,7 +360,7 @@ async function setup(darknode) {
     const renExBalances = await RenExBalances.new(rewardVault.address);
     const renExTokens = await RenExTokens.new();
     const GWEI = 1000000000;
-    const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI);
+    const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI, slasherAddress);
     await renExBalances.setRenExSettlementContract(renExSettlement.address);
 
     await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, 8);

@@ -160,7 +160,7 @@ contract("Slasher", function (accounts) {
         await renExSettlement.slash(innocentOrderID, { from: guiltyTrader })
             .should.be.rejectedWith(null, /unauthorised/);
 
-        // The guilty trader might try to dog the innocent trader
+        // The innocent trader might try to dog the guilty trader
         await renExSettlement.slash(guiltyOrderID, { from: innocentTrader })
             .should.be.rejectedWith(null, /unauthorised/);
     });

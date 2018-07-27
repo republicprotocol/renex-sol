@@ -126,7 +126,7 @@ let migration = async function (deployer, network) {
         .then(async () => {
             const renExBalances = RenExBalances.at(RenExBalances.address);
             await renExBalances.updateRewardVault(RewardVault.address);
-            await renExBalances.setRenExSettlementContract(RenExSettlement.address);
+            await renExBalances.updateRenExSettlementContract(RenExSettlement.address);
         })
 
         .then(() => deployer.deploy(

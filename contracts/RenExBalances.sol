@@ -32,7 +32,7 @@ contract RenExBalances is Ownable {
     mapping(address => mapping(address => bool)) private activeTraderToken;
 
     /**
-    @notice After deployment, setRenExSettlementContract should be called
+    @notice After deployment, updateRenExSettlementContract should be called
     */
     constructor(RewardVault _rewardVaultContract) public {
         rewardVaultContract = _rewardVaultContract;
@@ -57,7 +57,7 @@ contract RenExBalances is Ownable {
     by the owner of the contract)
     @param _newSettlementContract the address of the new settlement contract
     */
-    function setRenExSettlementContract(RenExSettlement _newSettlementContract) public onlyOwner {
+    function updateRenExSettlementContract(RenExSettlement _newSettlementContract) public onlyOwner {
         emit RenExSettlementContractUpdated(_newSettlementContract);
         settlementContract = _newSettlementContract;
     }

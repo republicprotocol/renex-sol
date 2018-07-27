@@ -239,7 +239,7 @@ contract("RenExSettlement", function (accounts) {
     });
 
     it("should fail for excessive gas price", async () => {
-        const _renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 0);
+        const _renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 0, 0x0);
         await _renExSettlement.submitOrder(
             "0x0000000000000000000000000000000000000000000000000000000000000001",
             "0x0000000000000000000000000000000000000000000000000000000000000001",
@@ -293,7 +293,7 @@ async function setup(darknode, broker) {
     const rewardVault = await RewardVault.new(dnr.address);
     const renExBalances = await RenExBalances.new(rewardVault.address);
     const renExTokens = await RenExTokens.new();
-    const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI);
+    const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI, 0x0);
     await renExBalances.setRenExSettlementContract(renExSettlement.address);
 
     await renExTokens.registerToken(ETH, tokenAddresses[ETH].address, 18);

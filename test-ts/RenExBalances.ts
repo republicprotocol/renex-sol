@@ -24,7 +24,7 @@ contract("RenExBalances", function (accounts) {
         rewardVault = await RewardVault.new(0x0);
         renExBalances = await RenExBalances.new(rewardVault.address);
         const GWEI = 1000000000;
-        renExSettlement = await RenExSettlement.new(0x0, 0x0, renExBalances.address, 100 * GWEI);
+        renExSettlement = await RenExSettlement.new(0x0, 0x0, renExBalances.address, 100 * GWEI, 0x0);
         await renExBalances.setRenExSettlementContract(renExSettlement.address);
     });
 

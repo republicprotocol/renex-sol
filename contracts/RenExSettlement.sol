@@ -276,7 +276,7 @@ contract RenExSettlement is Ownable {
             revert("non-eth tokens");
         }
         slashedMatches[matchID] = true;
-        renExBalancesContract.decrementBalanceWithFee(orderTrader[_guiltyOrderID], tokenAddress, fee, fee, msg.sender);
+        renExBalancesContract.decrementBalanceWithFee(orderTrader[_guiltyOrderID], tokenAddress, fee, fee, slasherAddress);
         renExBalancesContract.incrementBalance(orderTrader[innocentOrderID], tokenAddress, fee);
     }
 

@@ -78,11 +78,11 @@ contract("Slasher", function (accounts) {
         let slasherBalanceDiff = afterSlasherBalance - beforeSlasherBalance;
         let innocentBalanceDiff = afterInnocentBalance - beforeInnocentBalance;
         let guiltyBalanceDiff = afterGuiltyBalance - beforeGuiltyBalance;
-        // We expect the slasher to have +0.002% fees
+        // We expect the slasher to have gained fees
         slasherBalanceDiff.should.eql(fees);
-        // We expect the innocent trader to have +0.002% fees
+        // We expect the innocent trader to have gained fees
         innocentBalanceDiff.should.eql(fees);
-        // We expect the guilty trader to have -0.004% fees
+        // We expect the guilty trader to have lost fees twice
         guiltyBalanceDiff.should.eql(-fees * 2);
     });
 

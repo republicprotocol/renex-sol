@@ -78,13 +78,13 @@ contract RenExSettlement is Ownable {
         RenExTokens _renExTokensContract,
         RenExBalances _renExBalancesContract,
         uint256 _submissionGasPriceLimit,
-        address _newSlasherAddress
+        address _slasherAddress
     ) public {
         orderbookContract = _orderbookContract;
         renExTokensContract = _renExTokensContract;
         renExBalancesContract = _renExBalancesContract;
         submissionGasPriceLimit = _submissionGasPriceLimit;
-        slasherAddress = _newSlasherAddress;
+        slasherAddress = _slasherAddress;
     }
 
     /********** UPDATER FUNCTIONS *********************************************/

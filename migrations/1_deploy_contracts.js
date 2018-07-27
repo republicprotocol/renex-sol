@@ -55,8 +55,9 @@ let migration = async function (deployer, network) {
     RewardVault.address = `0x7214c4584ab01e61355244e2325ab3f40aca4d85`;
     RenExTokens.address = `0x3672b60236b76d30b64455515efa38e06f64e3df`;
     RenExBalances.address = `0xc2c126e1eb32e6ad50c611fb92d009b4b4518b00`;
-    RenExSettlement.address = `0xaa14f741b8dc7fc9166807144d881b016f0ee92f`;
+    RenExSettlement.address = `0x65712325c41fb39b9205e08483b43142d919cc42`;
 
+    const SlasherAddress = `0x565839E16bAC459884b0F0D7377Ac04e04Be150d`;
 
     // REN
     await deployer
@@ -120,6 +121,7 @@ let migration = async function (deployer, network) {
                 RenExTokens.address,
                 RenExBalances.address,
                 100 * GWEI,
+                SlasherAddress,
             );
         })
 

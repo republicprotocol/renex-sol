@@ -18,6 +18,8 @@ order values
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
+    address public slasherAddress;
+
     /**
       * @notice Fees are in RenEx are 0.2% and to represent this in integers it
       * is broken into a numerator and denominator.
@@ -48,10 +50,9 @@ contract RenExSettlement is Ownable {
     }
 
     // Events
-    event Transfer(address from, address to, uint32 token, uint256 value);
-    event OrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
-    event RenExBalancesUpdated(RenExBalances previousRenExBalances, RenExBalances nextRenExBalances);
-    event SubmissionGasPriceLimitUpdated(uint256 previousSubmissionGasPriceLimit, uint256 nextSubmissionGasPriceLimit);
+    // event OrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
+    // event RenExBalancesUpdated(RenExBalances previousRenExBalances, RenExBalances nextRenExBalances);
+    // event SubmissionGasPriceLimitUpdated(uint256 previousSubmissionGasPriceLimit, uint256 nextSubmissionGasPriceLimit);
 
     // Order Storage
     mapping(bytes32 => SettlementUtils.OrderDetails) public orderDetails;
@@ -60,6 +61,8 @@ contract RenExSettlement is Ownable {
     mapping(bytes32 => address) public orderSubmitter;
     // Match storage
     mapping(bytes32 => MatchDetails) public matchDetails;
+    // Slasher storage
+    mapping(bytes32 => bool) public slashedMatches;
 
 
     /**
@@ -74,28 +77,30 @@ contract RenExSettlement is Ownable {
         Orderbook _orderbookContract,
         RenExTokens _renExTokensContract,
         RenExBalances _renExBalancesContract,
-        uint256 _submissionGasPriceLimit
+        uint256 _submissionGasPriceLimit,
+        address _slasherAddress
     ) public {
         orderbookContract = _orderbookContract;
         renExTokensContract = _renExTokensContract;
         renExBalancesContract = _renExBalancesContract;
         submissionGasPriceLimit = _submissionGasPriceLimit;
+        slasherAddress = _slasherAddress;
     }
 
     /********** UPDATER FUNCTIONS *********************************************/
 
     function updateOrderbook(Orderbook _newOrderbookContract) public onlyOwner {
-        emit OrderbookUpdated(orderbookContract, _newOrderbookContract);
+        // emit OrderbookUpdated(orderbookContract, _newOrderbookContract);
         orderbookContract = _newOrderbookContract;
     }
 
     function updateRenExBalances(RenExBalances _newRenExBalancesContract) public onlyOwner {
-        emit RenExBalancesUpdated(renExBalancesContract, _newRenExBalancesContract);
+        // emit RenExBalancesUpdated(renExBalancesContract, _newRenExBalancesContract);
         renExBalancesContract = _newRenExBalancesContract;
     }
 
     function updateSubmissionGasPriceLimit(uint256 _newSubmissionGasPriceLimit) public onlyOwner {
-        emit SubmissionGasPriceLimitUpdated(submissionGasPriceLimit, _newSubmissionGasPriceLimit);
+        // emit SubmissionGasPriceLimitUpdated(submissionGasPriceLimit, _newSubmissionGasPriceLimit);
         submissionGasPriceLimit = _newSubmissionGasPriceLimit;
     }
 
@@ -103,6 +108,11 @@ contract RenExSettlement is Ownable {
 
     modifier withGasPriceLimit(uint256 gasPriceLimit) {
         require(tx.gasprice <= gasPriceLimit, "gas price too high");
+        _;
+    }
+
+    modifier onlySlasher() {
+        require(msg.sender == slasherAddress, "unauthorised");
         _;
     }
 
@@ -231,6 +241,43 @@ contract RenExSettlement is Ownable {
 
         orderStatus[_buyID] = OrderStatus.Matched;
         orderStatus[_sellID] = OrderStatus.Matched;
+    }
+
+    /**
+      * @notice Slashes the bond of a guilty trader. This is called when an atomic
+      * swap is not executed successfully. The bond of the trader who caused the
+      * swap to fail has their bond taken from them and split between the innocent
+      * trader and the watchdog.
+      *
+      * @param _guiltyOrderID the 32 byte ID of the order of the guilty trader
+      */
+    function slash(
+        bytes32 _guiltyOrderID
+    ) public onlySlasher {
+        require(orderDetails[_guiltyOrderID].settlementID == RENEX_ATOMIC_SETTLEMENT_ID, "slashing non-atomic trade");
+
+        bytes32 innocentOrderID = orderbookContract.orderMatch(_guiltyOrderID)[0];
+        bytes32 matchID;
+        if (orderDetails[_guiltyOrderID].parity == uint8(OrderParity.Buy)) {
+            matchID = keccak256(abi.encodePacked(_guiltyOrderID, innocentOrderID));
+        } else {
+            matchID = keccak256(abi.encodePacked(innocentOrderID, _guiltyOrderID));
+        }
+        require(slashedMatches[matchID] == false, "match already slashed");
+        uint256 fee;
+        address tokenAddress;
+        if (isEthereumBased(matchDetails[matchID].highTokenAddress)) {
+            tokenAddress = matchDetails[matchID].highTokenAddress;
+            (,fee) = subtractDarknodeFee(matchDetails[matchID].highTokenVolume);
+        } else if (isEthereumBased(matchDetails[matchID].lowTokenAddress)) {
+            tokenAddress = matchDetails[matchID].lowTokenAddress;
+            (,fee) = subtractDarknodeFee(matchDetails[matchID].lowTokenVolume);
+        } else {
+            revert("non-eth tokens");
+        }
+        slashedMatches[matchID] = true;
+        renExBalancesContract.decrementBalanceWithFee(orderTrader[_guiltyOrderID], tokenAddress, fee, fee, slasherAddress);
+        renExBalancesContract.incrementBalance(orderTrader[innocentOrderID], tokenAddress, fee);
     }
 
     function payFees(

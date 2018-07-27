@@ -7,7 +7,7 @@ const KOVAN = (MNEMONIC) => ({
         return new HDWalletProvider(MNEMONIC, `https://kovan.infura.io/${process.env.INFURA_TOKEN}`);
     },
     network_id: 42,
-    gas: 6000000,
+    gas: 6721975,
     gasPrice: 10000000000,
 });
 

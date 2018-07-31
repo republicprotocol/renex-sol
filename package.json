@@ -34,18 +34,18 @@
         "coveralls": "^3.0.1",
         "crypto-js": "^3.1.9-1",
         "dotenv": "^6.0.0",
-        "eslint": "^4.19.1",
+        "eth-gas-reporter": "^0.1.10",
         "ganache-cli": "^6.1.6",
         "js-sha256": "^0.9.0",
         "sol-merger": "^0.1.2",
         "solc": "^0.4.24",
         "solc-js": "^0.4.20-browser.1",
         "solidity-coverage": "^0.5.5",
-        "truffle": "^5.0.0-next.4",
+        "truffle": "^5.0.0-next.6",
         "truffle-hdwallet-provider": "0.0.5",
         "tslint": "^5.11.0",
         "tslint-react": "^3.6.0",
         "typescript": "^2.9.2",
-        "web3": "^1.0.0-beta.33"
+        "web3": "^1.0.0-beta.35"
     }
 }

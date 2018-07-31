@@ -10,7 +10,7 @@ import BigNumber from "bignumber.js";
 chai.use(chaiAsPromised);
 chai.should();
 
-contract("RenExBalances", function (accounts) {
+contract("RenExBalances", function (accounts: string[]) {
 
     let renExBalances, renExSettlement, rewardVault;
     let ETH, REN, TOKEN1, TOKEN2;
@@ -35,7 +35,7 @@ contract("RenExBalances", function (accounts) {
             .should.be.rejectedWith(null, /revert/); // not owner
         await renExBalances.updateRewardVault(rewardVault.address);
         (await renExBalances.rewardVaultContract()).should.equal(rewardVault.address);
-    })
+    });
 
     it("can hold tokens for a trader", async () => {
         const deposit1 = 100;
@@ -55,21 +55,21 @@ contract("RenExBalances", function (accounts) {
         const { 0: tokens, 1: balances } = await renExBalances.getBalances.call(accounts[0]);
         tokens[0].should.equal(TOKEN1.address);
         tokens[1].should.equal(TOKEN2.address);
-        balances[0].should.equal(deposit1.toFixed());
-        balances[1].should.equal(deposit2.toFixed());
+        balances[0].toString().should.equal(deposit1.toFixed());
+        balances[1].toString().should.equal(deposit2.toFixed());
 
         // Check that the correct amount of tokens has been withdrawn
-        (await TOKEN1.balanceOf(accounts[0])).should.equal(previous1.minus(deposit1).toFixed());
-        (await TOKEN2.balanceOf(accounts[0])).should.equal(previous2.minus(deposit2).toFixed());
+        (await TOKEN1.balanceOf(accounts[0])).toString().should.equal(previous1.minus(deposit1).toFixed());
+        (await TOKEN2.balanceOf(accounts[0])).toString().should.equal(previous2.minus(deposit2).toFixed());
 
         // Withdraw
         await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] });
         await renExBalances.withdraw(TOKEN2.address, deposit2, { from: accounts[0] });
 
         // Check that the tokens have been returned
-        (await TOKEN1.balanceOf(accounts[0])).should.equal(previous1.toFixed());
-        (await TOKEN2.balanceOf(accounts[0])).should.equal(previous2.toFixed());
-    })
+        (await TOKEN1.balanceOf(accounts[0])).toString().should.equal(previous1.toFixed());
+        (await TOKEN2.balanceOf(accounts[0])).toString().should.equal(previous2.toFixed());
+    });
 
     it("can hold tokens for multiple traders", async () => {
         const deposit1 = 100;
@@ -91,24 +91,24 @@ contract("RenExBalances", function (accounts) {
         // Check that balance in renExBalances is updated
         const { 0: tokens1, 1: balances1 } = await renExBalances.getBalances(accounts[0]);
         tokens1[0].should.equal(TOKEN1.address);
-        balances1[0].should.equal(deposit1.toFixed());
+        balances1[0].toString().should.equal(deposit1.toFixed());
 
         const { 0: tokens2, 1: balances2 } = await renExBalances.getBalances(accounts[1]);
         tokens2[0].should.equal(TOKEN1.address);
-        balances2[0].should.equal(deposit2.toFixed());
+        balances2[0].toString().should.equal(deposit2.toFixed());
 
         // Check that the correct amount of tokens has been withdrawn
-        (await TOKEN1.balanceOf(accounts[0])).should.equal(previous1.minus(deposit1).toFixed());
-        (await TOKEN1.balanceOf(accounts[1])).should.equal(previous2.minus(deposit2).toFixed());
+        (await TOKEN1.balanceOf(accounts[0])).toString().should.equal(previous1.minus(deposit1).toFixed());
+        (await TOKEN1.balanceOf(accounts[1])).toString().should.equal(previous2.minus(deposit2).toFixed());
 
         // Withdraw
         await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] });
         await renExBalances.withdraw(TOKEN1.address, deposit2, { from: accounts[1] });
 
         // Check that the tokens have been returned
-        (await TOKEN1.balanceOf(accounts[0])).should.equal(previous1.toFixed());
-        (await TOKEN1.balanceOf(accounts[1])).should.equal(previous2.toFixed());
-    })
+        (await TOKEN1.balanceOf(accounts[0])).toString().should.equal(previous1.toFixed());
+        (await TOKEN1.balanceOf(accounts[1])).toString().should.equal(previous2.toFixed());
+    });
 
     it("throws for invalid withdrawal", async () => {
         const deposit1 = 100;
@@ -133,7 +133,7 @@ contract("RenExBalances", function (accounts) {
         // Withdraw again
         await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] })
             .should.be.rejectedWith(null, /insufficient balance/);
-    })
+    });
 
     it("can deposit and withdraw multiple times", async () => {
         const deposit1 = 100;
@@ -147,7 +147,7 @@ contract("RenExBalances", function (accounts) {
         // Withdraw
         await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] });
         await renExBalances.withdraw(TOKEN1.address, deposit2, { from: accounts[0] });
-    })
+    });
 
     it("can hold ether for a trader", async () => {
         const deposit1 = 1;
@@ -159,14 +159,14 @@ contract("RenExBalances", function (accounts) {
 
         // Balance should be (previous - fee1 - deposit1)
         const after = (await web3.eth.getBalance(accounts[0]));
-        after.should.equal(previous.minus(fee1).minus(deposit1).toFixed());
+        after.toString().should.equal(previous.minus(fee1).minus(deposit1).toFixed());
 
         // Withdraw
         const fee2 = await getFee(renExBalances.withdraw(ETH.address, deposit1, { from: accounts[0] }));
 
         // Balance should be (previous - fee1 - fee2)
         (await web3.eth.getBalance(accounts[0])).should.equal(previous.minus(fee1).minus(fee2).toFixed());
-    })
+    });
 
     it("only the settlement contract can call `incrementBalance` and `decrementBalance`", async () => {
         await renExBalances.incrementBalance(
@@ -212,13 +212,12 @@ contract("RenExBalances", function (accounts) {
         // Can withdraw after reverting settlement contract update
         await renExBalances.updateRenExSettlementContract(renExSettlement.address);
         await renExBalances.withdraw(TOKEN1.address, deposit, { from: accounts[0] });
-    })
+    });
 });
 
-
-async function getFee(txP) {
+async function getFee(txP: any) { // TODO: Use web3 transaction type
     const tx = await txP;
     const gasAmount = new BigNumber(tx.receipt.gasUsed);
-    const gasPrice = (await web3.eth.getTransaction(tx.tx)).gasPrice;
-    return new BigNumber(gasPrice).multipliedBy(gasAmount);
+    const gasPrice = new BigNumber((await web3.eth.getTransaction(tx.tx)).gasPrice);
+    return gasPrice.multipliedBy(gasAmount);
 }

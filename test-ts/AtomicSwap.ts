@@ -10,16 +10,16 @@ import * as HEX from "crypto-js/enc-hex";
 
 const random32Bytes = () => {
     return `0x${SHA256(Math.random().toString()).toString()}`;
-}
+};
 
 const secondsFromNow = (seconds: number) => {
     return Math.round((new Date()).getTime() / 1000) + seconds;
-}
+};
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const second = 1000;
 
-contract("AtomicSwap", function (accounts) {
+contract("AtomicSwap", function (accounts: string[]) {
 
     let swap;
     const alice = accounts[1];
@@ -101,5 +101,5 @@ contract("AtomicSwap", function (accounts) {
         (await swap.refundable(swapID)).should.equal(false);
         (await swap.redeemable(swapID)).should.equal(false);
 
-    })
+    });
 });

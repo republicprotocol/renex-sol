@@ -1,3 +1,5 @@
+// tslint:disable:max-line-length
+
 const RenExTokens = artifacts.require("RenExTokens");
 const RenExBalances = artifacts.require("RenExBalances");
 const RenExSettlement = artifacts.require("RenExSettlement");
@@ -18,7 +20,7 @@ import * as chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 chai.should();
 
-contract("RenEx", function (accounts) {
+contract("RenEx", function (accounts: string[]) {
 
     const buyer = accounts[0];
     const seller = accounts[1];
@@ -26,7 +28,7 @@ contract("RenEx", function (accounts) {
     let tokenAddresses, orderbook, renExSettlement, renExBalances;
 
     before(async function () {
-        [tokenAddresses, orderbook, renExSettlement, renExBalances] = await setup(darknode);
+        ({ tokenAddresses, orderbook, renExSettlement, renExBalances } = await setupContracts(darknode, 0x0, 0x0));
     });
 
     it("order 1", async () => {
@@ -57,12 +59,10 @@ contract("RenEx", function (accounts) {
 [8]:  0000000000000000000000000000000000000000000000000000000000000001
 [9]:  0000000000000000000000000000000000000000000000000000000000000003
 [10]: fda940ba5250d10bd3c701ef3e627a7b0bd0fd5143c45a35981f247fa1db3812
-`)
+`);
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook);
     });
-
-
 
     it("order 2", async () => {
 
@@ -92,11 +92,10 @@ contract("RenEx", function (accounts) {
 [8]:  0000000000000000000000000000000000000000000000000000000000000008
 [9]:  0000000000000000000000000000000000000000000000000000000000000008
 [10]: 0000000000000000000000000000000000000000000000000000000000000000
-`)
+`);
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook);
     });
-
 
     it("order 3", async () => {
         const tokens = market(DGX, REN);
@@ -275,17 +274,19 @@ contract("RenEx", function (accounts) {
     });
 });
 
-
-
-
-
-
-
-
-
-
-
-
+/**
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
 
 const BTC = 0x0;
 const ETH = 0x1;
@@ -299,10 +300,9 @@ let prefix = web3.utils.toHex("Republic Protocol: open: ");
 
 const market = (low, high) => {
     return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
-}
+};
 
-
-function parseOutput(scraped) {
+function parseOutput(scraped: string) {
     return {
         // orderID: '0x' + getLine(scraped, 0).toArrayLike(Buffer, "be", 32).toString('hex'),
         parity: getLine(scraped, 1).toNumber(),
@@ -314,18 +314,19 @@ function parseOutput(scraped) {
         volumeQ: getLine(scraped, 7).toNumber(),
         minimumVolumeC: getLine(scraped, 8).toNumber(),
         minimumVolumeQ: getLine(scraped, 9).toNumber(),
-        nonceHash: '0x' + getLine(scraped, 10).toArrayLike(Buffer, "be", 32).toString('hex'),
-    }
+        nonceHash: "0x" + getLine(scraped, 10).toArrayLike(Buffer, "be", 32).toString("hex"),
+    };
 }
-function getLine(scraped, lineno) {
+function getLine(scraped: string, lineno: number) {
     const re = new RegExp("\\n\\[" + lineno + "\\]:\\s*([0-9a-f]*)");
     return new BN(scraped.match(re)[1], 16);
 }
 
-
-
-
-async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, verify = true) {
+export async function submitMatch(
+    buy: any, sell: any, buyer: string, seller: string,
+    darknode: string, renExSettlement: any, renExBalances: any, tokenAddresses: any, orderbook: any,
+    verify: boolean = true, returnIDs: boolean = false,
+) {
     (sell.parity === undefined || sell.parity !== buy.parity).should.be.true;
     if (buy.parity === 1) {
         const tmp = sell;
@@ -358,11 +359,7 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
                 const minimumVolume = volumeToTuple(order.minimumVolume);
                 order.minimumVolumeC = minimumVolume.c, order.minimumVolumeQ = minimumVolume.q;
             } else {
-                let minV = (order.parity === OrderParity.BUY) ?
-                    volumeToTuple(order.volume / order.price) :
-                    volumeToTuple(order.volume * order.price);
-
-                order.minimumVolumeC = minV.c, order.minimumVolumeQ = minV.q;
+                order.minimumVolumeC = 0, order.minimumVolumeQ = 0;
             }
         }
 
@@ -370,7 +367,7 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
             if (order.nonce === undefined) {
                 order.nonce = randomNonce();
             }
-            order.nonceHash = (web3.utils.sha3 as any)(order.nonce, { encoding: 'hex' });
+            order.nonceHash = (web3.utils.sha3 as any)(order.nonce, { encoding: "hex" });
         }
     }
 
@@ -385,7 +382,7 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
 
     buy.expiry = buy.expiry || 1641026487;
     buy.type = 1;
-    buy.tokens = `0x${tokens.toString('hex')}`;
+    buy.tokens = `0x${tokens.toString("hex")}`;
     if (buy.orderID !== undefined) {
         buy.orderID.should.equal(getOrderID(buy));
     } else {
@@ -396,7 +393,7 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
 
     sell.type = 1; // type
     sell.expiry = sell.expiry || 1641026487; // FIXME: expiry
-    sell.tokens = `0x${tokens.toString('hex')}`; // tokens
+    sell.tokens = `0x${tokens.toString("hex")}`; // tokens
     if (sell.orderID !== undefined) {
         sell.orderID.should.equal(getOrderID(sell));
     } else {
@@ -455,14 +452,14 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
 
     if (verify) {
         const sellMatch = await renExSettlement.getMatchDetails(sell.orderID);
-        buyMatch[0].should.equal(buy.orderID);
-        buyMatch[1].should.equal(sell.orderID);
-        sellMatch[0].should.equal(sell.orderID);
-        sellMatch[1].should.equal(buy.orderID);
-        buyMatch[2].should.equal(sellMatch[3]);
-        buyMatch[3].should.equal(sellMatch[2]);
-        buyMatch[4].should.equal(sellMatch[5]);
-        buyMatch[5].should.equal(sellMatch[4]);
+        buyMatch[0].toString().should.equal(buy.orderID.toString());
+        buyMatch[1].toString().should.equal(sell.orderID.toString());
+        sellMatch[0].toString().should.equal(sell.orderID.toString());
+        sellMatch[1].toString().should.equal(buy.orderID.toString());
+        buyMatch[2].toString().should.equal(sellMatch[3].toString());
+        buyMatch[3].toString().should.equal(sellMatch[2].toString());
+        buyMatch[4].toString().should.equal(sellMatch[5].toString());
+        buyMatch[5].toString().should.equal(sellMatch[4].toString());
 
         const buyerLowAfter = new BigNumber(await renExBalances.traderBalances(buyer, lowTokenInstance.address));
         // const buyerHighAfter = new BigNumber(await renExBalances.traderBalances(buyer, highTokenInstance.address));
@@ -487,13 +484,21 @@ async function submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, 
         // highFee.toFixed().should.equal(expectedHighFees.toFixed());
     }
 
-    return [
-        lowSum.toNumber() / 10 ** lowDecimals,
-        highSum.toNumber() / 10 ** highDecimals,
-    ];
+    const lowRet = lowSum.toNumber() / 10 ** lowDecimals;
+    const highRet = highSum.toNumber() / 10 ** highDecimals;
+
+    if (returnIDs) {
+        return [
+            lowRet, highRet,
+            buy.orderID,
+            sell.orderID
+        ];
+    } else {
+        return [lowRet, highRet];
+    }
 }
 
-async function setup(darknode) {
+export async function setupContracts(darknode: string | number, slasherAddress: string | number, broker: string | number) {
     const tokenAddresses = {
         [BTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
         [ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
@@ -512,7 +517,7 @@ async function setup(darknode) {
     const renExBalances = await RenExBalances.new(rewardVault.address);
     const renExTokens = await RenExTokens.new();
     const GWEI = 1000000000;
-    const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI, 0x0);
+    const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI, slasherAddress);
     await renExBalances.updateRenExSettlementContract(renExSettlement.address);
 
     await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, 8);
@@ -524,43 +529,39 @@ async function setup(darknode) {
     await dnr.register(darknode, "0x00", 0, { from: darknode });
     await dnr.epoch();
 
-    return [tokenAddresses, orderbook, renExSettlement, renExBalances];
+    if (broker !== 0x0) {
+        await tokenAddresses[REN].approve(orderbook.address, 100 * 1e18, { from: broker });
+    }
+
+    return { tokenAddresses, orderbook, renExSettlement, renExBalances, rewardVault, renExTokens };
 }
 
-
-const PRIME = new BN('17012364981921935471');
+const PRIME = new BN("17012364981921935471");
 function randomNonce() {
     let nonce = PRIME;
     while (nonce.gte(PRIME)) {
         nonce = new BN(Math.floor(Math.random() * 10000000));
     }
-    return nonce.toString('hex');
+    return nonce.toString("hex");
 }
 
-
-
-function getOrderID(order) {
+function getOrderID(order: any) {
     const bytes = Buffer.concat([
         new BN(order.type).toArrayLike(Buffer, "be", 1),
         new BN(order.parity).toArrayLike(Buffer, "be", 1),
         new BN(order.settlement).toArrayLike(Buffer, "be", 4), // RENEX
         new BN(order.expiry).toArrayLike(Buffer, "be", 8),
-        new BN(order.tokens.slice(2), 'hex').toArrayLike(Buffer, "be", 8),
+        new BN(order.tokens.slice(2), "hex").toArrayLike(Buffer, "be", 8),
         new BN(order.priceC).toArrayLike(Buffer, "be", 8),
         new BN(order.priceQ).toArrayLike(Buffer, "be", 8),
         new BN(order.volumeC).toArrayLike(Buffer, "be", 8),
         new BN(order.volumeQ).toArrayLike(Buffer, "be", 8),
         new BN(order.minimumVolumeC).toArrayLike(Buffer, "be", 8),
         new BN(order.minimumVolumeQ).toArrayLike(Buffer, "be", 8),
-        new Buffer(order.nonceHash.slice(2), 'hex'),
+        new Buffer(order.nonceHash.slice(2), "hex"),
     ]);
-    return (web3.utils.sha3 as any)('0x' + bytes.toString('hex'), { encoding: 'hex' });
+    return (web3.utils.sha3 as any)("0x" + bytes.toString("hex"), { encoding: "hex" });
 }
-
-
-
-
-
 
 /**
  * Calculate price tuple from a decimal string
@@ -568,7 +569,7 @@ function getOrderID(order) {
  * https://github.com/republicprotocol/republic-go/blob/smpc/docs/orders-and-order-fragments.md
  *
  */
-function priceToTuple(priceI) {
+function priceToTuple(priceI: number) {
     const price = new BigNumber(priceI);
     const shift = 10 ** 12;
     const exponentOffset = 26;
@@ -582,9 +583,9 @@ function priceToTuple(priceI) {
 const tupleToPrice = (t) => {
     const e = new BigNumber(10).pow(t.q - 26 - 12 - 3);
     return new BigNumber(t.c).times(5).times(e);
-}
+};
 
-function volumeToTuple(volumeI) {
+function volumeToTuple(volumeI: number) {
     const volume = new BigNumber(volumeI);
     const shift = 10 ** 12;
     const exponentOffset = 0;
@@ -598,9 +599,9 @@ function volumeToTuple(volumeI) {
 const tupleToVolume = (t) => {
     const e = new BigNumber(10).pow(t.q - 12);
     return new BigNumber(t.c).times(0.2).times(e);
-}
+};
 
-function floatToTuple(shift, exponentOffset, step, value, max) {
+function floatToTuple(shift: number, exponentOffset: number, step: number, value: BigNumber, max: number) {
     const shifted = value.times(shift);
 
     const digits = -Math.floor(Math.log10(step)) + 1;
@@ -626,8 +627,7 @@ function floatToTuple(shift, exponentOffset, step, value, max) {
     return { c, q };
 }
 
-
-function significantDigits(n, digits, simplify = false) {
+function significantDigits(n: number, digits: number, simplify: boolean = false) {
     if (n === 0) {
         return [0, 0];
     }

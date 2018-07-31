@@ -18,7 +18,7 @@ const openOrder = async (orderbook, trader) => {
     const signature = await web3.eth.sign(buyHash, trader);
     await orderbook.openBuyOrder(signature, orderID, { from: trader });
     return orderID;
-}
+};
 
 contract("AtomicInfo", function (accounts: string[]) {
 
@@ -98,6 +98,6 @@ contract("AtomicInfo", function (accounts: string[]) {
 
         await info.updateOrderbook(info.address, { from: accounts[0] });
         await info.updateOrderbook(orderbook.address, { from: accounts[0] });
-    })
+    });
 
 });

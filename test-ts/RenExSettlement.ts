@@ -1,3 +1,5 @@
+// tslint:disable:max-line-length
+
 const RenExTokens = artifacts.require("RenExTokens");
 const RenExBalances = artifacts.require("RenExBalances");
 const RenExSettlement = artifacts.require("RenExSettlement");
@@ -12,12 +14,13 @@ const BigNumber = require("bignumber.js");
 
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
+import { setupContracts } from "./RenEx";
 chai.use(chaiAsPromised);
 chai.should();
 
 const GWEI = 1000000000;
 
-contract("RenExSettlement", function (accounts) {
+contract("RenExSettlement", function (accounts: string[]) {
 
     const darknode = accounts[2];
     const broker = accounts[3];
@@ -27,7 +30,7 @@ contract("RenExSettlement", function (accounts) {
     let buyID_3;
 
     before(async function () {
-        [tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens] = await setup(darknode, broker);
+        ({ tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens } = await setupContracts(darknode, 0x0, broker));
 
         buyID_1 = "0x309a5df8e76da11abee911c97709a9b891dce6d2694d3161b59f36fe8529cbc0";
         await orderbook.openBuyOrder("0x32d455737ebe67b1ac9da90cd1095efa9761273e609462f04fca158a179498744ec86813f55462e600ecdb267f1f7ce0b1d31e12bc5bae1038f1f83b8196e8ff01", buyID_1, { from: broker });
@@ -52,7 +55,7 @@ contract("RenExSettlement", function (accounts) {
             .should.be.rejectedWith(null, /revert/); // not owner
         await renExSettlement.updateOrderbook(orderbook.address);
         (await renExSettlement.orderbookContract()).should.equal(orderbook.address);
-    })
+    });
 
     it("can update renex balances", async () => {
         await renExSettlement.updateRenExBalances(0x0);
@@ -61,16 +64,16 @@ contract("RenExSettlement", function (accounts) {
             .should.be.rejectedWith(null, /revert/); // not owner
         await renExSettlement.updateRenExBalances(renExBalances.address);
         (await renExSettlement.renExBalancesContract()).should.equal(renExBalances.address);
-    })
+    });
 
     it("can update submission gas price limit", async () => {
         await renExSettlement.updateSubmissionGasPriceLimit(0x0);
-        (await renExSettlement.submissionGasPriceLimit()).should.equal("0");
+        (await renExSettlement.submissionGasPriceLimit()).toString().should.equal("0");
         await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
         await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI);
-        (await renExSettlement.submissionGasPriceLimit()).should.equal((100 * GWEI).toString());
-    })
+        (await renExSettlement.submissionGasPriceLimit()).toString().should.equal((100 * GWEI).toString());
+    });
 
     it("submitOrder", async () => {
         // sellID_1?
@@ -253,59 +256,26 @@ contract("RenExSettlement", function (accounts) {
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x0000000000000000000000000000000000000000000000000000000000000000",
             "0x8d981922c65b85a257f457ba3c29831aa4c3b1bd45dc3b280590fd5c89c69dc2",
-        ).should.be.rejectedWith(null, /gas price too high/)
+        ).should.be.rejectedWith(null, /gas price too high/);
     });
 });
 
-
-
-
-
-
-
-
-
+/**
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
 
 const randomID = () => {
     return web3.utils.sha3(Math.random().toString());
-}
+};
 
 const BTC = 0x0;
 const ETH = 0x1;
 const DGX = 0x100;
 const REN = 0x10000;
-
-async function setup(darknode, broker) {
-    const tokenAddresses = {
-        [BTC]: await BitcoinMock.new(),
-        [ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
-        [DGX]: await DGXMock.new(),
-        [REN]: await RepublicToken.new(),
-    };
-
-    const dnr = await DarknodeRegistry.new(
-        tokenAddresses[REN].address,
-        0,
-        1,
-        0
-    );
-    const orderbook = await Orderbook.new(0, tokenAddresses[REN].address, dnr.address);
-    const rewardVault = await RewardVault.new(dnr.address);
-    const renExBalances = await RenExBalances.new(rewardVault.address);
-    const renExTokens = await RenExTokens.new();
-    const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI, 0x0);
-    await renExBalances.updateRenExSettlementContract(renExSettlement.address);
-
-    await renExTokens.registerToken(ETH, tokenAddresses[ETH].address, 18);
-    await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, (await tokenAddresses[BTC].decimals()));
-    await renExTokens.registerToken(DGX, tokenAddresses[DGX].address, (await tokenAddresses[DGX].decimals()));
-    await renExTokens.registerToken(REN, tokenAddresses[REN].address, (await tokenAddresses[REN].decimals()));
-
-    // Register darknode
-    await dnr.register(darknode, "0x", 0, { from: darknode });
-    await dnr.epoch();
-
-    await tokenAddresses[REN].approve(orderbook.address, 100 * 1e18, { from: broker });
-
-    return [tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens];
-}

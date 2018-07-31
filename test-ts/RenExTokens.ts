@@ -8,7 +8,7 @@ import * as chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 chai.should();
 
-contract("RenExTokens", function (accounts) {
+contract("RenExTokens", function (accounts: string[]) {
 
     const BTC = 0x0;
     const ETH = 0x1;
@@ -24,19 +24,23 @@ contract("RenExTokens", function (accounts) {
             [ETH]: { address: 0x0, decimals: () => Promise.resolve(18) },
             [DGX]: await DGXMock.new(),
             [REN]: await RepublicToken.new(),
-        }
+        };
 
         renExTokens = await RenExTokens.new();
     });
 
     it("owner can register and deregister tokens", async () => {
         for (const token of tokens) {
-            await renExTokens.registerToken(token, tokenInstances[token].address, await tokenInstances[token].decimals());
+            await renExTokens.registerToken(
+                token,
+                tokenInstances[token].address,
+                await tokenInstances[token].decimals()
+            );
         }
         for (const token of tokens) {
             await renExTokens.deregisterToken(token);
         }
-    })
+    });
 
     it("only the owner can register and deregister", async () => {
         for (const token of tokens) {
@@ -54,5 +58,5 @@ contract("RenExTokens", function (accounts) {
                 { from: accounts[1] }
             ).should.be.rejectedWith(null, /revert/); // not owner
         }
-    })
+    });
 });

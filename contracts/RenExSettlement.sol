@@ -131,12 +131,9 @@ contract RenExSettlement is Ownable {
       * @param _parity one of Buy or Sell
       * @param _expiry the expiry date of the order in seconds since Unix epoch
       * @param _tokens two 32-bit token codes concatenated (with the lowest first)
-      * @param _priceC the constant in the price tuple
-      * @param _priceQ the exponent in the price tuple
-      * @param _volumeC the constant in the volume tuple
-      * @param _volumeQ the exponent in the volume tuple
-      * @param _minimumVolumeC the constant in the minimum-volume tuple
-      * @param _minimumVolumeQ the exponent in the minimum-volume tuple
+      * @param _price the order price
+      * @param _volume the order volume
+      * @param _minimumVolume the order minimum volume
       * @param _nonceHash the keccak256 hash of a random 32 byte value
       */
     function submitOrder(
@@ -145,9 +142,9 @@ contract RenExSettlement is Ownable {
         uint8 _parity,
         uint64 _expiry,
         uint64 _tokens,
-        uint16 _priceC, uint16 _priceQ,
-        uint16 _volumeC, uint16 _volumeQ,
-        uint16 _minimumVolumeC, uint16 _minimumVolumeQ,
+        uint256 _price,
+        uint256 _volume,
+        uint256 _minimumVolume,
         uint256 _nonceHash
     ) public withGasPriceLimit(submissionGasPriceLimit) {
         SettlementUtils.OrderDetails memory order = SettlementUtils.OrderDetails({
@@ -156,17 +153,14 @@ contract RenExSettlement is Ownable {
             parity: _parity,
             expiry: _expiry,
             tokens: _tokens,
-            priceC: _priceC, priceQ: _priceQ,
-            volumeC: _volumeC, volumeQ: _volumeQ,
-            minimumVolumeC: _minimumVolumeC, minimumVolumeQ: _minimumVolumeQ,
+            price: _price,
+            volume: _volume,
+            minimumVolume: _minimumVolume,
             nonceHash: _nonceHash
         });
 
-        storeOrder(order);
-    }
-
-    function storeOrder(SettlementUtils.OrderDetails order) internal {
-        bytes32 orderID = SettlementUtils.hashOrder(order);
+        bytes memory orderBytes = SettlementUtils.hashOrder(order);
+        bytes32 orderID = keccak256(orderBytes);
 
         orderSubmitter[orderID] = msg.sender;
 
@@ -194,9 +188,6 @@ contract RenExSettlement is Ownable {
         require(orderStatus[_buyID] == OrderStatus.Submitted, "invalid buy status");
         require(orderStatus[_sellID] == OrderStatus.Submitted, "invalid sell status");
 
-        // Verify details
-        SettlementUtils.verifyOrder(orderDetails[_buyID]);
-        SettlementUtils.verifyOrder(orderDetails[_sellID]);
         SettlementUtils.verifyMatch(orderDetails[_buyID], orderDetails[_sellID]);
 
         require(orderbookContract.orderMatch(_buyID)[0] == _sellID, "invalid order pair");
@@ -204,28 +195,14 @@ contract RenExSettlement is Ownable {
         uint32 buyToken = uint32(orderDetails[_sellID].tokens);
         uint32 sellToken = uint32(orderDetails[_sellID].tokens >> 32);
 
-        require(renExTokensContract.tokenIsRegistered(buyToken), "unregistered buy token");
-        require(renExTokensContract.tokenIsRegistered(sellToken), "unregistered sell token");
+        (address buyTokenAddress, uint8 buyTokenDecimals, RenExTokens.TokenStatus buyTokenStatus) = renExTokensContract.tokens(buyToken);
+        (address sellTokenAddress, uint8 sellTokenDecimals, RenExTokens.TokenStatus sellTokenStatus) = renExTokensContract.tokens(sellToken);
 
-        (uint256 lowTokenVolume, uint256 highTokenVolume) = SettlementUtils.settlementDetails(
-            orderDetails[_buyID],
-            orderDetails[_sellID],
-            renExTokensContract.tokenDecimals(buyToken),
-            renExTokensContract.tokenDecimals(sellToken)
-        );
+        require(buyTokenStatus == RenExTokens.TokenStatus.Registered, "unregistered buy token");
+        require(sellTokenStatus == RenExTokens.TokenStatus.Registered, "unregistered sell token");
 
-        address highTokenAddress = renExTokensContract.tokenAddresses(buyToken);
-        address lowTokenAddress = renExTokensContract.tokenAddresses(sellToken);
 
-        bytes32 matchID = keccak256(abi.encodePacked(_buyID, _sellID));
-        matchDetails[matchID] = MatchDetails({
-            lowTokenVolume: lowTokenVolume,
-            highTokenVolume: highTokenVolume,
-            lowToken: sellToken,
-            highToken: buyToken,
-            lowTokenAddress: lowTokenAddress,
-            highTokenAddress: highTokenAddress
-        });
+        prepareMatchSettlement(_buyID, _sellID, buyToken, sellToken, buyTokenAddress, sellTokenAddress, buyTokenDecimals, sellTokenDecimals);
 
         // Note: verifyMatch checks that the buy and sell settlement IDs match
         uint32 settlementID = orderDetails[_buyID].settlementID;
@@ -241,6 +218,72 @@ contract RenExSettlement is Ownable {
 
         orderStatus[_buyID] = OrderStatus.Matched;
         orderStatus[_sellID] = OrderStatus.Matched;
+    }
+
+    function prepareMatchSettlement(
+        bytes32 _buyID, bytes32 _sellID,
+        uint32 buyToken, uint32 sellToken,
+        address buyTokenAddress, address sellTokenAddress,
+        uint8 buyTokenDecimals, uint8 sellTokenDecimals
+    ) private {
+        // Verify details
+
+        // uint256 priceN = orderDetails[_buyID].price + orderDetails[_sellID].price;
+        // uint256 priceD = 2;
+
+        (uint256 lowTokenVolume, uint256 highTokenVolume) = settlementDetails(
+            orderDetails[_buyID].price + orderDetails[_sellID].price, /* priceN */
+            2, /* priceD */
+            orderDetails[_buyID].volume,
+            orderDetails[_sellID].volume,
+            buyTokenDecimals,
+            sellTokenDecimals
+        );
+        
+        bytes32 matchID = keccak256(abi.encodePacked(_buyID, _sellID));
+        matchDetails[matchID] = MatchDetails({
+            lowTokenVolume: lowTokenVolume,
+            highTokenVolume: highTokenVolume,
+            lowToken: sellToken,
+            highToken: buyToken,
+            lowTokenAddress: sellTokenAddress,
+            highTokenAddress: buyTokenAddress
+        });
+    }
+
+    function settlementDetails(
+        uint256 _priceN,
+        uint256 _priceD,
+        uint256 _buyVolume,
+        uint256 _sellVolume,
+        uint8 _buyTokenDecimals,
+        uint8 _sellTokenDecimals
+    ) private pure returns (uint256, uint256) {
+        uint256 minVolumeN;
+        uint256 minVolumeQ;
+        if (_buyVolume * (10**12) / (_priceN / _priceD) <= _sellVolume) {
+            minVolumeN = _buyVolume * (10**12) * _priceD;
+            minVolumeQ = _priceN;
+        } else {
+            minVolumeN = _sellVolume;
+            minVolumeQ = 1;
+        }
+
+        uint256 lowTokenValue = joinFraction(minVolumeN * _priceN, minVolumeQ * _priceD, int16(_sellTokenDecimals) - 24);
+        uint256 highTokenValue = joinFraction(minVolumeN, minVolumeQ, int16(_buyTokenDecimals) - 12);
+
+        return (lowTokenValue, highTokenValue);
+    }
+
+    /** 
+     * @notice Computes (numerator / denominator) * 10 ** scale
+     */
+    function joinFraction(uint256 numerator, uint256 denominator, int16 scale) private pure returns (uint256) {
+        if (scale >= 0) {
+            return numerator * 10 ** uint256(scale) / denominator;
+        } else {
+            return (numerator / denominator) / 10 ** uint256(-scale);
+        }
     }
 
     /**

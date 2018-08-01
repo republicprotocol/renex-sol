@@ -107,6 +107,8 @@ contract RenExBalances is Ownable {
     */
     function decrementBalanceWithFee(address _trader, address _token, uint256 _value, uint256 _fee, address feePayee)
     public onlyRenExSettlementContract {
+        require(traderBalances[_trader][_token] >= _fee, "insufficient funds for fee");
+
         if (address(_token) == ETHEREUM) {
             rewardVaultContract.deposit.value(_fee)(feePayee, ERC20(_token), _fee);
         } else {
@@ -117,6 +119,7 @@ contract RenExBalances is Ownable {
     }
 
     function privateDecrementBalance(address _trader, ERC20 _token, uint256 _value) private {
+        require(traderBalances[_trader][_token] >= _value, "insufficient funds");
         traderBalances[_trader][_token] = traderBalances[_trader][_token].sub(_value);
 
         emit BalanceDecreased(_trader, _token, _value);

@@ -11,19 +11,25 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 contract RenExTokens is Ownable {
     using SafeMath for uint256;
 
-    mapping(uint32 => ERC20) public tokenAddresses;
-    mapping(uint32 => uint8) public tokenDecimals;
-    mapping(uint32 => bool) public tokenIsRegistered;
+    // Once a token is registered, its address and tokens can't be changed
+    // If an ERC20 token's contract is upgraded with a new address, a new token
+    // code should be used
+    enum TokenStatus {
+        NeverRegistered,
+        Registered,
+        Deregistered
+    }
+
+    struct TokenDetails {
+        address addr;
+        uint8 decimals;
+        TokenStatus status;
+    }
+
+    mapping(uint32 => TokenDetails) public tokens;
 
     event TokenRegistered(uint32 tokenCode, ERC20 tokenAddress, uint8 tokenDecimals);
     event TokenDeregistered(uint32 tokenCode);
-
-    /**
-    @notice constructor
-    */
-    constructor() public {
-    }
-
 
     /**
     @notice Sets a token as being registered and stores its details (only-owner)
@@ -32,9 +38,15 @@ contract RenExTokens is Ownable {
     @param _tokenDecimals the decimals to use for the token
     */
     function registerToken(uint32 _tokenCode, ERC20 _tokenAddress, uint8 _tokenDecimals) public onlyOwner {
-        tokenAddresses[_tokenCode] = _tokenAddress;
-        tokenDecimals[_tokenCode] = _tokenDecimals;
-        tokenIsRegistered[_tokenCode] = true;
+        TokenStatus previousStatus = tokens[_tokenCode].status;
+        require(previousStatus != TokenStatus.Registered);
+
+        tokens[_tokenCode].status = TokenStatus.Registered;
+
+        if (previousStatus == TokenStatus.NeverRegistered) {
+            tokens[_tokenCode].addr = _tokenAddress;
+            tokens[_tokenCode].decimals = _tokenDecimals;
+        }
 
         emit TokenRegistered(_tokenCode, _tokenAddress, _tokenDecimals);
     }
@@ -44,7 +56,9 @@ contract RenExTokens is Ownable {
     @param _tokenCode the unique 32-bit token identifier
     */
     function deregisterToken(uint32 _tokenCode) public onlyOwner {
-        tokenIsRegistered[_tokenCode] = false;
+        require (tokens[_tokenCode].status == TokenStatus.Registered);
+
+        tokens[_tokenCode].status = TokenStatus.Deregistered;
 
         emit TokenDeregistered(_tokenCode);
     }

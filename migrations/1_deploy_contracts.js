@@ -7,7 +7,7 @@ var RenExTokens = artifacts.require("RenExTokens.sol");
 var RenExSettlement = artifacts.require("RenExSettlement.sol");
 
 var AtomicInfo = artifacts.require("AtomicInfo.sol");
-var AtomicSwap = artifacts.require("AtomicSwap.sol");
+var RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper.sol");
 
 var RepublicToken = artifacts.require("RepublicToken.sol");
 var DGXMock = artifacts.require("DGXMock.sol");
@@ -137,7 +137,7 @@ let migration = async function (deployer, network) {
         ))
 
         .then(() => deployer.deploy(
-            AtomicSwap
+            RenExAtomicSwapper
         ))
         ;
 };

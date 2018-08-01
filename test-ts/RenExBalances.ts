@@ -213,6 +213,25 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.updateRenExSettlementContract(renExSettlement.address);
         await renExBalances.withdraw(TOKEN1.address, deposit, { from: accounts[0] });
     });
+
+    it("decrementBalance reverts for invalid withdrawals", async () => {
+        const auth = accounts[8];
+        await renExBalances.updateRenExSettlementContract(auth);
+
+        const deposit = 10;
+        await renExBalances.deposit(ETH.address, deposit, { from: accounts[0], value: deposit });
+
+        // Insufficient balance for fee
+        await renExBalances.decrementBalanceWithFee(accounts[0], ETH.address, 0, 20, accounts[0], { from: auth })
+            .should.be.rejectedWith(null, /insufficient funds for fee/);
+
+        // Insufficient balance for fee
+        await renExBalances.decrementBalanceWithFee(accounts[0], ETH.address, 20, 0, accounts[0], { from: auth })
+            .should.be.rejectedWith(null, /insufficient funds/);
+
+        // Revert change
+        await renExBalances.updateRenExSettlementContract(renExSettlement.address);
+    });
 });
 
 async function getFee(txP: any) { // TODO: Use web3 transaction type

@@ -159,20 +159,16 @@ contract RenExSettlement is Ownable {
             nonceHash: _nonceHash
         });
 
-        bytes memory orderBytes = SettlementUtils.hashOrder(order);
-        bytes32 orderID = keccak256(orderBytes);
+        bytes32 orderID = SettlementUtils.hashOrder(order);
 
         orderSubmitter[orderID] = msg.sender;
 
         require(orderStatus[orderID] == OrderStatus.None, "order already submitted");
         orderStatus[orderID] = OrderStatus.Submitted;
 
-        require(orderbookContract.orderState(orderID) == 2, "uncofirmed order");
+        require(orderbookContract.orderState(orderID) == Orderbook.OrderState.Confirmed, "uncofirmed order");
 
         orderTrader[orderID] = orderbookContract.orderTrader(orderID);
-
-        // (not needed? - orderbookContract.orderState can't be 2 if it fails)
-        // require(order.trader != 0x0, "null order trader");
 
         orderDetails[orderID] = order;
     }
@@ -188,7 +184,7 @@ contract RenExSettlement is Ownable {
         require(orderStatus[_buyID] == OrderStatus.Submitted, "invalid buy status");
         require(orderStatus[_sellID] == OrderStatus.Submitted, "invalid sell status");
 
-        SettlementUtils.verifyMatch(orderDetails[_buyID], orderDetails[_sellID]);
+        require(SettlementUtils.verifyMatch(orderDetails[_buyID], orderDetails[_sellID]), "incompatible orders");
 
         require(orderbookContract.orderMatch(_buyID)[0] == _sellID, "invalid order pair");
 

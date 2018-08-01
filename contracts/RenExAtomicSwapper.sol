@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-contract AtomicSwap {
+contract RenExAtomicSwapper {
 
     /********** STRUCTS *****************************************************/
     struct Swap {

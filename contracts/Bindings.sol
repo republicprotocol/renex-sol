@@ -7,7 +7,7 @@ import "republic-sol/contracts/RewardVault.sol";
 import "republic-sol/contracts/Settlement.sol";
 
 import "./AtomicInfo.sol";
-import "./AtomicSwap.sol";
+import "./RenExAtomicSwapper.sol";
 import "./RenExBalances.sol";
 import "./RenExSettlement.sol";
 import "./RenExTokens.sol";

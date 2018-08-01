@@ -1,18 +1,19 @@
 
-var DarknodeRegistry = artifacts.require("DarknodeRegistry.sol");
-var Orderbook = artifacts.require("Orderbook.sol");
-var RenExBalances = artifacts.require("RenExBalances.sol");
-var RewardVault = artifacts.require("RewardVault.sol");
-var RenExTokens = artifacts.require("RenExTokens.sol");
-var RenExSettlement = artifacts.require("RenExSettlement.sol");
+const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore.sol");
+const DarknodeRegistry = artifacts.require("DarknodeRegistry.sol");
+const Orderbook = artifacts.require("Orderbook.sol");
+const RenExBalances = artifacts.require("RenExBalances.sol");
+const DarknodeRewardVault = artifacts.require("DarknodeRewardVault.sol");
+const RenExTokens = artifacts.require("RenExTokens.sol");
+const RenExSettlement = artifacts.require("RenExSettlement.sol");
 
-var AtomicInfo = artifacts.require("AtomicInfo.sol");
-var RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper.sol");
+const AtomicInfo = artifacts.require("AtomicInfo.sol");
+const RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper.sol");
 
-var RepublicToken = artifacts.require("RepublicToken.sol");
-var DGXMock = artifacts.require("DGXMock.sol");
-// var ABCToken = artifacts.require("ABCToken.sol");
-// var XYZToken = artifacts.require("XYZToken.sol");
+const RepublicToken = artifacts.require("RepublicToken.sol");
+const DGXMock = artifacts.require("DGXMock.sol");
+// const ABCToken = artifacts.require("ABCToken.sol");
+// const XYZToken = artifacts.require("XYZToken.sol");
 const ABCToken = {};
 const XYZToken = {};
 
@@ -44,21 +45,6 @@ let migration = async function (deployer, network) {
 
     console.log(`Using ${POD_SIZE} nodes per pod, ${EPOCH_BLOCKS} blocks per epoch, ${BOND / 1e18} REN bond and ${INGRESS_FEE / 1e18} REN ingress fee`)
 
-    // Nightly
-    RepublicToken.address = `0x15f692d6b9ba8cec643c7d16909e8acdec431bf6`;
-    DGXMock.address = `0x092ece29781777604afac04887af30042c3bc5df`;
-    ABCToken.address = `0x49fa7a3b9705fa8deb135b7ba64c2ab00ab915a1`;
-    XYZToken.address = `0x6662449d05312afe0ca147db6eb155641077883f`;
-
-    DarknodeRegistry.address = `0xb3972e45d16b0942ed34943fdde413190cf5b12a`;
-    Orderbook.address = `0x8356e57aa32547685149a859293ad83c144b800c`;
-    RewardVault.address = `0x7214c4584ab01e61355244e2325ab3f40aca4d85`;
-    RenExTokens.address = `0x3672b60236b76d30b64455515efa38e06f64e3df`;
-    RenExBalances.address = `0xc2c126e1eb32e6ad50c611fb92d009b4b4518b00`;
-    RenExSettlement.address = `0x65712325c41fb39b9205e08483b43142d919cc42`;
-
-    const SlasherAddress = `0x565839E16bAC459884b0F0D7377Ac04e04Be150d`;
-
     // REN
     await deployer
         .deploy(
@@ -75,12 +61,23 @@ let migration = async function (deployer, network) {
         )
 
         .then(() => deployer.deploy(
+            DarknodeRegistryStore,
+            RepublicToken.address,
+        ))
+
+        .then(() => deployer.deploy(
             DarknodeRegistry,
             RepublicToken.address,
+            DarknodeRegistryStore.address,
             BOND, // Bond
             POD_SIZE, // Pod
             EPOCH_BLOCKS, // Epoch
         ))
+
+        .then(async () => {
+            const darknodeRegistryStore = DarknodeRegistryStore.at(DarknodeRegistryStore.address);
+            await darknodeRegistryStore.transferOwnership(DarknodeRegistry.address);
+        })
 
         .then(() => deployer.deploy(
             Orderbook,
@@ -90,7 +87,7 @@ let migration = async function (deployer, network) {
         ))
 
         .then(() => deployer.deploy(
-            RewardVault, DarknodeRegistry.address
+            DarknodeRewardVault, DarknodeRegistry.address
         ))
 
         .then(() => deployer.deploy(
@@ -109,7 +106,7 @@ let migration = async function (deployer, network) {
         })
 
         .then(() => deployer.deploy(
-            RenExBalances, RewardVault.address,
+            RenExBalances, DarknodeRewardVault.address,
             { overwrite: network !== "f0" },
         ))
 
@@ -127,7 +124,7 @@ let migration = async function (deployer, network) {
 
         .then(async () => {
             const renExBalances = RenExBalances.at(RenExBalances.address);
-            await renExBalances.updateRewardVault(RewardVault.address);
+            await renExBalances.updateRewardVault(DarknodeRewardVault.address);
             await renExBalances.updateRenExSettlementContract(RenExSettlement.address);
         })
 

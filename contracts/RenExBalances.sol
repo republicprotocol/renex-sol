@@ -5,7 +5,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "./RenExSettlement.sol";
-import "republic-sol/contracts/RewardVault.sol";
+import "republic-sol/contracts/DarknodeRewardVault.sol";
 
 /**
 @title The contract responsible for holding RenEx trader funds
@@ -15,7 +15,7 @@ contract RenExBalances is Ownable {
     using SafeMath for uint256;
 
     RenExSettlement public settlementContract;
-    RewardVault public rewardVaultContract;
+    DarknodeRewardVault public rewardVaultContract;
 
     // TODO: Use same constant instance across all contracts
     address constant public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -34,7 +34,7 @@ contract RenExBalances is Ownable {
     /**
     @notice After deployment, updateRenExSettlementContract should be called
     */
-    constructor(RewardVault _rewardVaultContract) public {
+    constructor(DarknodeRewardVault _rewardVaultContract) public {
         rewardVaultContract = _rewardVaultContract;
     }
 
@@ -67,7 +67,7 @@ contract RenExBalances is Ownable {
     by the owner of the contract)
     @param _newRewardVaultContract the address of the new reward vault contract
     */
-    function updateRewardVault(RewardVault _newRewardVaultContract) public onlyOwner {
+    function updateRewardVault(DarknodeRewardVault _newRewardVaultContract) public onlyOwner {
         emit RewardVaultContractUpdated(_newRewardVaultContract);
         rewardVaultContract = _newRewardVaultContract;
     }

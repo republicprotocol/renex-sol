@@ -8,6 +8,12 @@ import * as chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 chai.should();
 
+enum TokenStatus {
+    NeverRegistered = "0",
+    Registered = "1",
+    Deregistered = "2"
+}
+
 contract("RenExTokens", function (accounts: string[]) {
 
     const BTC = 0x0;
@@ -21,7 +27,7 @@ contract("RenExTokens", function (accounts: string[]) {
     beforeEach(async function () {
         tokenInstances = {
             [BTC]: await BitcoinMock.new(),
-            [ETH]: { address: 0x0, decimals: () => Promise.resolve(18) },
+            [ETH]: { address: "0x0000000000000000000000000000000000000000", decimals: () => Promise.resolve(18) },
             [DGX]: await DGXMock.new(),
             [REN]: await RepublicToken.new(),
         };
@@ -31,14 +37,37 @@ contract("RenExTokens", function (accounts: string[]) {
 
     it("owner can register and deregister tokens", async () => {
         for (const token of tokens) {
+            const tokenDetails = await renExTokens.tokens(token);
+            (tokenDetails.status.toString()).should.equal(TokenStatus.NeverRegistered);
+        }
+
+        for (const token of tokens) {
+            const address = tokenInstances[token].address;
+            const decimals = await tokenInstances[token].decimals();
+
+            // Register
             await renExTokens.registerToken(
                 token,
-                tokenInstances[token].address,
-                await tokenInstances[token].decimals()
+                address,
+                decimals
             );
+
+            const tokenDetails = await renExTokens.tokens(token);
+            (tokenDetails.addr).should.equal(address);
+            (tokenDetails.decimals.toString()).should.equal(decimals.toString());
+            (tokenDetails.status.toString()).should.equal(TokenStatus.Registered);
         }
         for (const token of tokens) {
+            const address = tokenInstances[token].address;
+            const decimals = await tokenInstances[token].decimals();
+
+            // Deregister
             await renExTokens.deregisterToken(token);
+
+            const tokenDetails = await renExTokens.tokens(token);
+            (tokenDetails.addr).should.equal(address);
+            (tokenDetails.decimals.toString()).should.equal(decimals.toString());
+            (tokenDetails.status.toString()).should.equal(TokenStatus.Deregistered);
         }
     });
 

@@ -1,4 +1,4 @@
-const Swap = artifacts.require("AtomicSwap");
+const Swap = artifacts.require("RenExAtomicSwapper");
 
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
@@ -19,7 +19,7 @@ const secondsFromNow = (seconds: number) => {
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const second = 1000;
 
-contract("AtomicSwap", function (accounts: string[]) {
+contract("RenExAtomicSwapper", function (accounts: string[]) {
 
     let swap;
     const alice = accounts[1];

@@ -121,25 +121,25 @@ contract("RenEx", function (accounts: string[]) {
         let sell: any = { tokens, price: 1, volume: 1 /* REN */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejectedWith(null, /incompatible sell volume/);
+            .should.be.rejectedWith(null, /incompatible orders/);
 
         buy = { tokens, price: 1, volume: 1 /* DGX */ };
         sell = { tokens, price: 1, volume: 2 /* REN */, minimumVolume: 2 /* REN */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejectedWith(null, /incompatible buy volume/);
+            .should.be.rejectedWith(null, /incompatible orders/);
 
         buy = { tokens, price: 1, volume: 1 /* DGX */ };
         sell = { tokens, price: 1.05, volume: 1 /* REN */, minimumVolume: 1 /* DGX */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejectedWith(null, /incompatible pricepoints/);
+            .should.be.rejectedWith(null, /incompatible orders/);
 
         buy = { tokens, priceC: 200, priceQ: 38, volume: 1 /* DGX */ };
         sell = { tokens, priceC: 200, priceQ: 39, volume: 1 /* REN */, minimumVolume: 1 /* DGX */ };
 
         await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook)
-            .should.be.rejectedWith(null, /incompatible pricepoints/);
+            .should.be.rejectedWith(null, /incompatible orders/);
 
         // // Invalid price (c component)
         // buy = { tokens, priceC: 2000, priceQ: 38, volume: 1 /* DGX */ };

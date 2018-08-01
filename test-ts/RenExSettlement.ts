@@ -192,13 +192,13 @@ contract("RenExSettlement", function (accounts: string[]) {
         await renExSettlement.submitMatch(
             buyID_1,
             buyID_1,
-        ).should.be.rejectedWith(null, /invalid sell parity/);
+        ).should.be.rejectedWith(null, /incompatible orders/);
 
         // Two sells
         await renExSettlement.submitMatch(
             sellID_1,
             sellID_1,
-        ).should.be.rejectedWith(null, /invalid buy parity/);
+        ).should.be.rejectedWith(null, /incompatible orders/);
 
         // Orders that aren't matched to one another
         await renExSettlement.submitMatch(

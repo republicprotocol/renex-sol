@@ -1,16 +1,6 @@
 // tslint:disable:max-line-length
 
-const RenExTokens = artifacts.require("RenExTokens");
-const RenExBalances = artifacts.require("RenExBalances");
 const RenExSettlement = artifacts.require("RenExSettlement");
-const RewardVault = artifacts.require("RewardVault");
-const Orderbook = artifacts.require("Orderbook");
-const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const BitcoinMock = artifacts.require("BitcoinMock");
-const DGXMock = artifacts.require("DGXMock");
-
-const BigNumber = require("bignumber.js");
 
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
@@ -236,22 +226,8 @@ contract("RenExSettlement", function (accounts: string[]) {
     });
 });
 
-/**
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- */
-
 const randomID = () => {
     return web3.utils.sha3(Math.random().toString());
 };
 
-const BTC = 0x0;
 const ETH = 0x1;
-const DGX = 0x100;
-const REN = 0x10000;

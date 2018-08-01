@@ -3,11 +3,11 @@
 const RenExTokens = artifacts.require("RenExTokens");
 const RenExBalances = artifacts.require("RenExBalances");
 const RenExSettlement = artifacts.require("RenExSettlement");
-const RewardVault = artifacts.require("RewardVault");
+const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
 const Orderbook = artifacts.require("Orderbook");
 const RepublicToken = artifacts.require("RepublicToken");
+const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
 const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const BitcoinMock = artifacts.require("BitcoinMock");
 const DGXMock = artifacts.require("DGXMock");
 
 // Two big number libraries are used - BigNumber decimal support
@@ -441,15 +441,20 @@ export async function setupContracts(darknode: string | number, slasherAddress: 
         [REN]: await RepublicToken.new(),
     };
 
+    const dnrStore = await DarknodeRegistryStore.new(tokenAddresses[REN].address.address);
     const dnr = await DarknodeRegistry.new(
         tokenAddresses[REN].address,
+        dnrStore.address,
         0,
         1,
         0
     );
+    dnr.updateSlasher(0x0);
+    dnrStore.transferOwnership(dnr.address);
+
     const orderbook = await Orderbook.new(0, tokenAddresses[REN].address, dnr.address);
-    const rewardVault = await RewardVault.new(dnr.address);
-    const renExBalances = await RenExBalances.new(rewardVault.address);
+    const darknodeRewardVault = await DarknodeRewardVault.new(dnr.address);
+    const renExBalances = await RenExBalances.new(darknodeRewardVault.address);
     const renExTokens = await RenExTokens.new();
     const GWEI = 1000000000;
     const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI, slasherAddress);
@@ -468,7 +473,7 @@ export async function setupContracts(darknode: string | number, slasherAddress: 
         await tokenAddresses[REN].approve(orderbook.address, 100 * 1e18, { from: broker });
     }
 
-    return { tokenAddresses, orderbook, renExSettlement, renExBalances, rewardVault, renExTokens };
+    return { tokenAddresses, orderbook, renExSettlement, renExBalances, darknodeRewardVault, renExTokens };
 }
 
 const PRIME = new BN("17012364981921935471");

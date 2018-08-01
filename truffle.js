@@ -1,6 +1,6 @@
 require('dotenv').config()
 
-var HDWalletProvider = require("truffle-hdwallet-provider");
+const HDWalletProvider = require("truffle-hdwallet-provider");
 
 const KOVAN = (MNEMONIC) => ({
     provider: function () {

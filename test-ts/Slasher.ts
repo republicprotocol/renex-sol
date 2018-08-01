@@ -1,12 +1,3 @@
-const RenExTokens = artifacts.require("RenExTokens");
-const RenExBalances = artifacts.require("RenExBalances");
-const RenExSettlement = artifacts.require("RenExSettlement");
-const RewardVault = artifacts.require("RewardVault");
-const Orderbook = artifacts.require("Orderbook");
-const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const BitcoinMock = artifacts.require("BitcoinMock");
-const DGXMock = artifacts.require("DGXMock");
 
 // Two big number libraries are used - BigNumber decimal support
 // while BN has better bitwise operations
@@ -26,12 +17,12 @@ contract("Slasher", function (accounts: string[]) {
     const seller = accounts[2];
     const darknode = accounts[3];
 
-    let tokenAddresses, orderbook, renExSettlement, renExBalances, rewardVault;
+    let tokenAddresses, orderbook, renExSettlement, renExBalances, darknodeRewardVault;
     let eth_address, eth_decimals;
 
     before(async function () {
         ({
-            tokenAddresses, orderbook, renExSettlement, renExBalances, rewardVault
+            tokenAddresses, orderbook, renExSettlement, renExBalances, darknodeRewardVault
         } = await setupContracts(darknode, slasher, 0x0));
         eth_address = tokenAddresses[ETH].address;
         eth_decimals = new BigNumber(10).pow(tokenAddresses[ETH].decimals());
@@ -61,7 +52,7 @@ contract("Slasher", function (accounts: string[]) {
         let fees = weiAmount / feeDen * feeNum;
 
         // Store the original balances
-        let beforeSlasherBalance = await rewardVault.darknodeBalances(slasher, eth_address);
+        let beforeSlasherBalance = await darknodeRewardVault.darknodeBalances(slasher, eth_address);
         let [beforeGuiltyTokens, beforeGuiltyBalances] = await renExBalances.getBalances(guiltyAddress);
         let [beforeInnocentTokens, beforeInnocentBalances] = await renExBalances.getBalances(innocentAddress);
         let beforeGuiltyBalance = beforeGuiltyBalances[beforeGuiltyTokens.indexOf(eth_address)];
@@ -71,7 +62,7 @@ contract("Slasher", function (accounts: string[]) {
         await renExSettlement.slash(guiltyOrderID, { from: slasher });
 
         // Check the new balances
-        let afterSlasherBalance = await rewardVault.darknodeBalances(slasher, eth_address);
+        let afterSlasherBalance = await darknodeRewardVault.darknodeBalances(slasher, eth_address);
         let [afterGuiltyTokens, afterGuiltyBalances] = await renExBalances.getBalances(guiltyAddress);
         let [afterInnocentTokens, afterInnocentBalances] = await renExBalances.getBalances(innocentAddress);
         let afterGuiltyBalance = afterGuiltyBalances[afterGuiltyTokens.indexOf(eth_address)];

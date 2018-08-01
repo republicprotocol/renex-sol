@@ -7,6 +7,7 @@ chai.should();
 
 const AtomicInfo = artifacts.require("AtomicInfo");
 const RepublicToken = artifacts.require("RepublicToken");
+const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
 const DarknodeRegistry = artifacts.require("DarknodeRegistry");
 const Orderbook = artifacts.require("Orderbook");
 
@@ -30,12 +31,16 @@ contract("AtomicInfo", function (accounts: string[]) {
 
     before(async function () {
         const ren = await RepublicToken.new();
+        const dnrStore = await DarknodeRegistryStore.new(ren.address);
         const dnr = await DarknodeRegistry.new(
             ren.address,
+            dnrStore.address,
             0,
             1,
             0
         );
+        dnr.updateSlasher(0x0);
+        dnrStore.transferOwnership(dnr.address);
 
         orderbook = await Orderbook.new(0, ren.address, dnr.address);
 

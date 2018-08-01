@@ -88,4 +88,52 @@ contract("RenExTokens", function (accounts: string[]) {
             ).should.be.rejectedWith(null, /revert/); // not owner
         }
     });
+
+    it("can't register already registered token (as with deregistration)", async () => {
+        const token = tokens[0];
+        const address = tokenInstances[token].address;
+        const decimals = await tokenInstances[token].decimals();
+
+        // Never registered - can't deregister
+        await renExTokens.deregisterToken(token)
+            .should.be.rejectedWith(null, /not registered/);
+
+        // Register
+        await renExTokens.registerToken(token, address, decimals);
+
+        // Already registered - can't register
+        await renExTokens.registerToken(token, address, decimals)
+            .should.be.rejectedWith(null, /already registered/);
+
+        // Deregister
+        await renExTokens.deregisterToken(token);
+
+        // Already deregistered - can't deregister again
+        await renExTokens.deregisterToken(token)
+            .should.be.rejectedWith(null, /not registered/);
+    });
+
+    it("can't change details", async () => {
+        const token1 = tokens[0];
+        const address1 = tokenInstances[token1].address;
+        const decimals1 = await tokenInstances[token1].decimals();
+
+        const token2 = tokens[0];
+        const address2 = tokenInstances[token2].address;
+        const decimals2 = await tokenInstances[token2].decimals();
+
+        // Register
+        await renExTokens.registerToken(token1, address1, decimals1);
+
+        // Deregister
+        await renExTokens.deregisterToken(token1);
+
+        // Attempt to reregister with different details
+        await renExTokens.registerToken(token1, address2, decimals2);
+
+        const tokenDetails = await renExTokens.tokens(token1);
+        (tokenDetails.addr).should.equal(address1);
+        (tokenDetails.decimals.toString()).should.equal(decimals1.toString());
+        (tokenDetails.status.toString()).should.equal(TokenStatus.Registered);
+    });
 });

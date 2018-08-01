@@ -39,7 +39,7 @@ contract RenExTokens is Ownable {
     */
     function registerToken(uint32 _tokenCode, ERC20 _tokenAddress, uint8 _tokenDecimals) public onlyOwner {
         TokenStatus previousStatus = tokens[_tokenCode].status;
-        require(previousStatus != TokenStatus.Registered);
+        require(previousStatus != TokenStatus.Registered, "already registered");
 
         tokens[_tokenCode].status = TokenStatus.Registered;
 
@@ -56,7 +56,7 @@ contract RenExTokens is Ownable {
     @param _tokenCode the unique 32-bit token identifier
     */
     function deregisterToken(uint32 _tokenCode) public onlyOwner {
-        require (tokens[_tokenCode].status == TokenStatus.Registered);
+        require (tokens[_tokenCode].status == TokenStatus.Registered, "not registered");
 
         tokens[_tokenCode].status = TokenStatus.Deregistered;
 

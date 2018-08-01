@@ -79,27 +79,27 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
         const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
 
         // Before initiating
-        (await swap.initiatable(swapID)).should.equal(true);
-        (await swap.refundable(swapID)).should.equal(false);
-        (await swap.redeemable(swapID)).should.equal(false);
+        (await swap.initiatable(swapID)).should.be.true;
+        (await swap.refundable(swapID)).should.be.false;
+        (await swap.redeemable(swapID)).should.be.false;
 
         await swap.initiate(swapID, bob, secretLock, secondsFromNow(1), { from: alice, value: 100000 });
 
-        (await swap.initiatable(swapID)).should.equal(false);
-        (await swap.refundable(swapID)).should.equal(false);
-        (await swap.redeemable(swapID)).should.equal(true);
+        (await swap.initiatable(swapID)).should.be.false;
+        (await swap.refundable(swapID)).should.be.false;
+        (await swap.redeemable(swapID)).should.be.true;
 
         await sleep(2 * second);
 
-        (await swap.initiatable(swapID)).should.equal(false);
-        (await swap.refundable(swapID)).should.equal(true);
-        (await swap.redeemable(swapID)).should.equal(true);
+        (await swap.initiatable(swapID)).should.be.false;
+        (await swap.refundable(swapID)).should.be.true;
+        (await swap.redeemable(swapID)).should.be.true;
 
         await swap.redeem(swapID, secret, { from: bob });
 
-        (await swap.initiatable(swapID)).should.equal(false);
-        (await swap.refundable(swapID)).should.equal(false);
-        (await swap.redeemable(swapID)).should.equal(false);
+        (await swap.initiatable(swapID)).should.be.false;
+        (await swap.refundable(swapID)).should.be.false;
+        (await swap.redeemable(swapID)).should.be.false;
 
     });
 });

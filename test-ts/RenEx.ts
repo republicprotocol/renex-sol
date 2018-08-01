@@ -31,7 +31,7 @@ contract("RenEx", function (accounts: string[]) {
         ({ tokenAddresses, orderbook, renExSettlement, renExBalances } = await setupContracts(darknode, 0x0, 0x0));
     });
 
-    it("order 3", async () => {
+    it("order 1", async () => {
         const tokens = market(DGX, REN);
         const buy = { tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
         const sell = { tokens, price: 0.95, volume: 1 /* REN */ };
@@ -40,7 +40,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.eql([0.975 /* DGX */, 1 /* REN */]);
     });
 
-    it("order 4", async () => {
+    it("order 2", async () => {
         const tokens = market(DGX, REN);
         const buy = { tokens, price: 1, volume: 1 /* DGX */ };
         const sell = { tokens, price: 0.95, volume: 2 /* REN */, minimumVolume: 1 /* DGX */ };
@@ -49,7 +49,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.eql([1 /* DGX */, 1.0256410256410258 /* REN */]);
     });
 
-    it("order 5", async () => {
+    it("order 3", async () => {
         const tokens = market(DGX, REN);
         const buy = { tokens, price: 0.5, volume: 1 /* DGX */ };
         const sell = { tokens, price: 0.5, volume: 2 /* REN */ };
@@ -58,7 +58,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.eql([1 /* DGX */, 2 /* REN */]);
     });
 
-    it("order 6", async () => {
+    it("order 4", async () => {
         const tokens = market(DGX, REN);
         const buy = { tokens, price: 1, volume: 1 /* DGX */ };
         // More precise than the number of decimals DGX has
@@ -68,7 +68,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.eql([1 /* DGX */, 1.9999999998 /* REN */]);
     });
 
-    it("order 7", async () => {
+    it("order 5", async () => {
         const tokens = market(DGX, REN);
         const buy = { tokens, priceC: 1999, priceQ: 40, volume: 2 /* DGX */ };
         const sell = { tokens, priceC: 1998, priceQ: 40, volume: 1 /* REN */, minimumVolume: 2 /* DGX */ };
@@ -77,26 +77,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.eql([2 /* DGX */, 0.002001501125844383 /* REN */]);
     });
 
-    // it("order 8", async () => {
-    //     const tokens = market(ETH, REN);
-    //     const buy = { tokens, priceC: 200, priceQ: 40, volumeC: 1, volumeQ: 0 /* ETH */, minimumVolumeC: 0, minimumVolumeQ: 0 };
-    //     const sell = { tokens, priceC: 200, priceQ: 40, volume: 1 /* REN */, minimumVolumeC: 0, minimumVolumeQ: 0 };
-
-    //     (await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook))
-    //         .should.eql([2e-13 /* ETH */, 2e-15 /* REN */]);
-    // });
-
-    // it("order 9", async () => {
-    //     const tokens = market(ETH, REN);
-    //     // Highest possible price, lowest possible volume
-    //     const buy = { tokens, priceC: 1999, priceQ: 52, volumeC: 1, volumeQ: 0 /* ETH */, minimumVolumeC: 0, minimumVolumeQ: 0 };
-    //     const sell = { tokens, priceC: 1999, priceQ: 52, volumeC: 1, volumeQ: 0 /* REN */, minimumVolumeC: 0, minimumVolumeQ: 0 };
-
-    //     (await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook))
-    //         .should.eql([2e-13 /* ETH */, 0 /* REN */]);
-    // });
-
-    it("order 10", async () => {
+    it("order 6", async () => {
         const tokens = market(ETH, REN);
         // Highest possible price, lowest possible volume
         const buy = { tokens, priceC: 1999, priceQ: 52, volumeC: 1, volumeQ: 13 /* ETH */, minimumVolumeC: 0, minimumVolumeQ: 0 };
@@ -105,6 +86,25 @@ contract("RenEx", function (accounts: string[]) {
         (await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook))
             .should.eql([2 /* ETH */, 2.001e-15 /* REN */]);
     });
+
+    // it("order 6", async () => {
+    //     const tokens = market(ETH, REN);
+    //     const buy = { tokens, priceC: 200, priceQ: 40, volumeC: 1, volumeQ: 0 /* ETH */, minimumVolumeC: 0, minimumVolumeQ: 0 };
+    //     const sell = { tokens, priceC: 200, priceQ: 40, volume: 1 /* REN */, minimumVolumeC: 0, minimumVolumeQ: 0 };
+
+    //     (await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook))
+    //         .should.eql([2e-13 /* ETH */, 2e-15 /* REN */]);
+    // });
+
+    // it("order 7", async () => {
+    //     const tokens = market(ETH, REN);
+    //     // Highest possible price, lowest possible volume
+    //     const buy = { tokens, priceC: 1999, priceQ: 52, volumeC: 1, volumeQ: 0 /* ETH */, minimumVolumeC: 0, minimumVolumeQ: 0 };
+    //     const sell = { tokens, priceC: 1999, priceQ: 52, volumeC: 1, volumeQ: 0 /* REN */, minimumVolumeC: 0, minimumVolumeQ: 0 };
+
+    //     (await submitMatch(buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook))
+    //         .should.eql([2e-13 /* ETH */, 0 /* REN */]);
+    // });
 
     it("atomic swap", async () => {
         const tokens = market(BTC, ETH);

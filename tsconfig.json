@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "typeRoots": [
+            "./test/typings"
+        ],
+        "outDir": "./test",
+        "lib": [
+            "es2015"
+        ],
+        "types": [
+            "node",
+            "mocha"
+        ],
+        "module": "commonjs",
+        "noImplicitAny": false,
+        "noImplicitReturns": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "sourceMap": true
+    }
+}

@@ -1,40 +1,51 @@
 {
-  "name": "renex-sol",
-  "version": "0.0.0",
-  "scripts": {
-    "test": "truffle test",
-    "coverage": "solidity-coverage",
-    "merge": "sol-merger \"./contracts/**/*.sol\"",
-    "development": "truffle migrate --network development --reset",
-    "nightly": "npm run merge ./.merged/nightly && truffle migrate --network nightly --reset",
-    "falcon": "npm run merge ./.merged/falcon && truffle migrate --network falcon --reset",
-    "f0": "npm run merge ./.merged/f0 && truffle migrate --network f0 --reset"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/republicprotocol/rexen-sol.git"
-  },
-  "license": "GPLv3",
-  "dependencies": {
-    "openzeppelin-solidity": "1.10.0",
-    "republic-sol": "^0.1.0"
-  },
-  "devDependencies": {
-    "bignumber.js": "^7.2.1",
-    "bn.js": "^4.11.8",
-    "chai": "^4.1.2",
-    "chai-as-promised": "^7.1.1",
-    "coveralls": "^3.0.1",
-    "crypto-js": "^3.1.9-1",
-    "dotenv": "^6.0.0",
-    "eslint": "^4.19.1",
-    "ganache-cli": "^6.1.3",
-    "js-sha256": "^0.9.0",
-    "sol-merger": "^0.1.2",
-    "solc": "^0.4.24",
-    "solc-js": "^0.4.20-browser.1",
-    "solidity-coverage": "^0.5.5",
-    "truffle": "^4.1.13",
-    "truffle-hdwallet-provider": "0.0.5"
-  }
+    "name": "renex-sol",
+    "version": "0.0.0",
+    "scripts": {
+        "test": "if [ -d \"test\" ]; then echo \"Refusing to overwrite 'test' directory\"; else npm run test-ts; fi;",
+        "test-ts": "(tsc && truffle test); rm -rf test",
+        "coverage": "if [ -d \"test\" ]; then echo \"Refusing to overwrite 'test' directory\"; else npm run coverage-ts; fi;",
+        "coverage-ts": "(tsc && solidity-coverage); rm -rf test",
+        "merge": "sol-merger \"./contracts/**/*.sol\"",
+        "development": "truffle migrate --network development --reset",
+        "nightly": "npm run merge ./.merged/nightly && truffle migrate --network nightly --reset",
+        "falcon": "npm run merge ./.merged/falcon && truffle migrate --network falcon --reset",
+        "f0": "npm run merge ./.merged/f0 && truffle migrate --network f0 --reset"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/republicprotocol/rexen-sol.git"
+    },
+    "license": "GPL-3.0-only",
+    "dependencies": {
+        "openzeppelin-solidity": "1.10.0",
+        "republic-sol": "git://github.com/republicprotocol/republic-sol.git#master"
+    },
+    "devDependencies": {
+        "@types/chai": "^4.1.4",
+        "@types/chai-as-promised": "^7.1.0",
+        "@types/crypto-js": "^3.1.42",
+        "@types/mocha": "^5.2.5",
+        "@types/node": "^10.5.2",
+        "bignumber.js": "^7.2.1",
+        "bn.js": "^4.11.8",
+        "chai": "^4.1.2",
+        "chai-as-promised": "^7.1.1",
+        "coveralls": "^3.0.1",
+        "crypto-js": "^3.1.9-1",
+        "dotenv": "^6.0.0",
+        "eth-gas-reporter": "^0.1.10",
+        "ganache-cli": "^6.1.6",
+        "js-sha256": "^0.9.0",
+        "sol-merger": "^0.1.2",
+        "solc": "^0.4.24",
+        "solc-js": "^0.4.20-browser.1",
+        "solidity-coverage": "^0.5.5",
+        "truffle": "^5.0.0-next.6",
+        "truffle-hdwallet-provider": "0.0.5",
+        "tslint": "^5.11.0",
+        "tslint-react": "^3.6.0",
+        "typescript": "^2.9.2",
+        "web3": "^1.0.0-beta.35"
+    }
 }

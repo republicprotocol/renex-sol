@@ -5,7 +5,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "./RenExSettlement.sol";
-import "republic-sol/contracts/RewardVault.sol";
+import "republic-sol/contracts/DarknodeRewardVault.sol";
 
 /**
 @title The contract responsible for holding RenEx trader funds
@@ -15,7 +15,7 @@ contract RenExBalances is Ownable {
     using SafeMath for uint256;
 
     RenExSettlement public settlementContract;
-    RewardVault public rewardVaultContract;
+    DarknodeRewardVault public rewardVaultContract;
 
     // TODO: Use same constant instance across all contracts
     address constant public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -34,7 +34,7 @@ contract RenExBalances is Ownable {
     /**
     @notice After deployment, updateRenExSettlementContract should be called
     */
-    constructor(RewardVault _rewardVaultContract) public {
+    constructor(DarknodeRewardVault _rewardVaultContract) public {
         rewardVaultContract = _rewardVaultContract;
     }
 
@@ -45,7 +45,7 @@ contract RenExBalances is Ownable {
     @notice Throws if called by any account other than the RenExSettlement contract
     */
     modifier onlyRenExSettlementContract() {
-        require(msg.sender == address(settlementContract));
+        require(msg.sender == address(settlementContract), "not authorised");
         _;
     }
 
@@ -67,7 +67,7 @@ contract RenExBalances is Ownable {
     by the owner of the contract)
     @param _newRewardVaultContract the address of the new reward vault contract
     */
-    function updateRewardVault(RewardVault _newRewardVaultContract) public onlyOwner {
+    function updateRewardVault(DarknodeRewardVault _newRewardVaultContract) public onlyOwner {
         emit RewardVaultContractUpdated(_newRewardVaultContract);
         rewardVaultContract = _newRewardVaultContract;
     }
@@ -107,6 +107,8 @@ contract RenExBalances is Ownable {
     */
     function decrementBalanceWithFee(address _trader, address _token, uint256 _value, uint256 _fee, address feePayee)
     public onlyRenExSettlementContract {
+        require(traderBalances[_trader][_token] >= _fee, "insufficient funds for fee");
+
         if (address(_token) == ETHEREUM) {
             rewardVaultContract.deposit.value(_fee)(feePayee, ERC20(_token), _fee);
         } else {
@@ -117,6 +119,7 @@ contract RenExBalances is Ownable {
     }
 
     function privateDecrementBalance(address _trader, ERC20 _token, uint256 _value) private {
+        require(traderBalances[_trader][_token] >= _value, "insufficient funds");
         traderBalances[_trader][_token] = traderBalances[_trader][_token].sub(_value);
 
         emit BalanceDecreased(_trader, _token, _value);
@@ -134,9 +137,9 @@ contract RenExBalances is Ownable {
         address trader = msg.sender;
 
         if (address(_token) == ETHEREUM) {
-            require(msg.value == _value);
+            require(msg.value == _value, "mismatched value parameter and tx value");
         } else {
-            require(_token.transferFrom(trader, this, _value));
+            require(_token.transferFrom(trader, this, _value), "token trasfer failed");
         }
         privateIncrementBalance(trader, _token, _value);
     }
@@ -150,16 +153,16 @@ contract RenExBalances is Ownable {
     function withdraw(ERC20 _token, uint256 _value) public {
         address trader = msg.sender;
 
-        require(traderBalances[trader][_token] >= _value);
+        require(traderBalances[trader][_token] >= _value, "insufficient balance");
 
         // Check if the trader is allowed to withdraw this token
-        require(settlementContract.traderCanWithdraw(trader, _token, _value));
+        require(settlementContract.traderCanWithdraw(trader, _token, _value), "withdraw blocked");
 
         privateDecrementBalance(trader, _token, _value);
         if (address(_token) == ETHEREUM) {
             trader.transfer(_value);
         } else {
-            require(_token.transfer(trader, _value));
+            require(_token.transfer(trader, _value), "token transfer failed");
         }
     }
 

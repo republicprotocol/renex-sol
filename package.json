@@ -19,7 +19,7 @@
     "license": "GPL-3.0-only",
     "dependencies": {
         "openzeppelin-solidity": "1.10.0",
-        "republic-sol": "^0.1.0"
+        "republic-sol": "git://github.com/republicprotocol/republic-sol.git#nightly"
     },
     "devDependencies": {
         "@types/chai": "^4.1.4",

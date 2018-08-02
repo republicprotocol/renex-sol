@@ -6,7 +6,7 @@ RenEx supports two Settlement Layers that are compatible with the Republic Proto
 
 Settlement Identifier: `1`
 
-![Settlement between ETH and ERC20s](./images/01-settlement-eth-and-erc20s.jpg "Settlement between ETH and ERC20s")
+![Settlement between ETH and ERC20s](./images/02-settlement-eth-and-erc20s.jpg "Settlement between ETH and ERC20s")
 
 ### Depositing
 
@@ -18,7 +18,7 @@ Settlement Identifier: `1`
 
 Settlement Identifier: `2`
 
-![Settlement between ETH and BTC](./images/01-settlement-eth-and-btc.jpg "Settlement between ETH and BTC")
+![Settlement between ETH and BTC](./images/02-settlement-eth-and-btc.jpg "Settlement between ETH and BTC")
 
 ### Depositing
 

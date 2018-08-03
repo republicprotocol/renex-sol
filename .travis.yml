@@ -8,9 +8,6 @@ cache:
   directories:
     - node_modules
 before_script:
-  - rm -rf node_modules/ethereumjs-testrpc-sc
-  - mv .travis/ethereumjs-testrpc-sc node_modules/ethereumjs-testrpc-sc
-  - npm install --global typescript
   - truffle version
 script:
   - npm run coverage

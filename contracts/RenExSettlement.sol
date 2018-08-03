@@ -11,10 +11,10 @@ import "./RenExBalances.sol";
 import "./RenExTokens.sol";
 
 /**
-@title The contract responsible for holding trader funds and settling matched
-order values
-@author Republic Protocol
-*/
+ * @title The contract responsible for holding trader funds and settling matched
+ * order values
+ * @author Republic Protocol
+ */
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
@@ -47,6 +47,7 @@ contract RenExSettlement is Ownable {
         uint32 highToken;
         address lowTokenAddress;
         address highTokenAddress;
+        uint256 timestamp;
     }
 
     // Events
@@ -243,7 +244,8 @@ contract RenExSettlement is Ownable {
             lowToken: sellToken,
             highToken: buyToken,
             lowTokenAddress: sellTokenAddress,
-            highTokenAddress: buyTokenAddress
+            highTokenAddress: buyTokenAddress,
+            timestamp: now
         });
     }
 
@@ -372,7 +374,7 @@ contract RenExSettlement is Ownable {
         return (newValue, value - newValue);
     }
 
-    function getMatchDetails(bytes32 _orderID) public view returns (bytes32, bytes32, uint256, uint256, uint32, uint32) {
+    function getMatchDetails(bytes32 _orderID) public view returns (bytes32, bytes32, uint256, uint256, uint32, uint32, uint256) {
         bytes32 matchingOrderID = orderbookContract.orderMatch(_orderID)[0];
         bytes32 matchID;
         MatchDetails memory details;
@@ -381,13 +383,13 @@ contract RenExSettlement is Ownable {
 
             details = matchDetails[matchID];
 
-            return (_orderID, matchingOrderID, details.highTokenVolume, details.lowTokenVolume, details.highToken, details.lowToken);
+            return (_orderID, matchingOrderID, details.highTokenVolume, details.lowTokenVolume, details.highToken, details.lowToken, details.timestamp);
         } else {
             matchID = keccak256(abi.encodePacked(matchingOrderID, _orderID));
 
             details = matchDetails[matchID];
 
-            return (_orderID, matchingOrderID, details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken);
+            return (_orderID, matchingOrderID, details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken, details.timestamp);
         }
     }
 }

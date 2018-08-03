@@ -380,4 +380,22 @@ contract RenExSettlement is Ownable {
         uint32 secondToken = uint32(tokens);
         return (firstToken < secondToken);
     }
+
+    function hashOrder(
+        bytes _details,
+        uint64 _settlementID,
+        uint64 _tokens,
+        uint256 _price,
+        uint256 _volume,
+        uint256 _minimumVolume
+    ) external view returns (bytes32) {
+        return SettlementUtils.hashOrder(SettlementUtils.OrderDetails({
+            details: _details,
+            settlementID: _settlementID,
+            tokens: _tokens,
+            price: _price,
+            volume: _volume,
+            minimumVolume: _minimumVolume
+        }));
+    }
 }

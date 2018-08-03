@@ -17,27 +17,35 @@ contract.only("RenExSettlement", function (accounts: string[]) {
     let tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens;
     let buyID_1, sellID_1;
     let buyID_2, sellID_2;
-    let buyID_3;
+    let buyID_3, sellID_3;
+    let buyID_4;
 
     before(async function () {
         ({ tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens } = await setupContracts(darknode, 0x0, broker));
-        sellID_1 = "0x14d9446e9695ce9f7499577e7bb8c8e1b10c71462cdd3c85749e09a5413c9d3d";
-        buyID_1 = "0x65ed970085599ef2c3f4230023db55130d503774bd9bcc3335b9368b91a64a90";
+        sellID_1 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x700000003", 10, 1000, 0); 
+        buyID_1 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x300000007", 10, 10000, 0); 
 
-        sellID_2 = "0x0f69955709a4e078264ddb0d299dc41f5bcea3b3fe33dd1ada12fde5dc3b1094";
-        buyID_2 = "0x1555eac6a530e771dcc31f193360371bd58d19010c1b351cc0be3cd54a3023cf";
+        sellID_2 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 1000, 0); 
+        buyID_2 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x1", 12, 10000, 0); 
 
-        buyID_3 = "0xdcb8f80310a702e8e024428e94f038030208655975d980d9b88f08d1c1d3d5ad";
+        sellID_3 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 10000, 0);
+        buyID_3 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x1", 15, 10000, 0);
+
+
+        buyID_4 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x1", 17, 10000, 0);
 
         await steps.openBuyOrder(orderbook, broker, accounts[5], buyID_1);
         await steps.openBuyOrder(orderbook, broker, accounts[6], buyID_2);
         await steps.openBuyOrder(orderbook, broker, accounts[7], buyID_3);
+        await steps.openBuyOrder(orderbook, broker, accounts[8], buyID_4);
 
         await steps.openSellOrder(orderbook, broker, accounts[6], sellID_1);
         await steps.openSellOrder(orderbook, broker, accounts[5], sellID_2);
+        await steps.openSellOrder(orderbook, broker, accounts[8], sellID_3);
 
         await orderbook.confirmOrder(buyID_1, [sellID_1], { from: darknode });
         await orderbook.confirmOrder(buyID_2, [sellID_2], { from: darknode });
+        await orderbook.confirmOrder(buyID_3, [sellID_3], { from: darknode });
     });
 
     it("can update orderbook", async () => {
@@ -69,27 +77,33 @@ contract.only("RenExSettlement", function (accounts: string[]) {
 
     it("submitOrder", async () => {
          // sellID_1?
-         await renExSettlement.submitOrder(web3.utils.sha3("0"), 2, "0x100000000", 10, 1000, 0);
+         await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x700000003", 10, 1000, 0);
 
          // buyID_1?
-         await renExSettlement.submitOrder(web3.utils.sha3("0"), 2, "0x1", 9, 10000, 0);
+         await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x300000007", 10, 10000, 0);
  
          // sellID_2?
-         await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x100000000", 10, 1000, 0);
+         await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 1000, 0);
  
          // buyID_2?
-         await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x1", 10, 10000, 0);
+         await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x1", 12, 10000, 0);
+
+          // sellID_3?
+          await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 10000, 0);
+ 
+          // buyID_3?
+          await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x1", 15, 10000, 0);
     });
 
     it("submitOrder (rejected)", async () => {
         // Can't submit order twice:
-        await renExSettlement.submitOrder(web3.utils.sha3("0"), 2, "0x100000000", 10, 1000, 0).should.be.rejectedWith(null, /order already submitted/);
+        await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 1000, 0).should.be.rejectedWith(null, /order already submitted/);
 
         // Can't submit order that's not in orderbook (different order details):
-        await renExSettlement.submitOrder(web3.utils.sha3("1"), 2, "0x100000000", 10, 1000, 0).should.be.rejectedWith(null, /uncofirmed order/);
+        await renExSettlement.submitOrder(web3.utils.sha3("1"), 1, "0x100000000", 12, 1000, 0).should.be.rejectedWith(null, /uncofirmed order/);
 
         // Can't submit order that's not confirmed
-        await renExSettlement.submitOrder(web3.utils.sha3("0"), 2, "0x1", 15, 10000, 0).should.be.rejectedWith(null, /uncofirmed order/);
+        await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x1", 17, 10000, 0).should.be.rejectedWith(null, /uncofirmed order/);
     });
 
     // it("verifyOrder", async () => {
@@ -122,17 +136,17 @@ contract.only("RenExSettlement", function (accounts: string[]) {
             sellID_1,
         ).should.be.rejectedWith(null, /incompatible orders/);
 
-        // // Orders that aren't matched to one another
-        // await renExSettlement.submitMatch(
-        //     buyID_2,
-        //     sellID_1,
-        // ).should.be.rejectedWith(null, /invalid order pair/);
+        // Orders that aren't matched to one another
+        await renExSettlement.submitMatch(
+            sellID_3,
+            buyID_2,
+        ).should.be.rejectedWith(null, /invalid order pair/);
 
-        // // Buy token that is not registered
-        // await renExSettlement.submitMatch(
-        //     buyID_1,
-        //     sellID_1,
-        // ).should.be.rejectedWith(null, /unregistered buy token/);
+        // Buy token that is not registered
+        await renExSettlement.submitMatch(
+            buyID_1,
+            sellID_1,
+        ).should.be.rejectedWith(null, /unregistered buy token/);
 
         await renExTokens.deregisterToken(ETH);
         await renExSettlement.submitMatch(

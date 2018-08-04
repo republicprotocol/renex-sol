@@ -6,7 +6,7 @@ RenEx supports two Settlement Layers that are compatible with the Republic Proto
 
 Settlement Identifier: `1`
 
-Settlement for ETH and ERC20s is immediate, and non-interactive. As part of the standard process for Republic Protocol Settlement Layers; Darknodes call `submitOrder` for two matching orders, and then call `settle` using the IDs of those two matching orders. The Settlement contract will:
+Settlement for ETH and ERC20s is immediate and non-interactive. As part of the standard process for Republic Protocol Settlement Layers; Darknodes call `submitOrder` for two matching orders and then call `settle` using the IDs of those two matching orders. The Settlement contract will:
 
 1. verify that the orders are confirmed matches in the Republic Protocol Orderbook,
 2. verify that the orders are matching,

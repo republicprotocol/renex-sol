@@ -1,4 +1,5 @@
 # RenEx — Solidity
 
-* [Settlement](./01-settlement.md)
-* [Atomic Swapping](./02-atomic-swapping.md)
+* [RenEx Balances](./01-balances.md)
+* [RenEx Settlement](./02-settlement.md)
+* [RenEx Atomic Swapping](./03-atomic-swapping.md)

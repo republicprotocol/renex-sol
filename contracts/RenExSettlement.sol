@@ -48,7 +48,6 @@ contract RenExSettlement is Ownable {
         address lowTokenAddress;
         address highTokenAddress;
     }
-
     // Events
     // event OrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
     // event RenExBalancesUpdated(RenExBalances previousRenExBalances, RenExBalances nextRenExBalances);
@@ -63,7 +62,6 @@ contract RenExSettlement is Ownable {
     mapping(bytes32 => MatchDetails) public matchDetails;
     // Slasher storage
     mapping(bytes32 => bool) public slashedMatches;
-
 
     /**
       * @notice constructor
@@ -88,7 +86,6 @@ contract RenExSettlement is Ownable {
     }
 
     /********** UPDATER FUNCTIONS *********************************************/
-
     function updateOrderbook(Orderbook _newOrderbookContract) public onlyOwner {
         // emit OrderbookUpdated(orderbookContract, _newOrderbookContract);
         orderbookContract = _newOrderbookContract;
@@ -105,7 +102,6 @@ contract RenExSettlement is Ownable {
     }
 
     /********** MODIFIERS *****************************************************/
-
     modifier withGasPriceLimit(uint256 gasPriceLimit) {
         require(tx.gasprice <= gasPriceLimit, "gas price too high");
         _;
@@ -117,59 +113,46 @@ contract RenExSettlement is Ownable {
     }
 
     /********** WITHDRAWAL FUNCTIONS ******************************************/
-
-    function traderCanWithdraw(address _trader, address _token, uint256 amount) public returns (bool) {
+    function traderCanWithdraw(address _trader, address _token, uint256 _amount) public returns (bool) {
         // In the future, this will return false (i.e. invalid withdrawal) if the
         // trader has open orders for that token
         return true;
     }
 
-
    /**
       * @notice Stores the details of an order
-      * @param _orderType one of Midpoint or Limit
-      * @param _parity one of Buy or Sell
-      * @param _expiry the expiry date of the order in seconds since Unix epoch
+      * @param _details miscellaneous details 
+      * @param _settlementID id of the settlement
       * @param _tokens two 32-bit token codes concatenated (with the lowest first)
       * @param _price the order price
       * @param _volume the order volume
       * @param _minimumVolume the order minimum volume
-      * @param _nonceHash the keccak256 hash of a random 32 byte value
       */
     function submitOrder(
-        uint32 _settlementID,
-        uint8 _orderType,
-        uint8 _parity,
-        uint64 _expiry,
+        bytes _details,
+        uint64 _settlementID,
         uint64 _tokens,
         uint256 _price,
         uint256 _volume,
-        uint256 _minimumVolume,
-        uint256 _nonceHash
+        uint256 _minimumVolume
     ) public withGasPriceLimit(submissionGasPriceLimit) {
         SettlementUtils.OrderDetails memory order = SettlementUtils.OrderDetails({
+            details: _details,
             settlementID: _settlementID,
-            orderType: _orderType,
-            parity: _parity,
-            expiry: _expiry,
             tokens: _tokens,
             price: _price,
             volume: _volume,
-            minimumVolume: _minimumVolume,
-            nonceHash: _nonceHash
+            minimumVolume: _minimumVolume
         });
 
         bytes32 orderID = SettlementUtils.hashOrder(order);
-
         orderSubmitter[orderID] = msg.sender;
 
         require(orderStatus[orderID] == OrderStatus.None, "order already submitted");
         orderStatus[orderID] = OrderStatus.Submitted;
-
         require(orderbookContract.orderState(orderID) == Orderbook.OrderState.Confirmed, "uncofirmed order");
 
         orderTrader[orderID] = orderbookContract.orderTrader(orderID);
-
         orderDetails[orderID] = order;
     }
 
@@ -201,7 +184,7 @@ contract RenExSettlement is Ownable {
         prepareMatchSettlement(_buyID, _sellID, buyToken, sellToken, buyTokenAddress, sellTokenAddress, buyTokenDecimals, sellTokenDecimals);
 
         // Note: verifyMatch checks that the buy and sell settlement IDs match
-        uint32 settlementID = orderDetails[_buyID].settlementID;
+        uint64 settlementID = orderDetails[_buyID].settlementID;
         if (settlementID == RENEX_ATOMIC_SETTLEMENT_ID) {
             // Pay darknode fees
             payFees(_buyID, _sellID);
@@ -297,7 +280,7 @@ contract RenExSettlement is Ownable {
 
         bytes32 innocentOrderID = orderbookContract.orderMatch(_guiltyOrderID)[0];
         bytes32 matchID;
-        if (orderDetails[_guiltyOrderID].parity == uint8(OrderParity.Buy)) {
+        if (isBuyOrder(_guiltyOrderID)) {
             matchID = keccak256(abi.encodePacked(_guiltyOrderID, innocentOrderID));
         } else {
             matchID = keccak256(abi.encodePacked(innocentOrderID, _guiltyOrderID));
@@ -376,7 +359,7 @@ contract RenExSettlement is Ownable {
         bytes32 matchingOrderID = orderbookContract.orderMatch(_orderID)[0];
         bytes32 matchID;
         MatchDetails memory details;
-        if (orderDetails[_orderID].parity == uint8(OrderParity.Buy)) {
+        if (isBuyOrder(_orderID)) {
             matchID = keccak256(abi.encodePacked(_orderID, matchingOrderID));
 
             details = matchDetails[matchID];
@@ -389,5 +372,30 @@ contract RenExSettlement is Ownable {
 
             return (_orderID, matchingOrderID, details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken);
         }
+    }
+
+    function isBuyOrder(bytes32 _orderID) internal view returns (bool) {
+        uint64 tokens = orderDetails[_orderID].tokens;
+        uint32 firstToken = uint32(tokens >> 32);
+        uint32 secondToken = uint32(tokens);
+        return (firstToken < secondToken);
+    }
+
+    function hashOrder(
+        bytes _details,
+        uint64 _settlementID,
+        uint64 _tokens,
+        uint256 _price,
+        uint256 _volume,
+        uint256 _minimumVolume
+    ) external view returns (bytes32) {
+        return SettlementUtils.hashOrder(SettlementUtils.OrderDetails({
+            details: _details,
+            settlementID: _settlementID,
+            tokens: _tokens,
+            price: _price,
+            volume: _volume,
+            minimumVolume: _minimumVolume
+        }));
     }
 }

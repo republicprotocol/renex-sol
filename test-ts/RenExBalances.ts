@@ -1,10 +1,8 @@
 const RepublicToken = artifacts.require("RepublicToken");
 const ABCToken = artifacts.require("ABCToken");
-const XYZToken = artifacts.require("XYZToken");
 const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
 const RenExSettlement = artifacts.require("RenExSettlement");
 const RenExBalances = artifacts.require("RenExBalances");
-const WithdrawBlock = artifacts.require("WithdrawBlock");
 
 import BigNumber from "bignumber.js";
 
@@ -197,23 +195,6 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.deposit(ETH.address, 2, { from: accounts[1], value: 1 })
             .should.be.rejectedWith(null, /mismatched value parameter and tx value/);
     });
-
-    // it("the RenExSettlement contract can approve and reject withdrawals", async () => {
-    //     const renExSettlementAlt = await WithdrawBlock.new();
-    //     await renExBalances.updateRenExSettlementContract(renExSettlementAlt.address);
-
-    //     const deposit = 10;
-    //     await TOKEN1.approve(renExBalances.address, deposit, { from: accounts[0] });
-    //     await renExBalances.deposit(TOKEN1.address, deposit, { from: accounts[0] });
-
-    //     // Withdrawal should not go through
-    //     await renExBalances.withdraw(TOKEN1.address, deposit, { from: accounts[0] })
-    //         .should.be.rejectedWith(null, /withdraw blocked/);
-
-    //     // Can withdraw after reverting settlement contract update
-    //     await renExBalances.updateRenExSettlementContract(renExSettlement.address);
-    //     await renExBalances.withdraw(TOKEN1.address, deposit, { from: accounts[0] });
-    // });
 
     it("decrementBalance reverts for invalid withdrawals", async () => {
         const auth = accounts[8];

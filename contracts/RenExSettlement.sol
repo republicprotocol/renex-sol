@@ -10,20 +10,15 @@ import "republic-sol/contracts/SettlementUtils.sol";
 import "./RenExBalances.sol";
 import "./RenExTokens.sol";
 
-/**
- * @title The contract responsible for holding trader funds and settling matched
- * order values
- * @author Republic Protocol
- */
+/// @notice The contract responsible for holding trader funds and settling matched
+/// order values.
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
     address public slasherAddress;
 
-    /**
-      * @notice Fees are in RenEx are 0.2% and to represent this in integers it
-      * is broken into a numerator and denominator.
-      */
+    /// @notice Fees are in RenEx are 0.2% and to represent this in integers it
+    /// is broken into a numerator and denominator.
     uint256 constant public DARKNODE_FEES_NUMERATOR = 2;
     uint256 constant public DARKNODE_FEES_DENOMINATOR = 1000;
 
@@ -49,6 +44,7 @@ contract RenExSettlement is Ownable {
         address highTokenAddress;
         uint256 timestamp;
     }
+
     // Events
     // event OrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
     // event RenExBalancesUpdated(RenExBalances previousRenExBalances, RenExBalances nextRenExBalances);
@@ -64,14 +60,12 @@ contract RenExSettlement is Ownable {
     // Slasher storage
     mapping(bytes32 => bool) public slashedMatches;
 
-    /**
-      * @notice constructor
-      *
-      * @param _orderbookContract The address of the Orderbook contract.
-      * @param _renExBalancesContract The address of the RenExBalances
-      *                               contract.
-      * @param _renExTokensContract The address of the RenExTokens contract.
-      */
+    /// @notice constructor
+    ///
+    /// @param _orderbookContract The address of the Orderbook contract.
+    /// @param _renExBalancesContract The address of the RenExBalances
+    ///        contract.
+    /// @param _renExTokensContract The address of the RenExTokens contract.
     constructor(
         Orderbook _orderbookContract,
         RenExTokens _renExTokensContract,
@@ -86,7 +80,6 @@ contract RenExSettlement is Ownable {
         slasherAddress = _slasherAddress;
     }
 
-    /********** UPDATER FUNCTIONS *********************************************/
     function updateOrderbook(Orderbook _newOrderbookContract) public onlyOwner {
         // emit OrderbookUpdated(orderbookContract, _newOrderbookContract);
         orderbookContract = _newOrderbookContract;
@@ -102,7 +95,6 @@ contract RenExSettlement is Ownable {
         submissionGasPriceLimit = _newSubmissionGasPriceLimit;
     }
 
-    /********** MODIFIERS *****************************************************/
     modifier withGasPriceLimit(uint256 gasPriceLimit) {
         require(tx.gasprice <= gasPriceLimit, "gas price too high");
         _;
@@ -113,22 +105,20 @@ contract RenExSettlement is Ownable {
         _;
     }
 
-    /********** WITHDRAWAL FUNCTIONS ******************************************/
     function traderCanWithdraw(address _trader, address _token, uint256 _amount) public returns (bool) {
         // In the future, this will return false (i.e. invalid withdrawal) if the
         // trader has open orders for that token
         return true;
     }
 
-   /**
-      * @notice Stores the details of an order
-      * @param _details miscellaneous details 
-      * @param _settlementID id of the settlement
-      * @param _tokens two 32-bit token codes concatenated (with the lowest first)
-      * @param _price the order price
-      * @param _volume the order volume
-      * @param _minimumVolume the order minimum volume
-      */
+    /// @notice Stores the details of an order
+    ///
+    /// @param _details miscellaneous details 
+    /// @param _settlementID id of the settlement
+    /// @param _tokens two 32-bit token codes concatenated (with the lowest first)
+    /// @param _price the order price
+    /// @param _volume the order volume
+    /// @param _minimumVolume the order minimum volume
     function submitOrder(
         bytes _details,
         uint64 _settlementID,
@@ -157,13 +147,11 @@ contract RenExSettlement is Ownable {
         orderDetails[orderID] = order;
     }
 
-    /**
-      * @notice Settles two orders that are matched. `submitOrder` must have been
-      * called for each order before this function is called.
-      *
-      * @param _buyID the 32 byte ID of the buy order
-      * @param _sellID the 32 byte ID of the sell order
-      */
+    /// @notice Settles two orders that are matched. `submitOrder` must have been
+    /// called for each order before this function is called.
+    ///
+    /// @param _buyID the 32 byte ID of the buy order
+    /// @param _sellID the 32 byte ID of the sell order
     function submitMatch(bytes32 _buyID, bytes32 _sellID) public {
         require(orderStatus[_buyID] == OrderStatus.Submitted, "invalid buy status");
         require(orderStatus[_sellID] == OrderStatus.Submitted, "invalid sell status");
@@ -256,9 +244,7 @@ contract RenExSettlement is Ownable {
         return (lowTokenValue, highTokenValue);
     }
 
-    /** 
-     * @notice Computes (numerator / denominator) * 10 ** scale
-     */
+    /// @notice Computes (numerator / denominator) * 10 ** scale
     function joinFraction(uint256 numerator, uint256 denominator, int16 scale) private pure returns (uint256) {
         if (scale >= 0) {
             return numerator * 10 ** uint256(scale) / denominator;
@@ -267,14 +253,12 @@ contract RenExSettlement is Ownable {
         }
     }
 
-    /**
-      * @notice Slashes the bond of a guilty trader. This is called when an atomic
-      * swap is not executed successfully. The bond of the trader who caused the
-      * swap to fail has their bond taken from them and split between the innocent
-      * trader and the watchdog.
-      *
-      * @param _guiltyOrderID the 32 byte ID of the order of the guilty trader
-      */
+    /// @notice Slashes the bond of a guilty trader. This is called when an atomic
+    /// swap is not executed successfully. The bond of the trader who caused the
+    /// swap to fail has their bond taken from them and split between the innocent
+    /// trader and the watchdog.
+    ///
+    /// @param _guiltyOrderID the 32 byte ID of the order of the guilty trader
     function slash(
         bytes32 _guiltyOrderID
     ) public onlySlasher {
@@ -324,9 +308,7 @@ contract RenExSettlement is Ownable {
         renExBalancesContract.decrementBalanceWithFee(orderTrader[_sellID], tokenAddress, 0, fee, orderSubmitter[_sellID]);
     }
 
-    /**
-     * @notice (private) Calls the RenExBalances contract to update the balances
-     */
+    /// @notice (private) Calls the RenExBalances contract to update the balances
     function settleFunds(
         bytes32 _buyID, bytes32 _sellID
     ) private {

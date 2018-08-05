@@ -18,61 +18,45 @@ contract AtomicInfo is Ownable {
     mapping (bytes32 => bytes) public swapDetails;
     mapping (bytes32 => uint256) public swapDetailsTimestamp;
 
-    /**
-      * @notice constructor
-      *
-      * @param _orderbookContract The address of the Orderbook contract.
-      */
+    /// @param _orderbookContract The address of the Orderbook contract.
     constructor(
         Orderbook _orderbookContract
     ) public {
         orderbookContract = _orderbookContract;
     }
 
-    /**
-     * @notice The owner of the contract can update the orderbook address
-     */
+    /// @notice The owner of the contract can update the orderbook address.
     function updateOrderbook(Orderbook _newOrderbookContract) public onlyOwner {
         emit OrderbookUpdated(orderbookContract, _newOrderbookContract);
         orderbookContract = _newOrderbookContract;
     }
 
-    /**
-     * @notice Restricts a function to only be called by an address that has
-     * been authorised by the trader who submitted the order
-     */
+    /// @notice Restricts a function to only be called by an address that has
+    /// been authorised by the trader who submitted the order.
     modifier onlyAuthorisedSwapper(bytes32 _orderID, address _swapper) {
         address trader = orderbookContract.orderTrader(_orderID);
         require(_swapper == trader || authorisedSwapper[trader][_swapper] == true, "not authorised");
         _;
     }
 
-    /**
-     * @notice Permits the address to submit details for the message senders's
-     * atomic swaps
-     */
+    /// @notice Permits the address to submit details for the message senders's
+    /// atomic swaps.
     function authoriseSwapper(address _swapper) public {
         authorisedSwapper[msg.sender][_swapper] = true;
     }
 
-    /**
-     * @notice Revokes the permissions allowed by `authoriseSwapper`
-     */
+    /// @notice Revokes the permissions allowed by `authoriseSwapper`
     function deauthoriseSwapper(address _swapper) public {
         authorisedSwapper[msg.sender][_swapper] = false;
     }
 
-    /**
-     * @notice Provides the encoded swap details about an order
-     */
+    /// @notice Provides the encoded swap details about an order
     function submitDetails(bytes32 _orderID, bytes _swapDetails) public onlyAuthorisedSwapper(_orderID, msg.sender) {
         swapDetails[_orderID] = _swapDetails;
         swapDetailsTimestamp[_orderID] = now;
     }
 
-    /**
-     * @notice Provides the address that will participate in the swap for the order
-     */
+    /// @notice Provides the address that will participate in the swap for the order
     function setOwnerAddress(bytes32 _orderID, bytes _owner) public onlyAuthorisedSwapper(_orderID, msg.sender) {
         getOwnerAddress[_orderID] = _owner;
         ownerAddressTimestamp[_orderID] = now;

@@ -399,7 +399,7 @@ export async function submitMatch(
     (await orderbook.orderTrader(buy.orderID)).should.equal(buyer);
     (await orderbook.orderTrader(sell.orderID)).should.equal(seller);
 
-    await orderbook.confirmOrder(buy.orderID, [sell.orderID], { from: darknode }).should.not.be.rejected;
+    await orderbook.confirmOrder(buy.orderID, sell.orderID, { from: darknode }).should.not.be.rejected;
 
     await renExSettlement.submitOrder(getPreBytes(buy), buy.settlement, buy.tokens, buy.price.multipliedBy(10 ** 12), buy.volume.multipliedBy(10 ** 12), buy.minimumVolume.multipliedBy(10 ** 12));
     await renExSettlement.submitOrder(getPreBytes(sell), sell.settlement, sell.tokens, sell.price.multipliedBy(10 ** 12), sell.volume.multipliedBy(10 ** 12), sell.minimumVolume.multipliedBy(10 ** 12));

@@ -81,8 +81,8 @@ contract("Slasher", function (accounts: string[]) {
         let guiltyAddress = buyer;
         let innocentOrderID = sellOrderID;
         let innocentAddress = seller;
-        (await orderbook.orderMatches(guiltyOrderID))[0].should.eql(innocentOrderID);
-        (await orderbook.orderMatches(innocentOrderID))[0].should.eql(guiltyOrderID);
+        (await orderbook.orderMatch(guiltyOrderID)).should.eql(innocentOrderID);
+        (await orderbook.orderMatch(innocentOrderID)).should.eql(guiltyOrderID);
 
         let feeNum = await renExSettlement.DARKNODE_FEES_NUMERATOR();
         let feeDen = await renExSettlement.DARKNODE_FEES_DENOMINATOR();
@@ -97,7 +97,7 @@ contract("Slasher", function (accounts: string[]) {
         let beforeInnocentBalance = beforeInnocentBalances[beforeInnocentTokens.indexOf(eth_address)];
 
         // Slash the fees
-        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: slasher });
+        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: slasher });
 
         // Check the new balances
         let afterSlasherBalance = await darknodeRewardVault.darknodeBalances(slasher, eth_address);
@@ -128,12 +128,12 @@ contract("Slasher", function (accounts: string[]) {
         );
 
         // Slash the fees
-        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: slasher });
+        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: slasher });
 
-        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: slasher })
+        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: slasher })
             .should.be.rejectedWith(null, /match already slashed/); // already slashed
 
-        await renExSettlement.slash(buyOrderID, sellOrderID, false, { from: slasher })
+        await renExSettlement.slashSeller(buyOrderID, sellOrderID, { from: slasher })
             .should.be.rejectedWith(null, /match already slashed/); // already slashed
     });
 
@@ -147,7 +147,7 @@ contract("Slasher", function (accounts: string[]) {
         );
 
         // Slash the fees
-        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: slasher })
+        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: slasher })
             .should.not.be.rejected;
     });
 
@@ -161,7 +161,7 @@ contract("Slasher", function (accounts: string[]) {
         );
 
         // Slash the fees
-        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: slasher })
+        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: slasher })
             .should.be.rejectedWith(null, /non-eth tokens/);
     });
 
@@ -175,7 +175,7 @@ contract("Slasher", function (accounts: string[]) {
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true, true
         );
 
-        await renExSettlement.slash(guiltyOrderID, sellOrderID, true, { from: slasher })
+        await renExSettlement.slashBuyer(guiltyOrderID, sellOrderID, { from: slasher })
             .should.be.rejectedWith(null, /slashing non-atomic trade/);
     });
 
@@ -191,11 +191,11 @@ contract("Slasher", function (accounts: string[]) {
         let innocentTrader = seller;
 
         // The guilty trader might try to dog the innocent trader
-        await renExSettlement.slash(buyOrderID, sellOrderID, false, { from: guiltyTrader })
+        await renExSettlement.slashSeller(buyOrderID, sellOrderID, { from: guiltyTrader })
             .should.be.rejectedWith(null, /unauthorised/);
 
         // The innocent trader might try to dog the guilty trader
-        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: innocentTrader })
+        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: innocentTrader })
             .should.be.rejectedWith(null, /unauthorised/);
     });
 });

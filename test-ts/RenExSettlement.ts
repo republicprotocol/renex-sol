@@ -83,9 +83,9 @@ contract("RenExSettlement", function (accounts: string[]) {
         await steps.openSellOrder(orderbook, broker, accounts[5], sellID_2);
         await steps.openSellOrder(orderbook, broker, accounts[8], sellID_3);
 
-        await orderbook.confirmOrder(buyID_1, [sellID_1], { from: darknode });
-        await orderbook.confirmOrder(buyID_2, [sellID_2], { from: darknode });
-        await orderbook.confirmOrder(buyID_3, [sellID_3], { from: darknode });
+        await orderbook.confirmOrder(buyID_1, sellID_1, { from: darknode });
+        await orderbook.confirmOrder(buyID_2, sellID_2, { from: darknode });
+        await orderbook.confirmOrder(buyID_3, sellID_3, { from: darknode });
     });
 
     it("can update orderbook", async () => {

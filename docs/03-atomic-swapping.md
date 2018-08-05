@@ -35,7 +35,7 @@ For easier understanding of the concept of atomic swaps, let's look at an exampl
     Bob audits the swap details he received from the AtomicInfo.sol contract by checking against the Ethereum blockchain(by calling `audit(bytes32 _swapID)` on the RenExAtomicSwapper.sol contract). Bob does this by checking whether the redeemer address is correct, the number of ether is as expected and he has enough time to redeem the atomic swap. 
 
 **(10) Bob Redeems**
-  If the audit is successful,  Bob redeems the atomic swap on Ethereum by calling `redeem(bytes32 _swapID, bytes32 _secret)` on the RenExAtomicSwapper.sol contract. In the process exposing the secret he generated during the initiation process and get's the 100 ether.
+  If the audit is successful,  Bob redeems the atomic swap on Ethereum by calling `redeem(bytes32 _swapID, bytes32 _secret)` on the RenExAtomicSwapper.sol contract. In the process exposing the secret, he generated during the initiation process and get's the 100 ether.
 
 **(11) Alice Audits Secret**
   Alice audits the secret on the Ethereum blockchain by calling `auditSecret(bytes32 _swapID)` on the RenExAtomicSwapper.sol contract. 
@@ -53,6 +53,7 @@ Alternative executions:
 As one can see, it is not possible to lose tokens in this process, the worst that could happen is that the swap does not go through, and the trader's tokens get locked up for a while.
 
 Timeline:
+
 **(1) Matched**
 The orders of Alice and Bob are matched at this state, and the atomic swap process has not started yet, this is the *Matched* state of the atomic swap. From this point, Alice and Bob have 24 hours to send their information to the other party.
 

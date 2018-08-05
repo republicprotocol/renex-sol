@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -11,13 +11,12 @@ import "./RenExBalances.sol";
 import "./RenExTokens.sol";
 
 /// @title The contract responsible for holding trader funds and settling matched
-/// order values
+/// order values.
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
     address public slasherAddress;
 
-    /********** GLOBAL CONSTANTS ***********************************************/
     /// @notice Fees are in RenEx are 0.2% and to represent this in integers it
     /// is broken into a numerator and denominator.
     uint256 constant public DARKNODE_FEES_NUMERATOR = 2;
@@ -25,19 +24,16 @@ contract RenExSettlement is Ownable {
     uint32 constant public RENEX_SETTLEMENT_ID = 1;
     uint32 constant public RENEX_ATOMIC_SETTLEMENT_ID = 2;
 
-    /********** CONTRACTS *****************************************************/
     Orderbook private orderbookContract;
     RenExTokens private renExTokensContract;
     RenExBalances private renExBalancesContract;
 
     uint256 public submissionGasPriceLimit;
 
-    /********** ENUMS *********************************************************/
     enum OrderType {Midpoint, Limit}
     enum OrderParity {Buy, Sell}
     enum OrderStatus {None, Submitted, Matched}
 
-    /********** STRUCTS *******************************************************/
     struct MatchDetails {
         uint256 lowTokenVolume;
         uint256 highTokenVolume;
@@ -45,14 +41,13 @@ contract RenExSettlement is Ownable {
         uint32 highToken;
         address lowTokenAddress;
         address highTokenAddress;
+        uint256 timestamp;
     }
 
-    /********** EVENTS *******************************************************/
     event LogOrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
     event LogRenExBalancesUpdated(RenExBalances previousRenExBalances, RenExBalances nextRenExBalances);
     event LogSubmissionGasPriceLimitUpdated(uint256 previousSubmissionGasPriceLimit, uint256 nextSubmissionGasPriceLimit);
 
-    /********** STORAGE ******************************************************/
     // Order Storage
     mapping(bytes32 => SettlementUtils.OrderDetails) public orderDetails;
     mapping(bytes32 => OrderStatus) public orderStatus;
@@ -63,7 +58,6 @@ contract RenExSettlement is Ownable {
     // Slasher storage
     mapping(bytes32 => bool) public slashedMatches;
 
-    /********** MODIFIERS *****************************************************/
     modifier withGasPriceLimit(uint256 gasPriceLimit) {
         require(tx.gasprice <= gasPriceLimit, "gas price too high");
         _;
@@ -74,11 +68,12 @@ contract RenExSettlement is Ownable {
         _;
     }
 
-    ///  @notice constructor
-    ///  @param _orderbookContract The address of the Orderbook contract.
-    ///  @param _renExBalancesContract The address of the RenExBalances
-    ///                                contract.
-    ///  @param _renExTokensContract The address of the RenExTokens contract.
+    /// @notice constructor
+    ///
+    /// @param _orderbookContract The address of the Orderbook contract.
+    /// @param _renExBalancesContract The address of the RenExBalances
+    ///        contract.
+    /// @param _renExTokensContract The address of the RenExTokens contract.
     constructor(
         Orderbook _orderbookContract,
         RenExTokens _renExTokensContract,
@@ -93,12 +88,8 @@ contract RenExSettlement is Ownable {
         slasherAddress = _slasherAddress;
     }
 
-    /********** EXTERNAL FUNCTIONS ********************************************/
-    /********** UPDATER FUNCTIONS *********************************************/
-    /// @notice The owner of the contract can update the Orderbook address.
-    /// @param _newOrderbookContract The address of the new Orderbook contract.
     function updateOrderbook(Orderbook _newOrderbookContract) external onlyOwner {
-        emit LogOrderbookUpdated(orderbookContract, _newOrderbookContract);
+        // emit OrderbookUpdated(orderbookContract, _newOrderbookContract);
         orderbookContract = _newOrderbookContract;
     }
 
@@ -116,8 +107,8 @@ contract RenExSettlement is Ownable {
         submissionGasPriceLimit = _newSubmissionGasPriceLimit;
     }
 
-    /********** WITHDRAWAL FUNCTIONS ******************************************/
     /// @notice Stores the details of an order
+    ///
     /// @param _details miscellaneous details 
     /// @param _settlementID id of the settlement
     /// @param _tokens two 32-bit token codes concatenated (with the lowest first)
@@ -153,7 +144,8 @@ contract RenExSettlement is Ownable {
     }
 
     /// @notice Settles two orders that are matched. `submitOrder` must have been
-    ///         called for each order before this function is called.
+    /// called for each order before this function is called.
+    ///
     /// @param _buyID the 32 byte ID of the buy order
     /// @param _sellID the 32 byte ID of the sell order
     function submitMatch(bytes32 _buyID, bytes32 _sellID) external {
@@ -226,6 +218,42 @@ contract RenExSettlement is Ownable {
         renExBalancesContract.incrementBalance(orderTrader[innocentOrderID], tokenAddress, fee);
     }
 
+    /// @notice Returns the details of an order match.
+    /// 
+    /// @dev [
+    ///     Fails if the order is not confirmed on the orderbook,
+    ///     Fails if the order match is not settled on this settlement layer
+    /// ] 
+    ///
+    /// @param _orderID The id of the order.
+    ///
+    /// @return [
+    ///     The caller's order id,
+    ///     The matching order id,
+    ///     The volume of the token the caller would be recieving,
+    ///     The volume of the token the caller would be sending,
+    ///     The token the caller would be recieving,
+    ///     The token the caller would be sending
+    /// ]
+    function getMatchDetails(bytes32 _orderID) external view returns (bytes32, bytes32, uint256, uint256, uint32, uint32) {
+        bytes32 matchingOrderID = orderbookContract.orderMatch(_orderID)[0];
+        bytes32 matchID;
+        MatchDetails memory details;
+        if (isBuyOrder(_orderID)) {
+            matchID = keccak256(abi.encodePacked(_orderID, matchingOrderID));
+
+            details = matchDetails[matchID];
+
+            return (_orderID, matchingOrderID, details.highTokenVolume, details.lowTokenVolume, details.highToken, details.lowToken);
+        } else {
+            matchID = keccak256(abi.encodePacked(matchingOrderID, _orderID));
+
+            details = matchDetails[matchID];
+
+            return (_orderID, matchingOrderID, details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken);
+        }
+    }
+
     /// @notice Calculates the hash of the provided order.
     ///
     /// @param _prefix The miscellaneous details of the order required for 
@@ -251,7 +279,7 @@ contract RenExSettlement is Ownable {
         uint256 _price,
         uint256 _volume,
         uint256 _minimumVolume
-    ) external view returns (bytes32) {
+    ) external pure returns (bytes32) {
         return SettlementUtils.hashOrder(SettlementUtils.OrderDetails({
             details: _prefix,
             settlementID: _settlement,
@@ -262,43 +290,6 @@ contract RenExSettlement is Ownable {
         }));
     }
 
-    /// @notice Returns the details of an order match.
-    /// 
-    /// @dev [
-    ///     Fails if the order is not confirmed on the orderbook,
-    ///     Fails if the order match is not settled on this settlement layer
-    /// ] 
-    ///
-    /// @param _orderID The id of the order.
-    ///
-    /// @return [
-    ///     The caller's order id,
-    ///     The matching order id,
-    ///     The volume of the token the caller would be recieving,
-    ///     The volume of the token the caller would be sending,
-    ///     The token the caller would be recieving,
-    ///     The token the caller would be sending
-    /// ]
-    function getMatchDetails(bytes32 _orderID) public view returns (bytes32, bytes32, uint256, uint256, uint32, uint32) {
-        bytes32 matchingOrderID = orderbookContract.orderMatch(_orderID)[0];
-        bytes32 matchID;
-        MatchDetails memory details;
-        if (isBuyOrder(_orderID)) {
-            matchID = keccak256(abi.encodePacked(_orderID, matchingOrderID));
-
-            details = matchDetails[matchID];
-
-            return (_orderID, matchingOrderID, details.highTokenVolume, details.lowTokenVolume, details.highToken, details.lowToken);
-        } else {
-            matchID = keccak256(abi.encodePacked(matchingOrderID, _orderID));
-
-            details = matchDetails[matchID];
-
-            return (_orderID, matchingOrderID, details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken);
-        }
-    }
-
-    /********** PRIVATE FUNCTIONS ********************************************/
     /// @notice Settles the order match by updating the balances on the 
     /// RenExBalances contract.
     ///
@@ -337,8 +328,6 @@ contract RenExSettlement is Ownable {
         uint8 buyTokenDecimals, uint8 sellTokenDecimals
     ) private {
         // Verify details
-        // uint256 priceN = orderDetails[_buyID].price + orderDetails[_sellID].price;
-        // uint256 priceD = 2;
         (uint256 lowTokenVolume, uint256 highTokenVolume) = settlementDetails(
             orderDetails[_buyID].price + orderDetails[_sellID].price, /* priceN */
             2, /* priceD */
@@ -355,24 +344,45 @@ contract RenExSettlement is Ownable {
             lowToken: sellToken,
             highToken: buyToken,
             lowTokenAddress: sellTokenAddress,
-            highTokenAddress: buyTokenAddress
+            highTokenAddress: buyTokenAddress,
+            timestamp: now
         });
     }
 
-    function isEthereumBased(address _tokenAddress) private pure returns (bool) {
-        return (_tokenAddress != address(0x0));
+    function payFees(
+        bytes32 _buyID, bytes32 _sellID
+    ) private {
+        bytes32 matchID = keccak256(abi.encodePacked(_buyID, _sellID));
+
+        uint256 fee;
+        address tokenAddress;
+        if (isEthereumBased(matchDetails[matchID].highTokenAddress)) {
+            tokenAddress = matchDetails[matchID].highTokenAddress;
+            (, fee) = subtractDarknodeFee(matchDetails[matchID].highTokenVolume);
+        } else if (isEthereumBased(matchDetails[matchID].lowTokenAddress)) {
+            tokenAddress = matchDetails[matchID].lowTokenAddress;
+            (, fee) = subtractDarknodeFee(matchDetails[matchID].lowTokenVolume);
+        } else {
+            return;
+        }
+        renExBalancesContract.decrementBalanceWithFee(orderTrader[_buyID], tokenAddress, 0, fee, orderSubmitter[_buyID]);
+        renExBalancesContract.decrementBalanceWithFee(orderTrader[_sellID], tokenAddress, 0, fee, orderSubmitter[_sellID]);
     }
 
-    function subtractDarknodeFee(uint256 value) internal pure returns (uint256, uint256) {
-        uint256 newValue = (value * (DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
-        return (newValue, value - newValue);
-    }
-
-    function isBuyOrder(bytes32 _orderID) internal view returns (bool) {
+    function isBuyOrder(bytes32 _orderID) private view returns (bool) {
         uint64 tokens = orderDetails[_orderID].tokens;
         uint32 firstToken = uint32(tokens >> 32);
         uint32 secondToken = uint32(tokens);
         return (firstToken < secondToken);
+    }
+
+    function subtractDarknodeFee(uint256 value) private pure returns (uint256, uint256) {
+        uint256 newValue = (value * (DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
+        return (newValue, value - newValue);
+    }
+
+    function isEthereumBased(address _tokenAddress) private pure returns (bool) {
+        return (_tokenAddress != address(0x0));
     }
 
     function settlementDetails( 
@@ -406,25 +416,5 @@ contract RenExSettlement is Ownable {
         } else {
             return (numerator / denominator) / 10 ** uint256(-scale);
         }
-    }
-
-    function payFees(
-        bytes32 _buyID, bytes32 _sellID
-    ) private {
-        bytes32 matchID = keccak256(abi.encodePacked(_buyID, _sellID));
-
-        uint256 fee;
-        address tokenAddress;
-        if (isEthereumBased(matchDetails[matchID].highTokenAddress)) {
-            tokenAddress = matchDetails[matchID].highTokenAddress;
-            (,fee) = subtractDarknodeFee(matchDetails[matchID].highTokenVolume);
-        } else if (isEthereumBased(matchDetails[matchID].lowTokenAddress)) {
-            tokenAddress = matchDetails[matchID].lowTokenAddress;
-            (,fee) = subtractDarknodeFee(matchDetails[matchID].lowTokenVolume);
-        } else {
-            return;
-        }
-        renExBalancesContract.decrementBalanceWithFee(orderTrader[_buyID], tokenAddress, 0, fee, orderSubmitter[_buyID]);
-        renExBalancesContract.decrementBalanceWithFee(orderTrader[_sellID], tokenAddress, 0, fee, orderSubmitter[_sellID]);
     }
 }

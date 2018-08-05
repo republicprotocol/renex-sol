@@ -1,6 +1,4 @@
 const RepublicToken = artifacts.require("RepublicToken");
-const BitcoinMock = artifacts.require("BitcoinMock");
-const DGXMock = artifacts.require("DGXMock");
 const RenExTokens = artifacts.require("RenExTokens");
 
 import * as chai from "chai";
@@ -16,20 +14,16 @@ enum TokenStatus {
 
 contract("RenExTokens", function (accounts: string[]) {
 
-    const BTC = 0x0;
     const ETH = 0x1;
-    const DGX = 0x100;
     const REN = 0x10000;
-    const tokens = [BTC, ETH, DGX, REN];
+    const tokens = [ETH, REN];
 
     let renExTokens, tokenInstances;
 
     beforeEach(async function () {
         tokenInstances = {
-            [BTC]: await BitcoinMock.deployed(),
             [ETH]: { address: "0x0000000000000000000000000000000000000000", decimals: () => Promise.resolve(18) },
-            [DGX]: await DGXMock.deployed(),
-            [REN]: await RepublicToken.deployed(),
+            [REN]: await RepublicToken.new(),
         };
 
         renExTokens = await RenExTokens.deployed();

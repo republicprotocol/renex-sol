@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -7,47 +7,39 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./RenExSettlement.sol";
 import "republic-sol/contracts/DarknodeRewardVault.sol";
 
-/// @title The contract responsible for holding RenEx trader funds
-/// @author Republic Protocol
+/// @notice The contract responsible for holding RenEx trader funds
 contract RenExBalances is Ownable {
     using SafeMath for uint256;
 
-    /********** CONTRACTS *****************************************************/
     RenExSettlement private settlementContract;
     DarknodeRewardVault private rewardVaultContract;
 
-    /********** GLOBAL CONSTANTS **********************************************/
     // @dev TODO: Use same constant instance across all contracts
     address constant public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
-    /********** EVENTS ********************************************************/
     event BalanceDecreased(address trader, ERC20 token, uint256 value);
     event BalanceIncreased(address trader, ERC20 token, uint256 value);
     event RenExSettlementContractUpdated(address indexed newRenExSettlementContract);
     event RewardVaultContractUpdated(address indexed newRewardVaultContract);
 
-    /********** STORAGE ********************************************************/
     mapping(address => address[]) public traderTokens;
     mapping(address => mapping(address => uint256)) public traderBalances;
     mapping(address => mapping(address => bool)) private activeTraderToken;
 
     /// @notice Constructor 
-    /// @notice After deployment, updateRenExSettlementContract should be called
     constructor(DarknodeRewardVault _rewardVaultContract) public {
         rewardVaultContract = _rewardVaultContract;
     }
 
-    /********** MODIFIERS *****************************************************/
     /// @notice Throws if called by any account other than the RenExSettlement contract
     modifier onlyRenExSettlementContract() {
         require(msg.sender == address(settlementContract), "not authorised");
         _;
     }
 
-    /********** EXTERNAL FUNCTIONS ********************************************/
-    /********** OWNER ONLY FUNCTIONS ******************************************/
     /// @notice Updates the address of the settlement contract (can only be called
     /// by the owner of the contract)
+    ///
     /// @param _newSettlementContract the address of the new settlement contract
     function updateRenExSettlementContract(RenExSettlement _newSettlementContract) external onlyOwner {
         emit RenExSettlementContractUpdated(_newSettlementContract);
@@ -56,15 +48,16 @@ contract RenExBalances is Ownable {
 
     /// @notice Updates the address of the reward vault contract (can only be called
     /// by the owner of the contract)
+    ///
     /// @param _newRewardVaultContract the address of the new reward vault contract
     function updateRewardVault(DarknodeRewardVault _newRewardVaultContract) external onlyOwner {
         emit RewardVaultContractUpdated(_newRewardVaultContract);
         rewardVaultContract = _newRewardVaultContract;
     }
 
-    /********** SETTLEMENT FUNCTIONS ******************************************/
     /// @notice Increments a trader's balance of a token - can only be called by the
     /// owner, intended to be the RenEx settlement contract
+    ///
     /// @param _trader the address of the trader
     /// @param _token the token's address
     /// @param _value the number of tokens to increment the balance by (in the token's smallest unit)
@@ -74,6 +67,7 @@ contract RenExBalances is Ownable {
 
     /// @notice Decrements a trader's balance of a token - can only be called by the
     /// owner, intended to be the RenEx settlement contract
+    ///
     /// @param _trader the address of the trader
     /// @param _token the token's address
     /// @param _value the number of tokens to decrement the balance by (in the token's smallest unit)
@@ -90,10 +84,10 @@ contract RenExBalances is Ownable {
         privateDecrementBalance(_trader, ERC20(_token), _value + _fee);
     }
 
-    /********** TRADER FUNCTIONS **********************************************/
-    //// @notice Deposits ETH or an ERC20 token into the contract
-    //// @param _token the token's address (must be a registered token)
-    //// @param _value the amount to deposit in the token's smallest unit
+    /// @notice Deposits ETH or an ERC20 token into the contract
+    ///
+    /// @param _token the token's address (must be a registered token)
+    /// @param _value the amount to deposit in the token's smallest unit
     function deposit(ERC20 _token, uint256 _value) external payable {
         address trader = msg.sender;
 
@@ -107,8 +101,8 @@ contract RenExBalances is Ownable {
 
     /// @notice Withdraws ETH or an ERC20 token from the contract
     /// @dev TODO: Check if the account has any open orders first
-    /// @param _token the token's address
-    /// @param _value the amount to withdraw in the token's smallest unit
+    /// @param _token the token's address.
+    /// @param _value the amount to withdraw in the token's smallest unit.
     function withdraw(ERC20 _token, uint256 _value) external {
         address trader = msg.sender;
 
@@ -126,10 +120,10 @@ contract RenExBalances is Ownable {
     /// had balances for and a list of the corresponding token balances
     /// @param _trader the address of the trader
     /// @return [
-    ///     "the array of token addresses",
-    ///     "the array of token balances in tokens' smallest units"
+    ///     the array of token addresses,
+    ///     the array of token balances in tokens' smallest units
     /// ]
-    function getBalances(address _trader) external view returns (address[], uint256[]) {
+    function getBalances(address _trader) public view returns (address[], uint256[]) {
         address[] memory tokens = traderTokens[_trader];
         uint256[] memory tokenBalances = new uint256[](tokens.length);
 
@@ -140,7 +134,6 @@ contract RenExBalances is Ownable {
         return (tokens, tokenBalances);
     }
 
-    /********** PRIVATE FUNCTIONS ********************************************/
     function privateIncrementBalance(address _trader, ERC20 _token, uint256 _value) private {
         // Check if it's the first time the trader
         if (!activeTraderToken[_trader][_token]) {

@@ -157,7 +157,7 @@ contract.only("RenExSettlement", function (accounts: string[]) {
     });
 
     it("should fail for excessive gas price", async () => {
-        const _renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 0, 0x0);
+        const _renExSettlement = await RenExSettlement.deployed();
         await _renExSettlement.submitOrder(web3.utils.sha3("0"), 2, "0x100000000", 10, 1000, 0).should.be.rejectedWith(null, /gas price too high/);
     });
 });

@@ -17,15 +17,12 @@ contract("RenExBalances", function (accounts: string[]) {
 
     beforeEach(async function () {
         ETH = { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" };
-        REN = await RepublicToken.new();
-        TOKEN1 = await RepublicToken.new();
-        TOKEN2 = await RepublicToken.new();
-
-        rewardVault = await DarknodeRewardVault.new(0x0);
-        renExBalances = await RenExBalances.new(rewardVault.address);
-        const GWEI = 1000000000;
-        renExSettlement = await RenExSettlement.new(0x0, 0x0, renExBalances.address, 100 * GWEI, 0x0);
-        await renExBalances.updateRenExSettlementContract(renExSettlement.address);
+        REN = await RepublicToken.deployed();
+        TOKEN1 = await RepublicToken.deployed();
+        TOKEN2 = await RepublicToken.deployed();
+        rewardVault = await DarknodeRewardVault.deployed();
+        renExBalances = await RenExBalances.deployed();
+        renExSettlement = await RenExSettlement.deployed();
     });
 
     it("can update Reward Vault address", async () => {
@@ -198,7 +195,7 @@ contract("RenExBalances", function (accounts: string[]) {
     });
 
     it("the RenExSettlement contract can approve and reject withdrawals", async () => {
-        const renExSettlementAlt = await WithdrawBlock.new();
+        const renExSettlementAlt = await WithdrawBlock.deployed();
         await renExBalances.updateRenExSettlementContract(renExSettlementAlt.address);
 
         const deposit = 10;

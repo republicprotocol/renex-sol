@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -10,7 +10,7 @@ import "republic-sol/contracts/SettlementUtils.sol";
 import "./RenExBalances.sol";
 import "./RenExTokens.sol";
 
-/// @notice The contract responsible for holding trader funds and settling matched
+/// @title The contract responsible for holding trader funds and settling matched
 /// order values.
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
@@ -21,7 +21,6 @@ contract RenExSettlement is Ownable {
     /// is broken into a numerator and denominator.
     uint256 constant public DARKNODE_FEES_NUMERATOR = 2;
     uint256 constant public DARKNODE_FEES_DENOMINATOR = 1000;
-
     uint32 constant public RENEX_SETTLEMENT_ID = 1;
     uint32 constant public RENEX_ATOMIC_SETTLEMENT_ID = 2;
 
@@ -44,10 +43,9 @@ contract RenExSettlement is Ownable {
         uint256 timestamp;
     }
 
-    // Events
-    // event OrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
-    // event RenExBalancesUpdated(RenExBalances previousRenExBalances, RenExBalances nextRenExBalances);
-    // event SubmissionGasPriceLimitUpdated(uint256 previousSubmissionGasPriceLimit, uint256 nextSubmissionGasPriceLimit);
+    event LogOrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
+    event LogRenExBalancesUpdated(RenExBalances previousRenExBalances, RenExBalances nextRenExBalances);
+    event LogSubmissionGasPriceLimitUpdated(uint256 previousSubmissionGasPriceLimit, uint256 nextSubmissionGasPriceLimit);
 
     // Order Storage
     mapping(bytes32 => SettlementUtils.OrderDetails) public orderDetails;
@@ -97,13 +95,17 @@ contract RenExSettlement is Ownable {
         orderbookContract = _newOrderbookContract;
     }
 
+    /// @notice The owner of the contract can update the RenExBalances address.
+    /// @param _newRenExBalancesContract The address of the new RenExBalances contract.
     function updateRenExBalances(RenExBalances _newRenExBalancesContract) external onlyOwner {
-        // emit RenExBalancesUpdated(renExBalancesContract, _newRenExBalancesContract);
+        emit LogRenExBalancesUpdated(renExBalancesContract, _newRenExBalancesContract);
         renExBalancesContract = _newRenExBalancesContract;
     }
-
+    
+    /// @notice The owner of the contract can update the submission gas price limit.
+    /// @param _newSubmissionGasPriceLimit The new gas price limit.
     function updateSubmissionGasPriceLimit(uint256 _newSubmissionGasPriceLimit) external onlyOwner {
-        // emit SubmissionGasPriceLimitUpdated(submissionGasPriceLimit, _newSubmissionGasPriceLimit);
+        emit LogSubmissionGasPriceLimitUpdated(submissionGasPriceLimit, _newSubmissionGasPriceLimit);
         submissionGasPriceLimit = _newSubmissionGasPriceLimit;
     }
 
@@ -253,17 +255,35 @@ contract RenExSettlement is Ownable {
         renExBalancesContract.incrementBalance(orderTrader[innocentID], tokenAddress, fee);
     }
 
+    /// @notice Calculates the hash of the provided order.
+    ///
+    /// @param _prefix The miscellaneous details of the order required for 
+    ///        calculating the order id.
+    /// @param _settlement The settlement identifier.
+    /// @param _tokens The encoding of the token pair (buy token is encoded as
+    ///        the first 32 bytes and sell token is encoded as the last 32 
+    ///        bytes).
+    /// @param _price The price of the order (the price is interpreted as the 
+    ///        cost for 1 standard unit of the priority token, in 1e-12 units
+    ///        of the non-priority token).
+    /// @param _volume The volume of the order (The volume is interpreted as 
+    ///        the maximum number of 1e-12 units of the sell token that can 
+    ///        be traded by this order.)
+    /// @param _minimumVolume The minimum volume the trader is willing to 
+    ///        accept (It's encoding is the same as that of the volume).
+    ///
+    /// @return Hash of the order.
     function hashOrder(
-        bytes _details,
-        uint64 _settlementID,
+        bytes _prefix,
+        uint64 _settlement,
         uint64 _tokens,
         uint256 _price,
         uint256 _volume,
         uint256 _minimumVolume
     ) external pure returns (bytes32) {
         return SettlementUtils.hashOrder(SettlementUtils.OrderDetails({
-            details: _details,
-            settlementID: _settlementID,
+            details: _prefix,
+            settlementID: _settlement,
             tokens: _tokens,
             price: _price,
             volume: _volume,
@@ -271,7 +291,11 @@ contract RenExSettlement is Ownable {
         }));
     }
 
-    /// @notice (private) Calls the RenExBalances contract to update the balances
+    /// @notice Settles the order match by updating the balances on the 
+    /// RenExBalances contract.
+    ///
+    /// @param _buyID The buy order ID.
+    /// @param _sellID The sell order ID.
     function settleFunds(
         bytes32 _buyID, bytes32 _sellID
     ) private {
@@ -293,6 +317,11 @@ contract RenExSettlement is Ownable {
         renExBalancesContract.incrementBalance(orderTrader[_buyID], details.highTokenAddress, highTokenFinal);
     }
 
+    /// @notice Settles the order match by updating the balances on the 
+    /// RenExBalances contract.
+    ///
+    /// @param _buyID The buy order ID.
+    /// @param _sellID The sell order ID.
     function prepareMatchSettlement(
         bytes32 _buyID, bytes32 _sellID,
         uint32 buyToken, uint32 sellToken,
@@ -324,7 +353,6 @@ contract RenExSettlement is Ownable {
         });
     }
 
-
     function payFees(
         bytes32 _buyID, bytes32 _sellID
     ) private {
@@ -334,10 +362,10 @@ contract RenExSettlement is Ownable {
         address tokenAddress;
         if (isEthereumBased(details.highTokenAddress)) {
             tokenAddress = details.highTokenAddress;
-            (,fee) = subtractDarknodeFee(details.highTokenVolume);
+            (, fee) = subtractDarknodeFee(details.highTokenVolume);
         } else if (isEthereumBased(details.lowTokenAddress)) {
             tokenAddress = details.lowTokenAddress;
-            (,fee) = subtractDarknodeFee(details.lowTokenVolume);
+            (, fee) = subtractDarknodeFee(details.lowTokenVolume);
         } else {
             return;
         }

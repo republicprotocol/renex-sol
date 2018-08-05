@@ -2,13 +2,9 @@
 
 const RenExSettlement = artifacts.require("RenExSettlement");
 
-import * as chai from "chai";
-import * as chaiAsPromised from "chai-as-promised";
 import { setupContracts } from "./RenEx";
-chai.use(chaiAsPromised);
-chai.should();
 
-const GWEI = 1000000000;
+import * as testUtils from "./helper/testUtils";
 
 contract("RenExSettlement", function (accounts: string[]) {
 
@@ -31,8 +27,14 @@ contract("RenExSettlement", function (accounts: string[]) {
         sellID_3 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 10000, 0);
         buyID_3 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x1", 15, 10000, 0);
 
-
         buyID_4 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x1", 17, 10000, 0);
+
+        // FIXME
+        const ren = tokenAddresses[0x10000];
+
+        // Broker
+        await ren.transfer(broker, testUtils.INGRESS_FEE * 100);
+        await ren.approve(orderbook.address, testUtils.INGRESS_FEE * 100, { from: broker });
 
         await steps.openBuyOrder(orderbook, broker, accounts[5], buyID_1);
         await steps.openBuyOrder(orderbook, broker, accounts[6], buyID_2);
@@ -69,10 +71,10 @@ contract("RenExSettlement", function (accounts: string[]) {
     it("can update submission gas price limit", async () => {
         await renExSettlement.updateSubmissionGasPriceLimit(0x0);
         (await renExSettlement.submissionGasPriceLimit()).toString().should.equal("0");
-        await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI, { from: accounts[1] })
+        await renExSettlement.updateSubmissionGasPriceLimit(100 * testUtils.GWEI, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI);
-        (await renExSettlement.submissionGasPriceLimit()).toString().should.equal((100 * GWEI).toString());
+        await renExSettlement.updateSubmissionGasPriceLimit(100 * testUtils.GWEI);
+        (await renExSettlement.submissionGasPriceLimit()).toString().should.equal((100 * testUtils.GWEI).toString());
     });
 
     it("submitOrder", async () => {
@@ -157,8 +159,14 @@ contract("RenExSettlement", function (accounts: string[]) {
     });
 
     it("should fail for excessive gas price", async () => {
-        const _renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 0, 0x0);
-        await _renExSettlement.submitOrder(web3.utils.sha3("0"), 2, "0x100000000", 10, 1000, 0).should.be.rejectedWith(null, /gas price too high/);
+        // Set gas price limit to 0
+        const previousGasPriceLimit = await renExSettlement.submissionGasPriceLimit();
+        await renExSettlement.updateSubmissionGasPriceLimit(0x0);
+
+        await renExSettlement.submitOrder(web3.utils.sha3("0"), 2, "0x100000000", 10, 1000, 0).should.be.rejectedWith(null, /gas price too high/);
+
+        // Reset gas price limit
+        await renExSettlement.updateSubmissionGasPriceLimit(previousGasPriceLimit);
     });
 });
 

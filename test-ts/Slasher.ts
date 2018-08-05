@@ -4,11 +4,9 @@
 import BigNumber from "bignumber.js";
 import { BN } from "bn.js";
 
-import * as chai from "chai";
-import * as chaiAsPromised from "chai-as-promised";
+import "./helper/testUtils";
+
 import { setupContracts, submitMatch } from "./RenEx";
-chai.use(chaiAsPromised);
-chai.should();
 
 contract.skip("Slasher", function (accounts: string[]) {
 

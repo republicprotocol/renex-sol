@@ -1,9 +1,6 @@
 const Swap = artifacts.require("RenExAtomicSwapper");
 
-import * as chai from "chai";
-import * as chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-chai.should();
+import "./helper/testUtils";
 
 import { SHA256 } from "crypto-js";
 import * as HEX from "crypto-js/enc-hex";
@@ -27,7 +24,7 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
     const eve = accounts[3];
 
     before(async function () {
-        swap = await Swap.new();
+        swap = await Swap.deployed();
     });
 
     it("can perform atomic swap", async () => {

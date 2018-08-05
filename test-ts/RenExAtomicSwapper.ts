@@ -27,7 +27,7 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
     const eve = accounts[3];
 
     before(async function () {
-        swap = await Swap.new();
+        swap = await Swap.deployed();
     });
 
     it("can perform atomic swap", async () => {

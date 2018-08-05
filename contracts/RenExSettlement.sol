@@ -168,8 +168,8 @@ contract RenExSettlement is Ownable {
         require(isBuyOrder(_buyID), "not a buy order");
 
         // Calculate token codes
-        uint32 buyToken = uint32(orderDetails[_sellID].tokens);
-        uint32 sellToken = uint32(orderDetails[_sellID].tokens >> 32);
+        uint32 buyToken = uint32(orderDetails[_buyID].tokens);
+        uint32 sellToken = uint32(orderDetails[_buyID].tokens >> 32);
 
         // Retrieve token details
         (address buyTokenAddress, uint8 buyTokenDecimals, RenExTokens.TokenStatus buyTokenStatus) = renExTokensContract.tokens(buyToken);

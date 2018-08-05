@@ -1,5 +1,7 @@
 pragma solidity 0.4.24;
 
+/// @notice RenExAtomicSwapper implements the Ethereum side of the atomic swap
+/// interface.
 contract RenExAtomicSwapper {
 
     struct Swap {

@@ -10,8 +10,8 @@ import "republic-sol/contracts/SettlementUtils.sol";
 import "./RenExBalances.sol";
 import "./RenExTokens.sol";
 
-/// @title The contract responsible for holding trader funds and settling matched
-/// order values.
+/// @notice RenExSettlement is responsible for holding trader funds and settling
+/// matched order values.
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
@@ -46,6 +46,7 @@ contract RenExSettlement is Ownable {
     event LogOrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
     event LogRenExBalancesUpdated(RenExBalances previousRenExBalances, RenExBalances nextRenExBalances);
     event LogSubmissionGasPriceLimitUpdated(uint256 previousSubmissionGasPriceLimit, uint256 nextSubmissionGasPriceLimit);
+    event LogSlasherUpdated(address previousSlasher, address nextSlasher);
 
     // Order Storage
     mapping(bytes32 => SettlementUtils.OrderDetails) public orderDetails;
@@ -90,8 +91,10 @@ contract RenExSettlement is Ownable {
         slasherAddress = _slasherAddress;
     }
 
+    /// @notice The of the contract can update the Orderbook address.
+    /// @param _newOrderbookContract The address of the new Orderbook contract.
     function updateOrderbook(Orderbook _newOrderbookContract) external onlyOwner {
-        // emit OrderbookUpdated(orderbookContract, _newOrderbookContract);
+        emit LogOrderbookUpdated(orderbookContract, _newOrderbookContract);
         orderbookContract = _newOrderbookContract;
     }
 
@@ -107,6 +110,11 @@ contract RenExSettlement is Ownable {
     function updateSubmissionGasPriceLimit(uint256 _newSubmissionGasPriceLimit) external onlyOwner {
         emit LogSubmissionGasPriceLimitUpdated(submissionGasPriceLimit, _newSubmissionGasPriceLimit);
         submissionGasPriceLimit = _newSubmissionGasPriceLimit;
+    }
+
+    function updateSlasher(address _newSlasherAddress) external onlyOwner {
+        emit LogSlasherUpdated(slasherAddress, _newSlasherAddress);
+        slasherAddress = _newSlasherAddress;
     }
 
     /// @notice Stores the details of an order
@@ -172,12 +180,12 @@ contract RenExSettlement is Ownable {
         uint32 sellToken = uint32(orderDetails[_buyID].tokens >> 32);
 
         // Retrieve token details
-        (address buyTokenAddress, uint8 buyTokenDecimals, RenExTokens.TokenStatus buyTokenStatus) = renExTokensContract.tokens(buyToken);
-        (address sellTokenAddress, uint8 sellTokenDecimals, RenExTokens.TokenStatus sellTokenStatus) = renExTokensContract.tokens(sellToken);
+        (address buyTokenAddress, uint8 buyTokenDecimals, bool buyTokenRegistered) = renExTokensContract.tokens(buyToken);
+        (address sellTokenAddress, uint8 sellTokenDecimals, bool sellTokenRegistered) = renExTokensContract.tokens(sellToken);
 
         // Require that the tokens have been registered
-        require(buyTokenStatus == RenExTokens.TokenStatus.Registered, "unregistered buy token");
-        require(sellTokenStatus == RenExTokens.TokenStatus.Registered, "unregistered sell token");
+        require(buyTokenRegistered, "unregistered buy token");
+        require(sellTokenRegistered, "unregistered sell token");
 
         // Calculate and store settlement details
         prepareMatchSettlement(_buyID, _sellID, buyToken, sellToken, buyTokenAddress, sellTokenAddress, buyTokenDecimals, sellTokenDecimals);

@@ -7,7 +7,7 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./RenExSettlement.sol";
 import "republic-sol/contracts/DarknodeRewardVault.sol";
 
-/// @notice The contract responsible for holding RenEx trader funds
+/// @notice RenExBalances is responsible for holding RenEx trader funds.
 contract RenExBalances is Ownable {
     using SafeMath for uint256;
 

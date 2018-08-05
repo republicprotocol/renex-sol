@@ -167,7 +167,7 @@ contract RenExSettlement is Ownable {
         require(SettlementUtils.verifyMatchDetails(orderDetails[_buyID], orderDetails[_sellID]), "incompatible orders");
 
         // Verify that the two orders have been confirmed to one another
-        require(SettlementUtils.verifyOrderPair(orderbookContract, _buyID, _sellID), "unconfirmed orders");
+        require(orderbookContract.orderMatch(_buyID) == _sellID, "unconfirmed orders");
 
         // Verify that the order traders are distinct
         require(orderbookContract.orderTrader(_buyID) != orderbookContract.orderTrader(_sellID), "orders from same trader");
@@ -206,60 +206,25 @@ contract RenExSettlement is Ownable {
         matchSettled[_buyID][_sellID] = true;
     }
 
-    /// @notice Slashes the bond of a guilty trader. This is called when an atomic
+    /// @notice Slashes the bond of the buy trader. This is called when an atomic
     /// swap is not executed successfully. The bond of the trader who caused the
     /// swap to fail has their bond taken from them and split between the innocent
     /// trader and the watchdog.
     ///
     /// @param _buyID The order ID of the buy order.
     /// @param _sellID The order ID of the buy order.
-    /// @param _buyerGuilty True if the buyer is guilty, false if the seller is
     ///        guilty.
-    function slash(
-        bytes32 _buyID, bytes32 _sellID, bool _buyerGuilty
+    function slashBuyer(
+        bytes32 _buyID, bytes32 _sellID
     ) external onlySlasher {
+        slash(_buyID, _sellID, true);
+    }
 
-        // Must be atomic swap
-        require(orderDetails[_buyID].settlementID == RENEX_ATOMIC_SETTLEMENT_ID, "slashing non-atomic trade");
-
-        // Must not have already been swapped
-        require(matchSlashed[_buyID][_sellID] == false, "match already slashed");
-
-        // Match must have been submitted/settled
-        // We don't have to check isBuyOrder(_buyID) because otherwise the next
-        // step would fail.
-        require(matchSettled[_buyID][_sellID], "match not submitted");
-
-        MatchDetails memory details = matchDetails[_buyID][_sellID];        
-
-        uint256 fee;
-        address tokenAddress;
-        if (isEthereumBased(details.highTokenAddress)) {
-            tokenAddress = details.highTokenAddress;
-            (,fee) = subtractDarknodeFee(details.highTokenVolume);
-        } else if (isEthereumBased(details.lowTokenAddress)) {
-            tokenAddress = details.lowTokenAddress;
-            (,fee) = subtractDarknodeFee(details.lowTokenVolume);
-        } else {
-            revert("non-eth tokens");
-        }
-
-        // Remember that this trade has been submitted
-        matchSlashed[_buyID][_sellID] = true;
-
-        // Get the order ID of the guilty trader
-        bytes32 guiltyID;
-        bytes32 innocentID;
-        if (_buyerGuilty) {
-            guiltyID = _buyID;
-            innocentID = _sellID;
-        } else {
-            guiltyID = _sellID;
-            innocentID = _buyID;
-        }
-
-        // Punish guilty trader        
-        renExBalancesContract.transferBalanceWithFee(orderTrader[guiltyID], orderTrader[innocentID], tokenAddress, fee, fee, slasherAddress);
+    /// @notice See `slashBuyer`
+    function slashSeller(
+        bytes32 _buyID, bytes32 _sellID
+    ) external onlySlasher {
+        slash(_buyID, _sellID, true);
     }
 
     /// @notice Calculates the hash of the provided order.
@@ -423,5 +388,54 @@ contract RenExSettlement is Ownable {
         } else {
             return (numerator / denominator) / 10 ** uint256(-scale);
         }
+    }
+
+    /// @notice See `slashBuyer`.
+    /// @param _buyerGuilty True if the buyer should be punished, false for the
+    ///        seller.
+    function slash(
+        bytes32 _buyID, bytes32 _sellID, bool _buyerGuilty
+    ) private onlySlasher {
+        // Must be atomic swap
+        require(orderDetails[_buyID].settlementID == RENEX_ATOMIC_SETTLEMENT_ID, "slashing non-atomic trade");
+
+        // Must not have already been swapped
+        require(matchSlashed[_buyID][_sellID] == false, "match already slashed");
+
+        // Match must have been submitted/settled
+        // We don't have to check isBuyOrder(_buyID) because otherwise the next
+        // step would fail.
+        require(matchSettled[_buyID][_sellID], "match not submitted");
+
+        MatchDetails memory details = matchDetails[_buyID][_sellID];        
+
+        uint256 fee;
+        address tokenAddress;
+        if (isEthereumBased(details.highTokenAddress)) {
+            tokenAddress = details.highTokenAddress;
+            (,fee) = subtractDarknodeFee(details.highTokenVolume);
+        } else if (isEthereumBased(details.lowTokenAddress)) {
+            tokenAddress = details.lowTokenAddress;
+            (,fee) = subtractDarknodeFee(details.lowTokenVolume);
+        } else {
+            revert("non-eth tokens");
+        }
+
+        // Remember that this trade has been submitted
+        matchSlashed[_buyID][_sellID] = true;
+
+        // Get the order ID of the guilty trader
+        bytes32 guiltyID;
+        bytes32 innocentID;
+        if (_buyerGuilty) {
+            guiltyID = _buyID;
+            innocentID = _sellID;
+        } else {
+            guiltyID = _sellID;
+            innocentID = _buyID;
+        }
+
+        // Punish guilty trader        
+        renExBalancesContract.transferBalanceWithFee(orderTrader[guiltyID], orderTrader[innocentID], tokenAddress, fee, fee, slasherAddress);
     }
 }

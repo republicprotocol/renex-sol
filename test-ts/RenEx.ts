@@ -437,33 +437,16 @@ export async function setupContracts(darknode: string | number, slasherAddress: 
     const tokenAddresses = {
         [BTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
         [ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
-        [DGX]: await DGXMock.new(),
-        [REN]: await RepublicToken.new(),
+        [DGX]: await DGXMock.deployed(),
+        [REN]: await RepublicToken.deployed(),
     };
-
-    const dnrStore = await DarknodeRegistryStore.new(tokenAddresses[REN].address.address);
-    const dnr = await DarknodeRegistry.new(
-        tokenAddresses[REN].address,
-        dnrStore.address,
-        0,
-        1,
-        0
-    );
-    dnr.updateSlasher(0x0);
-    dnrStore.transferOwnership(dnr.address);
-
-    const orderbook = await Orderbook.new(0, tokenAddresses[REN].address, dnr.address);
-    const darknodeRewardVault = await DarknodeRewardVault.new(dnr.address);
-    const renExBalances = await RenExBalances.new(darknodeRewardVault.address);
-    const renExTokens = await RenExTokens.new();
-    const GWEI = 1000000000;
-    const renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 100 * GWEI, slasherAddress);
-    await renExBalances.updateRenExSettlementContract(renExSettlement.address);
-
-    await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, 8);
-    await renExTokens.registerToken(ETH, tokenAddresses[ETH].address, 18);
-    await renExTokens.registerToken(DGX, tokenAddresses[DGX].address, (await tokenAddresses[DGX].decimals()));
-    await renExTokens.registerToken(REN, tokenAddresses[REN].address, (await tokenAddresses[REN].decimals()));
+    
+    const dnr = await DarknodeRegistry.deployed();
+    const orderbook = await Orderbook.deployed();
+    const darknodeRewardVault = await DarknodeRewardVault.deployed();
+    const renExTokens = await RenExTokens.deployed();
+    const renExSettlement = await RenExSettlement.deployed();
+    const renExBalances = await RenExBalances.deployed();
 
     // Register darknode
     await dnr.register(darknode, "0x00", 0, { from: darknode });

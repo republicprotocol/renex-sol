@@ -26,13 +26,13 @@ contract("RenExTokens", function (accounts: string[]) {
 
     beforeEach(async function () {
         tokenInstances = {
-            [BTC]: await BitcoinMock.new(),
+            [BTC]: await BitcoinMock.deployed(),
             [ETH]: { address: "0x0000000000000000000000000000000000000000", decimals: () => Promise.resolve(18) },
-            [DGX]: await DGXMock.new(),
-            [REN]: await RepublicToken.new(),
+            [DGX]: await DGXMock.deployed(),
+            [REN]: await RepublicToken.deployed(),
         };
 
-        renExTokens = await RenExTokens.new();
+        renExTokens = await RenExTokens.deployed();
     });
 
     it("owner can register and deregister tokens", async () => {

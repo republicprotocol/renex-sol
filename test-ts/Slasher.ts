@@ -90,28 +90,28 @@ contract("Slasher", function (accounts: string[]) {
         let fees = weiAmount / feeDen * feeNum;
 
         // Store the original balances
-        let beforeSlasherBalance = await darknodeRewardVault.darknodeBalances(slasher, eth_address);
+        let beforeBurntBalance = await darknodeRewardVault.darknodeBalances(0x0, eth_address);
         let [beforeGuiltyTokens, beforeGuiltyBalances] = await renExBalances.getBalances(guiltyAddress);
         let [beforeInnocentTokens, beforeInnocentBalances] = await renExBalances.getBalances(innocentAddress);
         let beforeGuiltyBalance = beforeGuiltyBalances[beforeGuiltyTokens.indexOf(eth_address)];
         let beforeInnocentBalance = beforeInnocentBalances[beforeInnocentTokens.indexOf(eth_address)];
 
         // Slash the fees
-        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: slasher });
+        await renExSettlement.slash(guiltyOrderID, { from: slasher });
 
         // Check the new balances
-        let afterSlasherBalance = await darknodeRewardVault.darknodeBalances(slasher, eth_address);
+        let afterBurntBalance = await darknodeRewardVault.darknodeBalances(0x0, eth_address);
         let [afterGuiltyTokens, afterGuiltyBalances] = await renExBalances.getBalances(guiltyAddress);
         let [afterInnocentTokens, afterInnocentBalances] = await renExBalances.getBalances(innocentAddress);
         let afterGuiltyBalance = afterGuiltyBalances[afterGuiltyTokens.indexOf(eth_address)];
         let afterInnocentBalance = afterInnocentBalances[afterInnocentTokens.indexOf(eth_address)];
 
         // Make sure fees were reallocated correctly
-        let slasherBalanceDiff = afterSlasherBalance - beforeSlasherBalance;
+        let burntBalanceDiff = afterBurntBalance - beforeBurntBalance;
         let innocentBalanceDiff = afterInnocentBalance - beforeInnocentBalance;
         let guiltyBalanceDiff = afterGuiltyBalance - beforeGuiltyBalance;
         // We expect the slasher to have gained fees
-        slasherBalanceDiff.should.eql(fees);
+        burntBalanceDiff.should.eql(fees);
         // We expect the innocent trader to have gained fees
         innocentBalanceDiff.should.eql(fees);
         // We expect the guilty trader to have lost fees twice
@@ -128,13 +128,13 @@ contract("Slasher", function (accounts: string[]) {
         );
 
         // Slash the fees
-        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: slasher });
+        await renExSettlement.slash(buyOrderID, { from: slasher });
 
-        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: slasher })
-            .should.be.rejectedWith(null, /match already slashed/); // already slashed
+        await renExSettlement.slash(buyOrderID, { from: slasher })
+            .should.be.rejectedWith(null, /invalid order status/); // already slashed
 
-        await renExSettlement.slashSeller(buyOrderID, sellOrderID, { from: slasher })
-            .should.be.rejectedWith(null, /match already slashed/); // already slashed
+        await renExSettlement.slash(sellOrderID, { from: slasher })
+            .should.be.rejectedWith(null, /invalid order status/); // already slashed
     });
 
     it("should handle orders if ETH is the low token", async () => {
@@ -142,12 +142,12 @@ contract("Slasher", function (accounts: string[]) {
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* ETH */, minimumVolume: 1 /* LTC */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
 
-        let [, , buyOrderID, sellOrderID] = await submitMatch(
+        let [, , buyOrderID, _] = await submitMatch(
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
 
         // Slash the fees
-        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: slasher })
+        await renExSettlement.slash(buyOrderID, { from: slasher })
             .should.not.be.rejected;
     });
 
@@ -156,12 +156,12 @@ contract("Slasher", function (accounts: string[]) {
         const buy = { settlement: 2, tokens, price: 1, volume: 1 /* BTC */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
 
-        let [, , buyOrderID, sellOrderID] = await submitMatch(
+        let [, , buyOrderID, _] = await submitMatch(
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
 
         // Slash the fees
-        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: slasher })
+        await renExSettlement.slash(buyOrderID, { from: slasher })
             .should.be.rejectedWith(null, /non-eth tokens/);
     });
 
@@ -171,11 +171,11 @@ contract("Slasher", function (accounts: string[]) {
         const buy = { tokens, price: 1, volume: 2 /* DGX */ };
         const sell = { tokens, price: 0.95, volume: 1 /* REN */ };
 
-        let [ethAmount, renAmount, guiltyOrderID, sellOrderID] = await submitMatch(
+        let [, , guiltyOrderID, _] = await submitMatch(
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true, true
         );
 
-        await renExSettlement.slashBuyer(guiltyOrderID, sellOrderID, { from: slasher })
+        await renExSettlement.slash(guiltyOrderID, { from: slasher })
             .should.be.rejectedWith(null, /slashing non-atomic trade/);
     });
 
@@ -191,11 +191,11 @@ contract("Slasher", function (accounts: string[]) {
         let innocentTrader = seller;
 
         // The guilty trader might try to dog the innocent trader
-        await renExSettlement.slashSeller(buyOrderID, sellOrderID, { from: guiltyTrader })
+        await renExSettlement.slash(sellOrderID, { from: guiltyTrader })
             .should.be.rejectedWith(null, /unauthorised/);
 
         // The innocent trader might try to dog the guilty trader
-        await renExSettlement.slashBuyer(buyOrderID, sellOrderID, { from: innocentTrader })
+        await renExSettlement.slash(buyOrderID, { from: innocentTrader })
             .should.be.rejectedWith(null, /unauthorised/);
     });
 });

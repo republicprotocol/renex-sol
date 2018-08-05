@@ -157,12 +157,12 @@ contract("RenExSettlement", function (accounts: string[]) {
         await renExSettlement.submitMatch(
             randomID(),
             sellID_1,
-        ).should.be.rejectedWith(null, /buy not submitted/);
+        ).should.be.rejectedWith(null, /invalid buy status/);
 
         await renExSettlement.submitMatch(
             buyID_1,
             randomID(),
-        ).should.be.rejectedWith(null, /sell not submitted/);
+        ).should.be.rejectedWith(null, /invalid sell status/);
 
         // Two buys
         await renExSettlement.submitMatch(

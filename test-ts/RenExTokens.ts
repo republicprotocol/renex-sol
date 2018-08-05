@@ -3,12 +3,6 @@ const RenExTokens = artifacts.require("RenExTokens");
 
 import "./helper/testUtils";
 
-enum TokenStatus {
-    NeverRegistered = "0",
-    Registered = "1",
-    Deregistered = "2"
-}
-
 contract("RenExTokens", function (accounts: string[]) {
 
     const ETH = 0x1;
@@ -29,7 +23,7 @@ contract("RenExTokens", function (accounts: string[]) {
     it("owner can register and deregister tokens", async () => {
         for (const token of tokens) {
             const tokenDetails = await renExTokens.tokens(token);
-            (tokenDetails.status.toString()).should.equal(TokenStatus.NeverRegistered);
+            (tokenDetails.registered).should.be.false;
         }
 
         for (const token of tokens) {
@@ -46,7 +40,7 @@ contract("RenExTokens", function (accounts: string[]) {
             const tokenDetails = await renExTokens.tokens(token);
             (tokenDetails.addr).should.equal(address);
             (tokenDetails.decimals.toString()).should.equal(decimals.toString());
-            (tokenDetails.status.toString()).should.equal(TokenStatus.Registered);
+            (tokenDetails.registered).should.be.true;
         }
         for (const token of tokens) {
             const address = tokenInstances[token].address;
@@ -58,7 +52,7 @@ contract("RenExTokens", function (accounts: string[]) {
             const tokenDetails = await renExTokens.tokens(token);
             (tokenDetails.addr).should.equal(address);
             (tokenDetails.decimals.toString()).should.equal(decimals.toString());
-            (tokenDetails.status.toString()).should.equal(TokenStatus.Deregistered);
+            (tokenDetails.registered).should.be.false;
         }
     });
 
@@ -109,7 +103,7 @@ contract("RenExTokens", function (accounts: string[]) {
         const address1 = tokenInstances[token1].address;
         const decimals1 = await tokenInstances[token1].decimals();
 
-        const token2 = tokens[0];
+        const token2 = tokens[1];
         const address2 = tokenInstances[token2].address;
         const decimals2 = await tokenInstances[token2].decimals();
 
@@ -120,11 +114,12 @@ contract("RenExTokens", function (accounts: string[]) {
         await renExTokens.deregisterToken(token1);
 
         // Attempt to reregister with different details
-        await renExTokens.registerToken(token1, address2, decimals2);
+        await renExTokens.registerToken(token1, address2, decimals2)
+            .should.be.rejectedWith(null, /different address/);
 
         const tokenDetails = await renExTokens.tokens(token1);
         (tokenDetails.addr).should.equal(address1);
         (tokenDetails.decimals.toString()).should.equal(decimals1.toString());
-        (tokenDetails.status.toString()).should.equal(TokenStatus.Registered);
+        (tokenDetails.registered).should.be.false;
     });
 });

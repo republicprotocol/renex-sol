@@ -1,15 +1,24 @@
 // tslint:disable:max-line-length
 
+const RenExBalances = artifacts.require("RenExBalances");
+const RenExSettlement = artifacts.require("RenExSettlement");
+const Orderbook = artifacts.require("Orderbook");
+const RepublicToken = artifacts.require("RepublicToken");
+const DarknodeRegistry = artifacts.require("DarknodeRegistry");
+const DGXMock = artifacts.require("DGXMock");
+const RenExTokens = artifacts.require("RenExTokens");
+const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
+
 // Two big number libraries are used - BigNumber decimal support
 // while BN has better bitwise operations
 import BigNumber from "bignumber.js";
 import { BN } from "bn.js";
 
-import "./helper/testUtils";
+import * as testUtils from "./helper/testUtils";
 
 import { submitMatch } from "./RenEx";
 
-contract.skip("Slasher", function (accounts: string[]) {
+contract("Slasher", function (accounts: string[]) {
 
     const slasher = accounts[0];
     const buyer = accounts[1];
@@ -21,9 +30,34 @@ contract.skip("Slasher", function (accounts: string[]) {
     let eth_address, eth_decimals;
 
     before(async function () {
-        // ({
-        //     tokenAddresses, orderbook, renExSettlement, renExBalances, darknodeRewardVault
-        // } = await setupContracts(darknode, slasher, 0x0));
+        const ren = await RepublicToken.deployed();
+
+        tokenAddresses = {
+            [BTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
+            [ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
+            [DGX]: await DGXMock.deployed(),
+            [REN]: ren,
+        };
+
+        let dnr = await DarknodeRegistry.deployed();
+        orderbook = await Orderbook.deployed();
+        darknodeRewardVault = await DarknodeRewardVault.deployed();
+        let renExTokens = await RenExTokens.deployed();
+        renExSettlement = await RenExSettlement.deployed();
+        renExBalances = await RenExBalances.deployed();
+
+        // Broker
+        await ren.transfer(broker, testUtils.INGRESS_FEE * 100);
+        await ren.approve(orderbook.address, testUtils.INGRESS_FEE * 100, { from: broker });
+
+        // Register darknode
+        await ren.transfer(darknode, testUtils.MINIMUM_BOND);
+        await ren.approve(dnr.address, testUtils.MINIMUM_BOND, { from: darknode });
+        await dnr.register(darknode, testUtils.PUBK("1"), testUtils.MINIMUM_BOND, { from: darknode });
+        await testUtils.waitForEpoch(dnr);
+
+        await renExSettlement.updateSlasher(slasher);
+
         eth_address = tokenAddresses[ETH].address;
         eth_decimals = new BigNumber(10).pow(tokenAddresses[ETH].decimals());
     });
@@ -43,8 +77,8 @@ contract.skip("Slasher", function (accounts: string[]) {
         let guiltyAddress = buyer;
         let innocentOrderID = sellOrderID;
         let innocentAddress = seller;
-        (await orderbook.orderMatch(guiltyOrderID))[0].should.eql(innocentOrderID);
-        (await orderbook.orderMatch(innocentOrderID))[0].should.eql(guiltyOrderID);
+        (await orderbook.orderMatches(guiltyOrderID))[0].should.eql(innocentOrderID);
+        (await orderbook.orderMatches(innocentOrderID))[0].should.eql(guiltyOrderID);
 
         let feeNum = await renExSettlement.DARKNODE_FEES_NUMERATOR();
         let feeDen = await renExSettlement.DARKNODE_FEES_DENOMINATOR();
@@ -59,7 +93,7 @@ contract.skip("Slasher", function (accounts: string[]) {
         let beforeInnocentBalance = beforeInnocentBalances[beforeInnocentTokens.indexOf(eth_address)];
 
         // Slash the fees
-        await renExSettlement.slash(guiltyOrderID, { from: slasher });
+        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: slasher });
 
         // Check the new balances
         let afterSlasherBalance = await darknodeRewardVault.darknodeBalances(slasher, eth_address);
@@ -88,46 +122,42 @@ contract.skip("Slasher", function (accounts: string[]) {
         let [, , buyOrderID, sellOrderID] = await submitMatch(
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
-        let guiltyOrderID = buyOrderID;
-        let innocentOrderID = sellOrderID;
 
         // Slash the fees
-        await renExSettlement.slash(guiltyOrderID, { from: slasher });
+        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: slasher });
 
-        await renExSettlement.slash(guiltyOrderID, { from: slasher })
+        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: slasher })
             .should.be.rejectedWith(null, /match already slashed/); // already slashed
 
-        await renExSettlement.slash(innocentOrderID, { from: slasher })
+        await renExSettlement.slash(buyOrderID, sellOrderID, false, { from: slasher })
             .should.be.rejectedWith(null, /match already slashed/); // already slashed
     });
 
-    it("should handle orders if ETH is the low token", async () => {
+    it.skip("should handle orders if ETH is the low token", async () => {
         const tokens = market(ETH, BTC);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
-        let [, , buyOrderID, _] = await submitMatch(
+        let [, , buyOrderID, sellOrderID] = await submitMatch(
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
-        let guiltyOrderID = buyOrderID;
 
         // Slash the fees
-        await renExSettlement.slash(guiltyOrderID, { from: slasher })
+        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: slasher })
             .should.not.be.rejected;
     });
 
-    it("should not slash non-ETH atomic swaps", async () => {
+    it.skip("should not slash non-ETH atomic swaps", async () => {
         const tokens = market(BTC, BTC);
         const buy = { settlement: 2, tokens, price: 1, volume: 1 /* BTC */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* BTC */ };
 
-        let [, , buyOrderID, _] = await submitMatch(
+        let [, , buyOrderID, sellOrderID] = await submitMatch(
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
-        let guiltyOrderID = buyOrderID;
 
         // Slash the fees
-        await renExSettlement.slash(guiltyOrderID, { from: slasher })
+        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: slasher })
             .should.be.rejectedWith(null, /non-eth tokens/);
     });
 
@@ -137,33 +167,31 @@ contract.skip("Slasher", function (accounts: string[]) {
         const buy = { tokens, price: 1, volume: 2 /* DGX */ };
         const sell = { tokens, price: 0.95, volume: 1 /* REN */ };
 
-        let [ethAmount, renAmount, guiltyOrderID, _] = await submitMatch(
+        let [ethAmount, renAmount, guiltyOrderID, sellOrderID] = await submitMatch(
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true, true
         );
 
-        await renExSettlement.slash(guiltyOrderID, { from: slasher })
+        await renExSettlement.slash(guiltyOrderID, sellOrderID, true, { from: slasher })
             .should.be.rejectedWith(null, /slashing non-atomic trade/);
     });
 
     it("should not slash if unauthorised to do so", async () => {
-        const tokens = market(ETH, BTC);
+        const tokens = market(BTC, ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
-        let [, , buyOrderID, sellerOrderID] = await submitMatch(
+        let [, , buyOrderID, sellOrderID] = await submitMatch(
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
         let guiltyTrader = buyer;
-        let guiltyOrderID = buyOrderID;
         let innocentTrader = seller;
-        let innocentOrderID = sellerOrderID;
 
         // The guilty trader might try to dog the innocent trader
-        await renExSettlement.slash(innocentOrderID, { from: guiltyTrader })
+        await renExSettlement.slash(buyOrderID, sellOrderID, false, { from: guiltyTrader })
             .should.be.rejectedWith(null, /unauthorised/);
 
         // The innocent trader might try to dog the guilty trader
-        await renExSettlement.slash(guiltyOrderID, { from: innocentTrader })
+        await renExSettlement.slash(buyOrderID, sellOrderID, true, { from: innocentTrader })
             .should.be.rejectedWith(null, /unauthorised/);
     });
 });

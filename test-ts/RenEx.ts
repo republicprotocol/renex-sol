@@ -1,12 +1,9 @@
 // tslint:disable:max-line-length
 
-const RenExTokens = artifacts.require("RenExTokens");
 const RenExBalances = artifacts.require("RenExBalances");
 const RenExSettlement = artifacts.require("RenExSettlement");
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
 const Orderbook = artifacts.require("Orderbook");
 const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
 const DarknodeRegistry = artifacts.require("DarknodeRegistry");
 const DGXMock = artifacts.require("DGXMock");
 

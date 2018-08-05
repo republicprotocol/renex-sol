@@ -33,7 +33,6 @@ contract RenExSettlement is Ownable {
 
     enum OrderType {Midpoint, Limit}
     enum OrderParity {Buy, Sell}
-    enum OrderStatus {None, Submitted, Matched}
 
     struct MatchDetails {
         uint256 lowTokenVolume;
@@ -52,13 +51,16 @@ contract RenExSettlement is Ownable {
 
     // Order Storage
     mapping(bytes32 => SettlementUtils.OrderDetails) public orderDetails;
-    mapping(bytes32 => OrderStatus) public orderStatus;
     mapping(bytes32 => address) public orderTrader;
     mapping(bytes32 => address) public orderSubmitter;
+    mapping(bytes32 => bool) public orderSubmitted;
+
     // Match storage
-    mapping(bytes32 => MatchDetails) public matchDetails;
+    mapping(bytes32 => mapping(bytes32 => MatchDetails)) public matchDetails;
+    mapping(bytes32 => mapping(bytes32 => bool)) public matchSettled;
+
     // Slasher storage
-    mapping(bytes32 => bool) public slashedMatches;
+    mapping(bytes32 => mapping(bytes32 => bool)) public matchSlashed;
 
     /// @notice constructor
     ///
@@ -139,8 +141,8 @@ contract RenExSettlement is Ownable {
         bytes32 orderID = SettlementUtils.hashOrder(order);
         orderSubmitter[orderID] = msg.sender;
 
-        require(orderStatus[orderID] == OrderStatus.None, "order already submitted");
-        orderStatus[orderID] = OrderStatus.Submitted;
+        require(!orderSubmitted[orderID], "order already submitted");
+        orderSubmitted[orderID] = true;
         require(orderbookContract.orderState(orderID) == Orderbook.OrderState.Confirmed, "uncofirmed order");
 
         orderTrader[orderID] = orderbookContract.orderTrader(orderID);
@@ -153,23 +155,35 @@ contract RenExSettlement is Ownable {
     /// @param _buyID the 32 byte ID of the buy order
     /// @param _sellID the 32 byte ID of the sell order
     function submitMatch(bytes32 _buyID, bytes32 _sellID) public {
-        require(orderStatus[_buyID] == OrderStatus.Submitted, "invalid buy status");
-        require(orderStatus[_sellID] == OrderStatus.Submitted, "invalid sell status");
+        require(orderSubmitted[_buyID], "buy not submitted");
+        require(orderSubmitted[_sellID], "sell not submitted");
+        require(!matchSettled[_buyID][_sellID], "match already submitted");
 
-        require(SettlementUtils.verifyMatch(orderDetails[_buyID], orderDetails[_sellID]), "incompatible orders");
+        // Verify that the two orders should have been matched
+        require(SettlementUtils.verifyMatchDetails(orderDetails[_buyID], orderDetails[_sellID]), "incompatible orders");
 
-        require(orderbookContract.orderMatch(_buyID)[0] == _sellID, "invalid order pair");
+        // Verify that the two orders have been confirmed to one another
+        require(SettlementUtils.verifyOrderPair(orderbookContract, _buyID, _sellID), "unconfirmed orders");
 
+        // Verify that the order traders are distinct
+        require(orderbookContract.orderTrader(_buyID) != orderbookContract.orderTrader(_sellID), "orders from same trader");
+
+        // Verify that the buy's tokens represent a buy order
+        require(isBuyOrder(_buyID), "not a buy order");
+
+        // Calculate token codes
         uint32 buyToken = uint32(orderDetails[_sellID].tokens);
         uint32 sellToken = uint32(orderDetails[_sellID].tokens >> 32);
 
+        // Retrieve token details
         (address buyTokenAddress, uint8 buyTokenDecimals, RenExTokens.TokenStatus buyTokenStatus) = renExTokensContract.tokens(buyToken);
         (address sellTokenAddress, uint8 sellTokenDecimals, RenExTokens.TokenStatus sellTokenStatus) = renExTokensContract.tokens(sellToken);
 
+        // Require that the tokens have been registered
         require(buyTokenStatus == RenExTokens.TokenStatus.Registered, "unregistered buy token");
         require(sellTokenStatus == RenExTokens.TokenStatus.Registered, "unregistered sell token");
 
-
+        // Calculate and store settlement details
         prepareMatchSettlement(_buyID, _sellID, buyToken, sellToken, buyTokenAddress, sellTokenAddress, buyTokenDecimals, sellTokenDecimals);
 
         // Note: verifyMatch checks that the buy and sell settlement IDs match
@@ -184,8 +198,8 @@ contract RenExSettlement is Ownable {
             revert("invalid settlement id");
         }
 
-        orderStatus[_buyID] = OrderStatus.Matched;
-        orderStatus[_sellID] = OrderStatus.Matched;
+        // Note: slash() relies on matchSettled[_sellID][_buyID] not being set
+        matchSettled[_buyID][_sellID] = true;
     }
 
     function prepareMatchSettlement(
@@ -208,8 +222,7 @@ contract RenExSettlement is Ownable {
             sellTokenDecimals
         );
         
-        bytes32 matchID = keccak256(abi.encodePacked(_buyID, _sellID));
-        matchDetails[matchID] = MatchDetails({
+        matchDetails[_buyID][_sellID] = MatchDetails({
             lowTokenVolume: lowTokenVolume,
             highTokenVolume: highTokenVolume,
             lowToken: sellToken,
@@ -258,49 +271,71 @@ contract RenExSettlement is Ownable {
     /// swap to fail has their bond taken from them and split between the innocent
     /// trader and the watchdog.
     ///
-    /// @param _guiltyOrderID the 32 byte ID of the order of the guilty trader
+    /// @param _buyID The order ID of the buy order.
+    /// @param _sellID The order ID of the buy order.
+    /// @param _buyerGuilty True if the buyer is guilty, false if the seller is
+    ///        guilty.
     function slash(
-        bytes32 _guiltyOrderID
+        bytes32 _buyID, bytes32 _sellID, bool _buyerGuilty
     ) public onlySlasher {
-        require(orderDetails[_guiltyOrderID].settlementID == RENEX_ATOMIC_SETTLEMENT_ID, "slashing non-atomic trade");
 
-        bytes32 innocentOrderID = orderbookContract.orderMatch(_guiltyOrderID)[0];
-        bytes32 matchID;
-        if (isBuyOrder(_guiltyOrderID)) {
-            matchID = keccak256(abi.encodePacked(_guiltyOrderID, innocentOrderID));
-        } else {
-            matchID = keccak256(abi.encodePacked(innocentOrderID, _guiltyOrderID));
-        }
-        require(slashedMatches[matchID] == false, "match already slashed");
+        // Must be atomic swap
+        require(orderDetails[_buyID].settlementID == RENEX_ATOMIC_SETTLEMENT_ID, "slashing non-atomic trade");
+
+        // Must not have already been swapped
+        require(matchSlashed[_buyID][_sellID] == false, "match already slashed");
+
+        // Match must have been submitted/settled
+        // We don't have to check isBuyOrder(_buyID) because otherwise the next
+        // step would fail.
+        require(matchSettled[_buyID][_sellID], "match not submitted");
+
+        MatchDetails memory details = matchDetails[_buyID][_sellID];        
+
         uint256 fee;
         address tokenAddress;
-        if (isEthereumBased(matchDetails[matchID].highTokenAddress)) {
-            tokenAddress = matchDetails[matchID].highTokenAddress;
-            (,fee) = subtractDarknodeFee(matchDetails[matchID].highTokenVolume);
-        } else if (isEthereumBased(matchDetails[matchID].lowTokenAddress)) {
-            tokenAddress = matchDetails[matchID].lowTokenAddress;
-            (,fee) = subtractDarknodeFee(matchDetails[matchID].lowTokenVolume);
+        if (isEthereumBased(details.highTokenAddress)) {
+            tokenAddress = details.highTokenAddress;
+            (,fee) = subtractDarknodeFee(details.highTokenVolume);
+        } else if (isEthereumBased(details.lowTokenAddress)) {
+            tokenAddress = details.lowTokenAddress;
+            (,fee) = subtractDarknodeFee(details.lowTokenVolume);
         } else {
             revert("non-eth tokens");
         }
-        slashedMatches[matchID] = true;
-        renExBalancesContract.decrementBalanceWithFee(orderTrader[_guiltyOrderID], tokenAddress, fee, fee, slasherAddress);
-        renExBalancesContract.incrementBalance(orderTrader[innocentOrderID], tokenAddress, fee);
+
+        // Remember that this trade has been submitted
+        matchSlashed[_buyID][_sellID] = true;
+
+        // Get the order ID of the guilty trader
+        bytes32 guiltyID;
+        bytes32 innocentID;
+        if (_buyerGuilty) {
+            guiltyID = _buyID;
+            innocentID = _sellID;
+        } else {
+            guiltyID = _sellID;
+            innocentID = _buyID;
+        }
+
+        // Punish guilty trader        
+        renExBalancesContract.decrementBalanceWithFee(orderTrader[guiltyID], tokenAddress, fee, fee, slasherAddress);
+        renExBalancesContract.incrementBalance(orderTrader[innocentID], tokenAddress, fee);
     }
 
     function payFees(
         bytes32 _buyID, bytes32 _sellID
     ) private {
-        bytes32 matchID = keccak256(abi.encodePacked(_buyID, _sellID));
+        MatchDetails memory details = matchDetails[_buyID][_sellID];
 
         uint256 fee;
         address tokenAddress;
-        if (isEthereumBased(matchDetails[matchID].highTokenAddress)) {
-            tokenAddress = matchDetails[matchID].highTokenAddress;
-            (,fee) = subtractDarknodeFee(matchDetails[matchID].highTokenVolume);
-        } else if (isEthereumBased(matchDetails[matchID].lowTokenAddress)) {
-            tokenAddress = matchDetails[matchID].lowTokenAddress;
-            (,fee) = subtractDarknodeFee(matchDetails[matchID].lowTokenVolume);
+        if (isEthereumBased(details.highTokenAddress)) {
+            tokenAddress = details.highTokenAddress;
+            (,fee) = subtractDarknodeFee(details.highTokenVolume);
+        } else if (isEthereumBased(details.lowTokenAddress)) {
+            tokenAddress = details.lowTokenAddress;
+            (,fee) = subtractDarknodeFee(details.lowTokenVolume);
         } else {
             return;
         }
@@ -312,22 +347,22 @@ contract RenExSettlement is Ownable {
     function settleFunds(
         bytes32 _buyID, bytes32 _sellID
     ) private {
-        bytes32 matchID = keccak256(abi.encodePacked(_buyID, _sellID));
-
-        (uint256 lowTokenFinal, uint256 lowTokenFee) = subtractDarknodeFee(matchDetails[matchID].lowTokenVolume);
-        (uint256 highTokenFinal, uint256 highTokenFee) = subtractDarknodeFee(matchDetails[matchID].highTokenVolume);
+        MatchDetails memory details = matchDetails[_buyID][_sellID];
+        
+        (uint256 lowTokenFinal, uint256 lowTokenFee) = subtractDarknodeFee(details.lowTokenVolume);
+        (uint256 highTokenFinal, uint256 highTokenFee) = subtractDarknodeFee(details.highTokenVolume);
 
         // Subtract values
         renExBalancesContract.decrementBalanceWithFee(
-            orderTrader[_buyID], matchDetails[matchID].lowTokenAddress, lowTokenFinal, lowTokenFee, orderSubmitter[_buyID]
+            orderTrader[_buyID], details.lowTokenAddress, lowTokenFinal, lowTokenFee, orderSubmitter[_buyID]
         );
         renExBalancesContract.decrementBalanceWithFee(
-            orderTrader[_sellID], matchDetails[matchID].highTokenAddress, highTokenFinal, highTokenFee, orderSubmitter[_sellID]
+            orderTrader[_sellID], details.highTokenAddress, highTokenFinal, highTokenFee, orderSubmitter[_sellID]
         );
 
         // Add values
-        renExBalancesContract.incrementBalance(orderTrader[_sellID], matchDetails[matchID].lowTokenAddress, lowTokenFinal);
-        renExBalancesContract.incrementBalance(orderTrader[_buyID], matchDetails[matchID].highTokenAddress, highTokenFinal);
+        renExBalancesContract.incrementBalance(orderTrader[_sellID], details.lowTokenAddress, lowTokenFinal);
+        renExBalancesContract.incrementBalance(orderTrader[_buyID], details.highTokenAddress, highTokenFinal);
     }
 
     function isEthereumBased(address _tokenAddress) private pure returns (bool) {
@@ -337,25 +372,6 @@ contract RenExSettlement is Ownable {
     function subtractDarknodeFee(uint256 value) internal pure returns (uint256, uint256) {
         uint256 newValue = (value * (DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
         return (newValue, value - newValue);
-    }
-
-    function getMatchDetails(bytes32 _orderID) public view returns (bytes32, bytes32, uint256, uint256, uint32, uint32, uint256) {
-        bytes32 matchingOrderID = orderbookContract.orderMatch(_orderID)[0];
-        bytes32 matchID;
-        MatchDetails memory details;
-        if (isBuyOrder(_orderID)) {
-            matchID = keccak256(abi.encodePacked(_orderID, matchingOrderID));
-
-            details = matchDetails[matchID];
-
-            return (_orderID, matchingOrderID, details.highTokenVolume, details.lowTokenVolume, details.highToken, details.lowToken, details.timestamp);
-        } else {
-            matchID = keccak256(abi.encodePacked(matchingOrderID, _orderID));
-
-            details = matchDetails[matchID];
-
-            return (_orderID, matchingOrderID, details.lowTokenVolume, details.highTokenVolume, details.lowToken, details.highToken, details.timestamp);
-        }
     }
 
     function isBuyOrder(bytes32 _orderID) internal view returns (bool) {
@@ -372,7 +388,7 @@ contract RenExSettlement is Ownable {
         uint256 _price,
         uint256 _volume,
         uint256 _minimumVolume
-    ) external view returns (bytes32) {
+    ) external pure returns (bytes32) {
         return SettlementUtils.hashOrder(SettlementUtils.OrderDetails({
             details: _details,
             settlementID: _settlementID,

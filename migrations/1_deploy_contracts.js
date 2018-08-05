@@ -12,10 +12,10 @@ const RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper.sol");
 
 const RepublicToken = artifacts.require("RepublicToken.sol");
 const DGXMock = artifacts.require("DGXMock.sol");
-// const ABCToken = artifacts.require("ABCToken.sol");
-// const XYZToken = artifacts.require("XYZToken.sol");
-const ABCToken = {};
-const XYZToken = {};
+const ABCToken = artifacts.require("ABCToken.sol");
+const XYZToken = artifacts.require("XYZToken.sol");
+// const ABCToken = {};
+// const XYZToken = {};
 
 let migration = async function (deployer, network) {
     // Network is "development", "nightly", "falcon" or "f0"
@@ -139,7 +139,7 @@ let migration = async function (deployer, network) {
         ;
 };
 
-migration = async (deployer, network) => { }
+// migration = async (deployer, network) => { }
 
 module.exports = (deployer, network) => {
     migration(deployer, network).catch((err) => { console.error(err); throw err; });

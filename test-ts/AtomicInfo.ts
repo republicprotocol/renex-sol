@@ -30,25 +30,14 @@ contract("AtomicInfo", function (accounts: string[]) {
     const attacker = accounts[3];
 
     before(async function () {
-        const ren = await RepublicToken.new();
-        const dnrStore = await DarknodeRegistryStore.new(ren.address);
-        const dnr = await DarknodeRegistry.new(
-            ren.address,
-            dnrStore.address,
-            0,
-            1,
-            0
-        );
-        dnr.updateSlasher(0x0);
-        dnrStore.transferOwnership(dnr.address);
-
-        orderbook = await Orderbook.new(0, ren.address, dnr.address);
-
+        const dnr = await DarknodeRegistry.deployed();
+        orderbook = await Orderbook.deployed();
+        
         // Register darknode
         await dnr.register(darknode, "0x00", 0, { from: darknode });
         await dnr.epoch();
 
-        info = await AtomicInfo.new(orderbook.address);
+        info = await AtomicInfo.deployed();
     });
 
     it("can submit and retrieve swap details", async () => {

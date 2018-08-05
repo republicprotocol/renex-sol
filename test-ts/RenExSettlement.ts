@@ -2,11 +2,9 @@
 
 const RenExSettlement = artifacts.require("RenExSettlement");
 
-import { setupContracts } from "./RenEx";
-
 import * as testUtils from "./helper/testUtils";
 
-contract("RenExSettlement", function (accounts: string[]) {
+contract.skip("RenExSettlement", function (accounts: string[]) {
 
     const darknode = accounts[2];
     const broker = accounts[3];
@@ -17,7 +15,7 @@ contract("RenExSettlement", function (accounts: string[]) {
     let buyID_4;
 
     before(async function () {
-        ({ tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens } = await setupContracts(darknode, 0x0, broker));
+        // ({ tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens } = await setupContracts(darknode, 0x0, broker));
         sellID_1 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x700000003", 10, 1000, 0);
         buyID_1 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x300000007", 10, 10000, 0);
 

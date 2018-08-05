@@ -1,3 +1,4 @@
+// tslint:disable:max-line-length
 
 // Two big number libraries are used - BigNumber decimal support
 // while BN has better bitwise operations
@@ -6,7 +7,7 @@ import { BN } from "bn.js";
 
 import "./helper/testUtils";
 
-import { setupContracts, submitMatch } from "./RenEx";
+import { submitMatch } from "./RenEx";
 
 contract.skip("Slasher", function (accounts: string[]) {
 
@@ -14,14 +15,15 @@ contract.skip("Slasher", function (accounts: string[]) {
     const buyer = accounts[1];
     const seller = accounts[2];
     const darknode = accounts[3];
+    const broker = accounts[4];
 
     let tokenAddresses, orderbook, renExSettlement, renExBalances, darknodeRewardVault;
     let eth_address, eth_decimals;
 
     before(async function () {
-        ({
-            tokenAddresses, orderbook, renExSettlement, renExBalances, darknodeRewardVault
-        } = await setupContracts(darknode, slasher, 0x0));
+        // ({
+        //     tokenAddresses, orderbook, renExSettlement, renExBalances, darknodeRewardVault
+        // } = await setupContracts(darknode, slasher, 0x0));
         eth_address = tokenAddresses[ETH].address;
         eth_decimals = new BigNumber(10).pow(tokenAddresses[ETH].decimals());
     });
@@ -32,7 +34,7 @@ contract.skip("Slasher", function (accounts: string[]) {
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
         let [btcAmount, ethAmount, buyOrderID, sellOrderID] = await submitMatch(
-            buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
         btcAmount.should.eql(0.975 /* BTC */);
         ethAmount.should.eql(1 /* ETH */);
@@ -84,7 +86,7 @@ contract.skip("Slasher", function (accounts: string[]) {
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
         let [, , buyOrderID, sellOrderID] = await submitMatch(
-            buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
         let guiltyOrderID = buyOrderID;
         let innocentOrderID = sellOrderID;
@@ -105,7 +107,7 @@ contract.skip("Slasher", function (accounts: string[]) {
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
         let [, , buyOrderID, _] = await submitMatch(
-            buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
         let guiltyOrderID = buyOrderID;
 
@@ -120,7 +122,7 @@ contract.skip("Slasher", function (accounts: string[]) {
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* BTC */ };
 
         let [, , buyOrderID, _] = await submitMatch(
-            buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
         let guiltyOrderID = buyOrderID;
 
@@ -136,7 +138,7 @@ contract.skip("Slasher", function (accounts: string[]) {
         const sell = { tokens, price: 0.95, volume: 1 /* REN */ };
 
         let [ethAmount, renAmount, guiltyOrderID, _] = await submitMatch(
-            buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, true, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true, true
         );
 
         await renExSettlement.slash(guiltyOrderID, { from: slasher })
@@ -149,7 +151,7 @@ contract.skip("Slasher", function (accounts: string[]) {
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
         let [, , buyOrderID, sellerOrderID] = await submitMatch(
-            buy, sell, buyer, seller, darknode, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
         );
         let guiltyTrader = buyer;
         let guiltyOrderID = buyOrderID;

@@ -35,6 +35,7 @@ contract("Slasher", function (accounts: string[]) {
         tokenAddresses = {
             [BTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
             [ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
+            [LTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
             [DGX]: await DGXMock.deployed(),
             [REN]: ren,
         };
@@ -42,9 +43,12 @@ contract("Slasher", function (accounts: string[]) {
         let dnr = await DarknodeRegistry.deployed();
         orderbook = await Orderbook.deployed();
         darknodeRewardVault = await DarknodeRewardVault.deployed();
-        let renExTokens = await RenExTokens.deployed();
         renExSettlement = await RenExSettlement.deployed();
         renExBalances = await RenExBalances.deployed();
+
+        // Register extra token
+        const renExTokens = await RenExTokens.deployed();
+        renExTokens.registerToken(LTC, tokenAddresses[LTC].address, await tokenAddresses[LTC].decimals());
 
         // Broker
         await ren.transfer(broker, testUtils.INGRESS_FEE * 100);
@@ -133,10 +137,10 @@ contract("Slasher", function (accounts: string[]) {
             .should.be.rejectedWith(null, /match already slashed/); // already slashed
     });
 
-    it.skip("should handle orders if ETH is the low token", async () => {
-        const tokens = market(ETH, BTC);
-        const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
-        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
+    it("should handle orders if ETH is the low token", async () => {
+        const tokens = market(ETH, LTC);
+        const buy = { settlement: 2, tokens, price: 1, volume: 2 /* ETH */, minimumVolume: 1 /* LTC */ };
+        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
 
         let [, , buyOrderID, sellOrderID] = await submitMatch(
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
@@ -147,10 +151,10 @@ contract("Slasher", function (accounts: string[]) {
             .should.not.be.rejected;
     });
 
-    it.skip("should not slash non-ETH atomic swaps", async () => {
-        const tokens = market(BTC, BTC);
+    it("should not slash non-ETH atomic swaps", async () => {
+        const tokens = market(BTC, LTC);
         const buy = { settlement: 2, tokens, price: 1, volume: 1 /* BTC */ };
-        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* BTC */ };
+        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
 
         let [, , buyOrderID, sellOrderID] = await submitMatch(
             buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
@@ -210,13 +214,9 @@ contract("Slasher", function (accounts: string[]) {
 
 const BTC = 0x0;
 const ETH = 0x1;
+const LTC = 0x2;
 const DGX = 0x100;
 const REN = 0x10000;
-const OrderParity = {
-    BUY: 0,
-    SELL: 1,
-};
-let prefix = web3.utils.toHex("Republic Protocol: open: ");
 
 const market = (low, high) => {
     return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));

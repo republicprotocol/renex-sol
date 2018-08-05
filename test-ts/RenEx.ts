@@ -6,6 +6,7 @@ const Orderbook = artifacts.require("Orderbook");
 const RepublicToken = artifacts.require("RepublicToken");
 const DarknodeRegistry = artifacts.require("DarknodeRegistry");
 const DGXMock = artifacts.require("DGXMock");
+const RenExTokens = artifacts.require("RenExTokens");
 
 // Two big number libraries are used - BigNumber decimal support
 // while BN has better bitwise operations
@@ -28,6 +29,7 @@ contract("RenEx", function (accounts: string[]) {
         tokenAddresses = {
             [BTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
             [ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
+            [LTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
             [DGX]: await DGXMock.deployed(),
             [REN]: ren,
         };
@@ -35,9 +37,11 @@ contract("RenEx", function (accounts: string[]) {
         let dnr = await DarknodeRegistry.deployed();
         orderbook = await Orderbook.deployed();
         // darknodeRewardVault = await DarknodeRewardVault.deployed();
-        // renExTokens = await RenExTokens.deployed();
         renExSettlement = await RenExSettlement.deployed();
         renExBalances = await RenExBalances.deployed();
+
+        const renExTokens = await RenExTokens.deployed();
+        renExTokens.registerToken(LTC, tokenAddresses[LTC].address, await tokenAddresses[LTC].decimals());
 
         // Broker
         await ren.transfer(broker, testUtils.INGRESS_FEE * 100);
@@ -212,20 +216,20 @@ contract("RenEx", function (accounts: string[]) {
             .should.be.rejectedWith(null, /invalid settlement id/);
     });
 
-    it.skip("atomic fees are paid in ethereum-based token", async () => {
-        let tokens = market(ETH, BTC);
-        let buy = { settlement: 2, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
-        let sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* REN */ };
+    it("atomic fees are paid in ethereum-based token", async () => {
+        let tokens = market(ETH, LTC);
+        let buy = { settlement: 2, tokens, price: 1, volume: 2 /* ETH */, minimumVolume: 1 /* LTC */ };
+        let sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
 
         (await submitMatch(buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false))
-            .should.eql([0.975 /* DGX */, 1 /* REN */]);
+            .should.eql([0.975 /* ETH */, 1 /* LTC */]);
 
-        tokens = market(BTC, BTC);
-        buy = { settlement: 2, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
-        sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* REN */ };
+        tokens = market(BTC, LTC);
+        buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* LTC */ };
+        sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
 
         (await submitMatch(buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false))
-            .should.eql([0.975 /* DGX */, 1 /* REN */]);
+            .should.eql([0.975 /* BTC */, 1 /* LTC */]);
     });
 });
 
@@ -245,6 +249,7 @@ contract("RenEx", function (accounts: string[]) {
 
 const BTC = 0x0;
 const ETH = 0x1;
+const LTC = 0x2;
 const DGX = 0x100;
 const REN = 0x10000;
 const OrderParity = {
@@ -369,21 +374,21 @@ export async function submitMatch(
     const highDeposit = sell.volume.multipliedBy(10 ** highDecimals);
     const lowDeposit = buy.volume.multipliedBy(10 ** lowDecimals);
 
-    if (lowToken !== ETH && lowToken !== BTC) {
+    if (lowToken !== ETH && lowToken !== BTC && lowToken !== LTC) {
         await lowTokenInstance.transfer(buyer, lowDeposit);
         await lowTokenInstance.approve(renExBalances.address, lowDeposit, { from: buyer });
         await renExBalances.deposit(lowTokenInstance.address, lowDeposit, { from: buyer });
     } else {
-        const deposit = lowToken === BTC ? highDeposit : lowDeposit;
+        const deposit = lowToken === ETH ? lowDeposit : highDeposit;
         await renExBalances.deposit(tokenAddresses[ETH].address, deposit, { from: buyer, value: deposit });
     }
 
-    if (highToken !== ETH && highToken !== BTC) {
+    if (highToken !== ETH && highToken !== BTC && highToken !== LTC) {
         await highTokenInstance.transfer(seller, highDeposit);
         await highTokenInstance.approve(renExBalances.address, highDeposit, { from: seller });
         await renExBalances.deposit(highTokenInstance.address, highDeposit, { from: seller });
     } else {
-        const deposit = highToken === BTC ? lowDeposit : highDeposit;
+        const deposit = highToken === ETH ? highDeposit : lowDeposit;
         await renExBalances.deposit(tokenAddresses[ETH].address, deposit, { from: seller, value: deposit });
     }
 

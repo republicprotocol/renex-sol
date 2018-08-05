@@ -167,20 +167,14 @@ contract("RenExBalances", function (accounts: string[]) {
         (await web3.eth.getBalance(accounts[0])).should.equal(previous.minus(fee1).minus(fee2).toFixed());
     });
 
-    it("only the settlement contract can call `incrementBalance` and `decrementBalance`", async () => {
-        await renExBalances.incrementBalance(
+    it("only the settlement contract can call `transferBalanceWithFee`", async () => {
+        await renExBalances.transferBalanceWithFee(
             accounts[1],
+            accounts[2],
             REN.address,
             1,
-            { from: accounts[1] }
-        ).should.be.rejectedWith(null, /not authorised/);
-
-        await renExBalances.decrementBalanceWithFee(
-            accounts[1],
-            REN.address,
             0,
-            0,
-            accounts[1],
+            0x0,
             { from: accounts[1] }
         ).should.be.rejectedWith(null, /not authorised/);
     });
@@ -204,12 +198,14 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.deposit(ETH.address, deposit, { from: accounts[0], value: deposit });
 
         // Insufficient balance for fee
-        await renExBalances.decrementBalanceWithFee(accounts[0], ETH.address, 0, 20, accounts[0], { from: auth })
-            .should.be.rejectedWith(null, /insufficient funds for fee/);
+        await renExBalances.transferBalanceWithFee(
+            accounts[0], accounts[1], ETH.address, 0, 20, accounts[0], { from: auth }
+        ).should.be.rejectedWith(null, /insufficient funds for fee/);
 
         // Insufficient balance for fee
-        await renExBalances.decrementBalanceWithFee(accounts[0], ETH.address, 20, 0, accounts[0], { from: auth })
-            .should.be.rejectedWith(null, /insufficient funds/);
+        await renExBalances.transferBalanceWithFee(
+            accounts[0], accounts[1], ETH.address, 20, 0, accounts[0], { from: auth }
+        ).should.be.rejectedWith(null, /insufficient funds/);
 
         // Revert change
         await renExBalances.updateRenExSettlementContract(renExSettlement.address);

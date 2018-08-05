@@ -55,33 +55,31 @@ contract RenExBalances is Ownable {
         rewardVaultContract = _newRewardVaultContract;
     }
 
-    /// @notice Increments a trader's balance of a token - can only be called by the
-    /// owner, intended to be the RenEx settlement contract
+    /// @notice Transfer a token value from one trader to another, transferring
+    /// a fee to the RewardVault.
     ///
-    /// @param _trader the address of the trader
-    /// @param _token the token's address
-    /// @param _value the number of tokens to increment the balance by (in the token's smallest unit)
-    function incrementBalance(address _trader, address _token, uint256 _value) external onlyRenExSettlementContract {
-        privateIncrementBalance(_trader, ERC20(_token), _value);
-    }
-
-    /// @notice Decrements a trader's balance of a token - can only be called by the
-    /// owner, intended to be the RenEx settlement contract
-    ///
-    /// @param _trader the address of the trader
-    /// @param _token the token's address
-    /// @param _value the number of tokens to decrement the balance by (in the token's smallest unit)
-    function decrementBalanceWithFee(address _trader, address _token, uint256 _value, uint256 _fee, address feePayee)
+    /// @param _traderFrom The address of the trader to decrement the balance of.
+    /// @param _traderTo The address of the trader to increment the balance of.
+    /// @param _token The token's address.
+    /// @param _value The number of tokens to decrement the balance by (in the
+    ///        token's smallest unit).
+    /// @param _fee The fee amount to forward on to the RewardVault.
+    /// @param _feePayee The recipient of the fee.
+    /// 
+    function transferBalanceWithFee(address _traderFrom, address _traderTo, address _token, uint256 _value, uint256 _fee, address _feePayee)
     external onlyRenExSettlementContract {
-        require(traderBalances[_trader][_token] >= _fee, "insufficient funds for fee");
+        require(traderBalances[_traderFrom][_token] >= _fee, "insufficient funds for fee");
 
         if (address(_token) == ETHEREUM) {
-            rewardVaultContract.deposit.value(_fee)(feePayee, ERC20(_token), _fee);
+            rewardVaultContract.deposit.value(_fee)(_feePayee, ERC20(_token), _fee);
         } else {
             ERC20(_token).approve(rewardVaultContract, _fee);
-            rewardVaultContract.deposit(feePayee, ERC20(_token), _fee);
+            rewardVaultContract.deposit(_feePayee, ERC20(_token), _fee);
         }
-        privateDecrementBalance(_trader, ERC20(_token), _value + _fee);
+        privateDecrementBalance(_traderFrom, ERC20(_token), _value + _fee);
+        if (_value > 0) {
+            privateIncrementBalance(_traderTo, ERC20(_token), _value);
+        }
     }
 
     /// @notice Deposits ETH or an ERC20 token into the contract

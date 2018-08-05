@@ -259,8 +259,7 @@ contract RenExSettlement is Ownable {
         }
 
         // Punish guilty trader        
-        renExBalancesContract.decrementBalanceWithFee(orderTrader[guiltyID], tokenAddress, fee, fee, slasherAddress);
-        renExBalancesContract.incrementBalance(orderTrader[innocentID], tokenAddress, fee);
+        renExBalancesContract.transferBalanceWithFee(orderTrader[guiltyID], orderTrader[innocentID], tokenAddress, fee, fee, slasherAddress);
     }
 
     /// @notice Calculates the hash of the provided order.
@@ -312,17 +311,13 @@ contract RenExSettlement is Ownable {
         (uint256 lowTokenFinal, uint256 lowTokenFee) = subtractDarknodeFee(details.lowTokenVolume);
         (uint256 highTokenFinal, uint256 highTokenFee) = subtractDarknodeFee(details.highTokenVolume);
 
-        // Subtract values
-        renExBalancesContract.decrementBalanceWithFee(
-            orderTrader[_buyID], details.lowTokenAddress, lowTokenFinal, lowTokenFee, orderSubmitter[_buyID]
+        // Transfer values
+        renExBalancesContract.transferBalanceWithFee(
+            orderTrader[_buyID], orderTrader[_sellID], details.lowTokenAddress, lowTokenFinal, lowTokenFee, orderSubmitter[_buyID]
         );
-        renExBalancesContract.decrementBalanceWithFee(
-            orderTrader[_sellID], details.highTokenAddress, highTokenFinal, highTokenFee, orderSubmitter[_sellID]
+        renExBalancesContract.transferBalanceWithFee(
+            orderTrader[_sellID], orderTrader[_buyID], details.highTokenAddress, highTokenFinal, highTokenFee, orderSubmitter[_sellID]
         );
-
-        // Add values
-        renExBalancesContract.incrementBalance(orderTrader[_sellID], details.lowTokenAddress, lowTokenFinal);
-        renExBalancesContract.incrementBalance(orderTrader[_buyID], details.highTokenAddress, highTokenFinal);
     }
 
     /// @notice Settles the order match by updating the balances on the 
@@ -377,8 +372,8 @@ contract RenExSettlement is Ownable {
         } else {
             return;
         }
-        renExBalancesContract.decrementBalanceWithFee(orderTrader[_buyID], tokenAddress, 0, fee, orderSubmitter[_buyID]);
-        renExBalancesContract.decrementBalanceWithFee(orderTrader[_sellID], tokenAddress, 0, fee, orderSubmitter[_sellID]);
+        renExBalancesContract.transferBalanceWithFee(orderTrader[_buyID], 0x0, tokenAddress, 0, fee, orderSubmitter[_buyID]);
+        renExBalancesContract.transferBalanceWithFee(orderTrader[_sellID], 0x0, tokenAddress, 0, fee, orderSubmitter[_sellID]);
     }
 
     function isBuyOrder(bytes32 _orderID) private view returns (bool) {

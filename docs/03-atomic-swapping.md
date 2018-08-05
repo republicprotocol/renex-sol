@@ -4,38 +4,55 @@ The Atomic Swap is an Ethereum smart contract used to swap tokens cross-chain.
 
 For easier understanding of the concept of atomic swaps, let's look at an example. Assume that Alice has 100 Ether, and she wants to trade it for 10 Bitcoin, and Bob has 10 Bitcoin that he wants to trade for 100 Ether. They decide to do an atomic swap as they do not trust each other to hold their end of the bargain.
 
-According to the priority order of the tokens defined by Republic Protocol(???), Bitcoin should go first.
+![Atomic Swap between ETH and BTC](./images/03-atomic-swapping-overview.jpg "Atomic Swap between ETH and BTC")
 
-1. Alice sends her Bitcoin Address to Bob, and Bob sends his ethereum address to Alice. 
+**(1) Alice & Bob Submit Addresses**
+  Alice sends her Bitcoin Address to Bob, and Bob sends his Ethereum address to Alice. By calling the `setOwnerAddress(bytes32 _orderID, bytes _owner)` function on AtomicInfo.sol contract.
 
-2. Bob generates a secret, hashes it and uses the hash to initiate an atomic swap for 10 Bitcoin to Alice's Bitcoin Address. He sets the expiry to be around 48 hours.
 
-3. Bob sends the transaction information to Alice.
+**(2) Bob Initiates**
+  Bob generates a secret, hashes it and uses the hash to initiate an atomic swap for 10 Bitcoin to Alice's Bitcoin Address on the Bitcoin Blockchain. He does this by creating a Bitcoin script, that can be redeemed by Alice to get the 10 Bitcoins or expires in 48 hours refunding his Bitcoins.
 
-4.  Alice audits the transaction, to check whether the redeemer address is correct, the number of bitcoins is as expected. 
+**(3) Bob Submits Swap Details**
+  Bob submits the swap information to the AtomicInfo.sol contract by calling `submitDetails(bytes32 _orderID, bytes _swapDetails)`.
 
-5. If the audit is successful,  Alice initiates an atomic swap on ethereum for 100 Ether to Bob's ethereum address with the same hash and sets the expiry to be 24 hours.
+**(4) Alice Observes Swap Details**
+  Alice observes Bob's swap details by calling `swapDetails(bytes32 _orderID)` on the AtomicInfo.sol contract.
 
-6. Alice sends the transaction information to Bob.
+**(5) Alice Audits**
+  Alice audits the swap details she received from the AtomicInfo.sol contract by checking against the Bitcoin blockchain. Alice does this by checking whether the redeemer address is correct, the number of bitcoins is as expected and she has enough time to redeem the atomic swap. 
 
-7. Bob audits the transaction, to check whether the redeemer address is correct, the number of ether is as expected and the hash is the same as the one he used. 
+**(6) Alice Initiates**
+  If the audit is successful, Alice initiates an atomic swap on Ethereum for 100 Ether to Bob's Ethereum address with the same hash and sets the expiry to be 24 hours. Alice does this by calling `initiate(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock, uint256 _timelock)` on the RenExAtomicSwapper.sol contract.
+  
+**(7) Alice Submits Swap Details**
+  Alice submits the swap information to the AtomicInfo.sol contract by calling `submitDetails(bytes32 _orderID, bytes _swapDetails)`.
+  
+**(8) Bob Observes Swap Details**
+  Bob observes Alice's swap details by calling `swapDetails(bytes32 _orderID)` on the AtomicInfo.sol contract.
 
-8.  If the audit is successful,  Bob redeems the atomic swap on ethereum and get's the 100 ether releasing the secret.
+**(9) Bob Audits Swap Details**
+    Bob audits the swap details he received from the AtomicInfo.sol contract by checking against the Ethereum blockchain(by calling `audit(bytes32 _swapID)` on the RenExAtomicSwapper.sol contract). Bob does this by checking whether the redeemer address is correct, the number of ether is as expected and he has enough time to redeem the atomic swap. 
 
-9. Alice audits the secret on the ethereum blockchain and redeems the swap on the bitcoin blockchain getting 10 bitcoins.
+**(10) Bob Redeems**
+  If the audit is successful,  Bob redeems the atomic swap on Ethereum by calling `redeem(bytes32 _swapID, bytes32 _secret)` on the RenExAtomicSwapper.sol contract. In the process exposing the secret he generated during the initiation process and get's the 100 ether.
 
+**(11) Alice Audits Secret**
+  Alice audits the secret on the Ethereum blockchain by calling `auditSecret(bytes32 _swapID)` on the RenExAtomicSwapper.sol contract. 
+  
+**(12) Alice Redeems**
+  Alice redeems the atomic swap on the Bitcoin blockchain, using the secret received from the RenExAtomicSwapper.sol contract and receives 10 bitcoins.
 
 Alternative executions:
 * If Bob does not initiate in step 2, then the atomic swap will not happen.
 
-* If Alice does not initiate in step 5, then Bob will be able to refund his bitcoins after the swap expires. 
+* If Alice does not initiate in step 6, then Bob will be able to refund his bitcoins after the swap expires(which is 48 hours in this case). 
 
-* If Bob does not redeem in step 8, the Alice and Bob will be able to refund and get their tokens back after they expire.
+* If Bob does not redeem in step 8, then Alice and Bob will be able to refund and get their tokens back after they expire(in 24 hours and 48 hours in this case).
 
 As one can see, it is not possible to lose tokens in this process, the worst that could happen is that the swap does not go through, and the trader's tokens get locked up for a while.
 
 Timeline:
-
 **(1) Matched**
 The orders of Alice and Bob are matched at this state, and the atomic swap process has not started yet, this is the *Matched* state of the atomic swap. From this point, Alice and Bob have 24 hours to send their information to the other party.
 

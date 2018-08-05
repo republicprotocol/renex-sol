@@ -10,7 +10,7 @@ import { setupContracts, submitMatch } from "./RenEx";
 chai.use(chaiAsPromised);
 chai.should();
 
-contract("Slasher", function (accounts: string[]) {
+contract.skip("Slasher", function (accounts: string[]) {
 
     const slasher = accounts[0];
     const buyer = accounts[1];

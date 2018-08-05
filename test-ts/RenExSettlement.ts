@@ -10,7 +10,7 @@ chai.should();
 
 const GWEI = 1000000000;
 
-contract.only("RenExSettlement", function (accounts: string[]) {
+contract("RenExSettlement", function (accounts: string[]) {
 
     const darknode = accounts[2];
     const broker = accounts[3];
@@ -22,11 +22,11 @@ contract.only("RenExSettlement", function (accounts: string[]) {
 
     before(async function () {
         ({ tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens } = await setupContracts(darknode, 0x0, broker));
-        sellID_1 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x700000003", 10, 1000, 0); 
-        buyID_1 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x300000007", 10, 10000, 0); 
+        sellID_1 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x700000003", 10, 1000, 0);
+        buyID_1 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x300000007", 10, 10000, 0);
 
-        sellID_2 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 1000, 0); 
-        buyID_2 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x1", 12, 10000, 0); 
+        sellID_2 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 1000, 0);
+        buyID_2 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x1", 12, 10000, 0);
 
         sellID_3 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 10000, 0);
         buyID_3 = await renExSettlement.hashOrder(web3.utils.sha3("0"), 1, "0x1", 15, 10000, 0);
@@ -76,23 +76,23 @@ contract.only("RenExSettlement", function (accounts: string[]) {
     });
 
     it("submitOrder", async () => {
-         // sellID_1?
-         await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x700000003", 10, 1000, 0);
+        // sellID_1?
+        await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x700000003", 10, 1000, 0);
 
-         // buyID_1?
-         await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x300000007", 10, 10000, 0);
- 
-         // sellID_2?
-         await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 1000, 0);
- 
-         // buyID_2?
-         await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x1", 12, 10000, 0);
+        // buyID_1?
+        await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x300000007", 10, 10000, 0);
 
-          // sellID_3?
-          await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 10000, 0);
- 
-          // buyID_3?
-          await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x1", 15, 10000, 0);
+        // sellID_2?
+        await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 1000, 0);
+
+        // buyID_2?
+        await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x1", 12, 10000, 0);
+
+        // sellID_3?
+        await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x100000000", 12, 10000, 0);
+
+        // buyID_3?
+        await renExSettlement.submitOrder(web3.utils.sha3("0"), 1, "0x1", 15, 10000, 0);
     });
 
     it("submitOrder (rejected)", async () => {
@@ -117,12 +117,12 @@ contract.only("RenExSettlement", function (accounts: string[]) {
         await renExSettlement.submitMatch(
             randomID(),
             sellID_1,
-        ).should.be.rejectedWith(null, /invalid buy status/);
+        ).should.be.rejectedWith(null, /buy not submitted/);
 
         await renExSettlement.submitMatch(
             buyID_1,
             randomID(),
-        ).should.be.rejectedWith(null, /invalid sell status/);
+        ).should.be.rejectedWith(null, /sell not submitted/);
 
         // Two buys
         await renExSettlement.submitMatch(
@@ -140,7 +140,7 @@ contract.only("RenExSettlement", function (accounts: string[]) {
         await renExSettlement.submitMatch(
             sellID_3,
             buyID_2,
-        ).should.be.rejectedWith(null, /invalid order pair/);
+        ).should.be.rejectedWith(null, /unconfirmed orders/);
 
         // Buy token that is not registered
         await renExSettlement.submitMatch(

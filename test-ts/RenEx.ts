@@ -20,7 +20,7 @@ import * as chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 chai.should();
 
-contract("RenEx", function (accounts: string[]) {
+contract.skip("RenEx", function (accounts: string[]) {
 
     const buyer = accounts[0];
     const seller = accounts[1];

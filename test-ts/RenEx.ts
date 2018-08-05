@@ -392,17 +392,12 @@ export async function submitMatch(
 
     // await tokenAddresses[REN].approve(orderbook.address, testUtils.INGRESS_FEE * 4, { from: broker });
     await orderbook.openBuyOrder(buy.signature, buy.orderID, { from: broker }).should.not.be.rejected;
-    console.log(1.5);
     await orderbook.openSellOrder(sellSignature, sell.orderID, { from: broker }).should.not.be.rejected;
-
-    console.log(2);
 
     (await orderbook.orderTrader(buy.orderID)).should.equal(buyer);
     (await orderbook.orderTrader(sell.orderID)).should.equal(seller);
-    console.log("3");
 
     await orderbook.confirmOrder(buy.orderID, [sell.orderID], { from: darknode }).should.not.be.rejected;
-    console.log("4");
 
     await renExSettlement.submitOrder(getPreBytes(buy), buy.settlement, buy.tokens, buy.price.multipliedBy(10 ** 12), buy.volume.multipliedBy(10 ** 12), buy.minimumVolume.multipliedBy(10 ** 12));
     await renExSettlement.submitOrder(getPreBytes(sell), sell.settlement, sell.tokens, sell.price.multipliedBy(10 ** 12), sell.volume.multipliedBy(10 ** 12), sell.minimumVolume.multipliedBy(10 ** 12));
@@ -411,14 +406,11 @@ export async function submitMatch(
     // const buyerHighBefore = new BigNumber(await renExBalances.traderBalances(buyer, highTokenInstance.address));
     // const sellerLowBefore = new BigNumber(await renExBalances.traderBalances(seller, lowTokenInstance.address));
     const sellerHighBefore = new BigNumber(await renExBalances.traderBalances(seller, highTokenInstance.address));
-    console.log("5");
 
     await renExSettlement.submitMatch(buy.orderID, sell.orderID)
         .should.not.be.rejected;
-    console.log("6");
 
     const buyMatch = await renExSettlement.matchDetails(buy.orderID, sell.orderID);
-    console.log(buyMatch);
 
     const highSum = new BigNumber(buyMatch[1]);
     const lowSum = new BigNumber(buyMatch[0]);

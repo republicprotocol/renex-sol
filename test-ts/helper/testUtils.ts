@@ -4,6 +4,8 @@ import * as chaiAsPromised from "chai-as-promised";
 import * as chaiBigNumber from "chai-bignumber";
 
 import BigNumber from "bignumber.js";
+import { TransactionReceipt, Log } from "web3/types";
+import { BN } from "bn.js";
 
 chai.use(chaiAsPromised);
 chai.use(chaiBigNumber(BigNumber));
@@ -14,8 +16,24 @@ export const { INGRESS_FEE, MINIMUM_POD_SIZE, MINIMUM_EPOCH_INTERVAL } = config;
 export const MINIMUM_BOND = new BigNumber(config.MINIMUM_BOND);
 
 export const NULL = "0x0000000000000000000000000000000000000000";
+export const Ox0 = NULL;
 
 export const GWEI = 1000000000;
+
+export enum OrderParity {
+    BUY = 0,
+    SELL = 1,
+}
+
+// Tokens used for testing only. These tokens do not represent the tokens that
+// will be supported by RenEx.
+export enum TokenCodes {
+    BTC = 0x0,
+    ETH = 0x1,
+    LTC = 0x2,
+    DGX = 0x100,
+    REN = 0x10000,
+}
 
 // Makes a public key for a darknode
 export function PUBK(i: string) {
@@ -41,12 +59,15 @@ export async function waitForEpoch(dnr: any) {
     }
 }
 
+export const market = (low, high) => {
+    return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
+};
 export const randomID = () => {
     return web3.utils.sha3(Math.random().toString());
 };
 
-const openPrefix = web3.utils.toHex("Republic Protocol: open: ");
-const closePrefix = web3.utils.toHex("Republic Protocol: cancel: ");
+export const openPrefix = web3.utils.toHex("Republic Protocol: open: ");
+export const closePrefix = web3.utils.toHex("Republic Protocol: cancel: ");
 
 export const openBuyOrder = async (orderbook, broker, account, orderID?) => {
     if (!orderID) {
@@ -78,3 +99,19 @@ export const cancelOrder = async (orderbook, broker, account, orderID) => {
     const signature = await web3.eth.sign(hash, account);
     await orderbook.cancelOrder(signature, orderID, { from: broker });
 };
+
+export async function getFee(txP: Promise<{ receipt: TransactionReceipt, tx: string; logs: Log[] }>) {
+    const tx = await txP;
+    const gasAmount = new BigNumber(tx.receipt.gasUsed);
+    const gasPrice = new BigNumber((await web3.eth.getTransaction(tx.tx)).gasPrice);
+    return gasPrice.multipliedBy(gasAmount);
+}
+
+const PRIME = new BN("17012364981921935471");
+export function randomNonce() {
+    let nonce = PRIME;
+    while (nonce.gte(PRIME)) {
+        nonce = new BN(Math.floor(Math.random() * 10000000));
+    }
+    return nonce.toString("hex");
+}

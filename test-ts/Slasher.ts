@@ -12,9 +12,9 @@ const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
 // Two big number libraries are used - BigNumber decimal support
 // while BN has better bitwise operations
 import BigNumber from "bignumber.js";
-import { BN } from "bn.js";
 
 import * as testUtils from "./helper/testUtils";
+import { TokenCodes, market } from "./helper/testUtils";
 
 import { submitMatch } from "./RenEx";
 
@@ -33,11 +33,11 @@ contract("Slasher", function (accounts: string[]) {
         const ren = await RepublicToken.deployed();
 
         tokenAddresses = {
-            [BTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
-            [ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
-            [LTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
-            [DGX]: await DGXMock.deployed(),
-            [REN]: ren,
+            [TokenCodes.BTC]: { address: testUtils.Ox0, decimals: () => new BigNumber(8), approve: () => null },
+            [TokenCodes.ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
+            [TokenCodes.LTC]: { address: testUtils.Ox0, decimals: () => new BigNumber(8), approve: () => null },
+            [TokenCodes.DGX]: await DGXMock.deployed(),
+            [TokenCodes.REN]: ren,
         };
 
         let dnr = await DarknodeRegistry.deployed();
@@ -48,7 +48,7 @@ contract("Slasher", function (accounts: string[]) {
 
         // Register extra token
         const renExTokens = await RenExTokens.deployed();
-        renExTokens.registerToken(LTC, tokenAddresses[LTC].address, await tokenAddresses[LTC].decimals());
+        renExTokens.registerToken(TokenCodes.LTC, tokenAddresses[TokenCodes.LTC].address, await tokenAddresses[TokenCodes.LTC].decimals());
 
         // Broker
         await ren.transfer(broker, testUtils.INGRESS_FEE * 100);
@@ -62,12 +62,12 @@ contract("Slasher", function (accounts: string[]) {
 
         await renExSettlement.updateSlasher(slasher);
 
-        eth_address = tokenAddresses[ETH].address;
-        eth_decimals = new BigNumber(10).pow(tokenAddresses[ETH].decimals());
+        eth_address = tokenAddresses[TokenCodes.ETH].address;
+        eth_decimals = new BigNumber(10).pow(tokenAddresses[TokenCodes.ETH].decimals());
     });
 
     it("should correctly relocate fees", async () => {
-        const tokens = market(BTC, ETH);
+        const tokens = market(TokenCodes.BTC, TokenCodes.ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
@@ -119,7 +119,7 @@ contract("Slasher", function (accounts: string[]) {
     });
 
     it("should not slash bonds more than once", async () => {
-        const tokens = market(BTC, ETH);
+        const tokens = market(TokenCodes.BTC, TokenCodes.ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
@@ -138,7 +138,7 @@ contract("Slasher", function (accounts: string[]) {
     });
 
     it("should handle orders if ETH is the low token", async () => {
-        const tokens = market(ETH, LTC);
+        const tokens = market(TokenCodes.ETH, TokenCodes.LTC);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* ETH */, minimumVolume: 1 /* LTC */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
 
@@ -152,7 +152,7 @@ contract("Slasher", function (accounts: string[]) {
     });
 
     it("should not slash non-ETH atomic swaps", async () => {
-        const tokens = market(BTC, LTC);
+        const tokens = market(TokenCodes.BTC, TokenCodes.LTC);
         const buy = { settlement: 2, tokens, price: 1, volume: 1 /* BTC */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
 
@@ -166,7 +166,7 @@ contract("Slasher", function (accounts: string[]) {
     });
 
     it("should not slash non-atomic swap orders", async () => {
-        const tokens = market(ETH, REN);
+        const tokens = market(TokenCodes.ETH, TokenCodes.REN);
         // Highest possible price, lowest possible volume
         const buy = { tokens, price: 1, volume: 2 /* DGX */ };
         const sell = { tokens, price: 0.95, volume: 1 /* REN */ };
@@ -180,7 +180,7 @@ contract("Slasher", function (accounts: string[]) {
     });
 
     it("should not slash if unauthorised to do so", async () => {
-        const tokens = market(BTC, ETH);
+        const tokens = market(TokenCodes.BTC, TokenCodes.ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
@@ -199,25 +199,3 @@ contract("Slasher", function (accounts: string[]) {
             .should.be.rejectedWith(null, /unauthorised/);
     });
 });
-
-/**
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- */
-
-const BTC = 0x0;
-const ETH = 0x1;
-const LTC = 0x2;
-const DGX = 0x100;
-const REN = 0x10000;
-
-const market = (low, high) => {
-    return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
-};

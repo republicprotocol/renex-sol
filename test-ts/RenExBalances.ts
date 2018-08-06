@@ -6,8 +6,7 @@ const RenExBalances = artifacts.require("RenExBalances");
 
 import BigNumber from "bignumber.js";
 
-import "./helper/testUtils";
-import { TransactionReceipt, Log } from "web3/types";
+import * as testUtils from "./helper/testUtils";
 
 contract("RenExBalances", function (accounts: string[]) {
 
@@ -26,7 +25,7 @@ contract("RenExBalances", function (accounts: string[]) {
 
     it("can update Reward Vault address", async () => {
         await renExBalances.updateRewardVault(0x0);
-        (await renExBalances.rewardVaultContract()).should.equal("0x0000000000000000000000000000000000000000");
+        (await renExBalances.rewardVaultContract()).should.equal(testUtils.Ox0);
         await renExBalances.updateRewardVault(rewardVault.address, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
         await renExBalances.updateRewardVault(rewardVault.address);
@@ -155,14 +154,16 @@ contract("RenExBalances", function (accounts: string[]) {
         const previous = new BigNumber(await web3.eth.getBalance(accounts[0]));
 
         // Approve and deposit
-        const fee1 = await getFee(renExBalances.deposit(ETH.address, deposit1, { from: accounts[0], value: deposit1 }));
+        const fee1 = await testUtils.getFee(
+            renExBalances.deposit(ETH.address, deposit1, { from: accounts[0], value: deposit1 })
+        );
 
         // Balance should be (previous - fee1 - deposit1)
         const after = (await web3.eth.getBalance(accounts[0]));
         after.toString().should.equal(previous.minus(fee1).minus(deposit1).toFixed());
 
         // Withdraw
-        const fee2 = await getFee(renExBalances.withdraw(ETH.address, deposit1, { from: accounts[0] }));
+        const fee2 = await testUtils.getFee(renExBalances.withdraw(ETH.address, deposit1, { from: accounts[0] }));
 
         // Balance should be (previous - fee1 - fee2)
         (await web3.eth.getBalance(accounts[0])).should.equal(previous.minus(fee1).minus(fee2).toFixed());
@@ -212,10 +213,3 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.updateRenExSettlementContract(renExSettlement.address);
     });
 });
-
-async function getFee(txP: Promise<{ receipt: TransactionReceipt, tx: string; logs: Log[] }>) {
-    const tx = await txP;
-    const gasAmount = new BigNumber(tx.receipt.gasUsed);
-    const gasPrice = new BigNumber((await web3.eth.getTransaction(tx.tx)).gasPrice);
-    return gasPrice.multipliedBy(gasAmount);
-}

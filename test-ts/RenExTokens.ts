@@ -1,7 +1,7 @@
 const RepublicToken = artifacts.require("RepublicToken");
 const RenExTokens = artifacts.require("RenExTokens");
 
-import "./helper/testUtils";
+import * as testUtils from "./helper/testUtils";
 
 contract("RenExTokens", function (accounts: string[]) {
 
@@ -13,7 +13,7 @@ contract("RenExTokens", function (accounts: string[]) {
 
     beforeEach(async function () {
         tokenInstances = {
-            [ETH]: { address: "0x0000000000000000000000000000000000000000", decimals: () => Promise.resolve(18) },
+            [ETH]: { address: testUtils.Ox0, decimals: () => Promise.resolve(18) },
             [REN]: await RepublicToken.new(),
         };
 

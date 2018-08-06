@@ -10,12 +10,9 @@ const RenExTokens = artifacts.require("RenExTokens");
 const PreciseToken = artifacts.require("PreciseToken");
 
 import * as testUtils from "./helper/testUtils";
-import BigNumber from "bignumber.js";
+import { TokenCodes } from "./helper/testUtils";
 
-const BTC = 0x0;
-const ETH = 0x1;
-const DGX = 0x100;
-const REN = 0x10000;
+import BigNumber from "bignumber.js";
 
 contract("RenExSettlement", function (accounts: string[]) {
 
@@ -39,10 +36,10 @@ contract("RenExSettlement", function (accounts: string[]) {
         const ren = await RepublicToken.deployed();
 
         tokenAddresses = {
-            [BTC]: { address: "0x0000000000000000000000000000000000000000", decimals: () => new BigNumber(8), approve: () => null },
-            [ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
-            [DGX]: await DGXMock.deployed(),
-            [REN]: ren,
+            [TokenCodes.BTC]: { address: testUtils.Ox0, decimals: () => new BigNumber(8), approve: () => null },
+            [TokenCodes.ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
+            [TokenCodes.DGX]: await DGXMock.deployed(),
+            [TokenCodes.REN]: ren,
         };
 
         let dnr = await DarknodeRegistry.deployed();
@@ -62,7 +59,7 @@ contract("RenExSettlement", function (accounts: string[]) {
         await dnr.register(darknode, testUtils.PUBK("1"), testUtils.MINIMUM_BOND, { from: darknode });
         await testUtils.waitForEpoch(dnr);
 
-        await tokenAddresses[REN].approve(orderbook.address, 100 * 1e18, { from: broker });
+        await tokenAddresses[TokenCodes.REN].approve(orderbook.address, 100 * 1e18, { from: broker });
 
         buyID_1 = await renExSettlement.hashOrder(...BUY1);
         sellID_1 = await renExSettlement.hashOrder(...SELL1);
@@ -75,14 +72,14 @@ contract("RenExSettlement", function (accounts: string[]) {
 
         buyID_4 = await renExSettlement.hashOrder(...BUY4);
 
-        await steps.openBuyOrder(orderbook, broker, accounts[5], buyID_1);
-        await steps.openBuyOrder(orderbook, broker, accounts[6], buyID_2);
-        await steps.openBuyOrder(orderbook, broker, accounts[7], buyID_3);
-        await steps.openBuyOrder(orderbook, broker, accounts[8], buyID_4);
+        await testUtils.openBuyOrder(orderbook, broker, accounts[5], buyID_1);
+        await testUtils.openBuyOrder(orderbook, broker, accounts[6], buyID_2);
+        await testUtils.openBuyOrder(orderbook, broker, accounts[7], buyID_3);
+        await testUtils.openBuyOrder(orderbook, broker, accounts[8], buyID_4);
 
-        await steps.openSellOrder(orderbook, broker, accounts[6], sellID_1);
-        await steps.openSellOrder(orderbook, broker, accounts[5], sellID_2);
-        await steps.openSellOrder(orderbook, broker, accounts[8], sellID_3);
+        await testUtils.openSellOrder(orderbook, broker, accounts[6], sellID_1);
+        await testUtils.openSellOrder(orderbook, broker, accounts[5], sellID_2);
+        await testUtils.openSellOrder(orderbook, broker, accounts[8], sellID_3);
 
         await orderbook.confirmOrder(buyID_1, sellID_1, { from: darknode });
         await orderbook.confirmOrder(buyID_2, sellID_2, { from: darknode });
@@ -91,7 +88,7 @@ contract("RenExSettlement", function (accounts: string[]) {
 
     it("can update orderbook", async () => {
         await renExSettlement.updateOrderbook(0x0);
-        (await renExSettlement.orderbookContract()).should.equal("0x0000000000000000000000000000000000000000");
+        (await renExSettlement.orderbookContract()).should.equal(testUtils.Ox0);
         await renExSettlement.updateOrderbook(orderbook.address, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
         await renExSettlement.updateOrderbook(orderbook.address);
@@ -100,7 +97,7 @@ contract("RenExSettlement", function (accounts: string[]) {
 
     it("can update renex balances", async () => {
         await renExSettlement.updateRenExBalances(0x0);
-        (await renExSettlement.renExBalancesContract()).should.equal("0x0000000000000000000000000000000000000000");
+        (await renExSettlement.renExBalancesContract()).should.equal(testUtils.Ox0);
         await renExSettlement.updateRenExBalances(renExBalances.address, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
         await renExSettlement.updateRenExBalances(renExBalances.address);
@@ -149,7 +146,7 @@ contract("RenExSettlement", function (accounts: string[]) {
 
     it("submitMatch checks the buy order status", async () => {
         await renExSettlement.submitMatch(
-            randomID(),
+            testUtils.randomID(),
             sellID_1,
         ).should.be.rejectedWith(null, /invalid buy status/);
     });
@@ -157,7 +154,7 @@ contract("RenExSettlement", function (accounts: string[]) {
     it("submitMatch checks the sell order status", async () => {
         await renExSettlement.submitMatch(
             buyID_1,
-            randomID(),
+            testUtils.randomID(),
         ).should.be.rejectedWith(null, /invalid sell status/);
     });
 
@@ -189,12 +186,12 @@ contract("RenExSettlement", function (accounts: string[]) {
         ).should.be.rejectedWith(null, /unregistered buy token/);
 
         // Sell token that is not registered
-        await renExTokens.deregisterToken(BTC);
+        await renExTokens.deregisterToken(TokenCodes.BTC);
         await renExSettlement.submitMatch(
             buyID_2,
             sellID_2,
         ).should.be.rejectedWith(null, /unregistered sell token/);
-        await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, 8);
+        await renExTokens.registerToken(TokenCodes.BTC, tokenAddresses[TokenCodes.BTC].address, 8);
     });
 
     it("submitMatch errors for token with more than log10(2**256) decimals", async () => {
@@ -209,8 +206,8 @@ contract("RenExSettlement", function (accounts: string[]) {
         const SELL5 = [web3.utils.sha3("5"), 1, "0x300000000", 1, 1, 0];
         const buyID_5 = await renExSettlement.hashOrder(...BUY5);
         const sellID_5 = await renExSettlement.hashOrder(...SELL5);
-        await steps.openBuyOrder(orderbook, broker, accounts[8], buyID_5);
-        await steps.openSellOrder(orderbook, broker, accounts[6], sellID_5);
+        await testUtils.openBuyOrder(orderbook, broker, accounts[8], buyID_5);
+        await testUtils.openSellOrder(orderbook, broker, accounts[6], sellID_5);
         await orderbook.confirmOrder(buyID_5, sellID_5, { from: darknode });
 
         // Submit orders
@@ -238,32 +235,3 @@ contract("RenExSettlement", function (accounts: string[]) {
         await renExSettlement.updateSubmissionGasPriceLimit(previousGasPriceLimit);
     });
 });
-
-const randomID = () => {
-    return web3.utils.sha3(Math.random().toString());
-};
-
-const openPrefix = web3.utils.toHex("Republic Protocol: open: ");
-const closePrefix = web3.utils.toHex("Republic Protocol: cancel: ");
-
-const steps = {
-    openBuyOrder: async (orderbook, broker, account, orderID) => {
-        let hash = openPrefix + orderID.slice(2);
-        let signature = await web3.eth.sign(hash, account);
-        await orderbook.openBuyOrder(signature, orderID, { from: broker });
-        return orderID;
-    },
-
-    openSellOrder: async (orderbook, broker, account, orderID) => {
-        let hash = openPrefix + orderID.slice(2);
-        let signature = await web3.eth.sign(hash, account);
-        await orderbook.openSellOrder(signature, orderID, { from: broker });
-        return orderID;
-    },
-
-    cancelOrder: async (orderbook, broker, account, orderID) => {
-        const hash = closePrefix + orderID.slice(2);
-        const signature = await web3.eth.sign(hash, account);
-        await orderbook.cancelOrder(signature, orderID, { from: broker });
-    }
-};

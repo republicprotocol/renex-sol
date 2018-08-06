@@ -10,7 +10,7 @@ coverage.json
 .env
 .merged/
 build/*
-./test
+test/*
 local_*
 
 !node_modules/openzeppelin-solidity/

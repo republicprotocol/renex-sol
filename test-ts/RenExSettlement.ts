@@ -5,7 +5,6 @@ const RepublicToken = artifacts.require("RepublicToken");
 const DarknodeRegistry = artifacts.require("DarknodeRegistry");
 const DGXMock = artifacts.require("DGXMock");
 const RenExTokens = artifacts.require("RenExTokens");
-const PreciseToken = artifacts.require("PreciseToken");
 
 import * as testUtils from "./helper/testUtils";
 import { TokenCodes, buyMarket, sellMarket } from "./helper/testUtils";
@@ -190,36 +189,6 @@ contract("RenExSettlement", function (accounts: string[]) {
             sellID_2,
         ).should.be.rejectedWith(null, /unregistered sell token/);
         await renExTokens.registerToken(TokenCodes.BTC, tokenAddresses[TokenCodes.BTC].address, 8);
-    });
-
-    it("submitMatch errors for token with more than log10(2**256) decimals", async () => {
-
-        // Register new token with 255 decimals
-        const preciseToken = await PreciseToken.new();
-        const VPT = 0x3;
-        await renExTokens.registerToken(VPT, preciseToken.address, 255);
-
-        // Open and confirm orders
-        const BUY6 = [web3.utils.sha3("5"), 1, buyMarket(TokenCodes.BTC, VPT), 1, 1, 0];
-        const SELL6 = [web3.utils.sha3("5"), 1, sellMarket(TokenCodes.BTC, VPT), 1, 1, 0];
-        const buyID_6 = await renExSettlement.hashOrder(...BUY6);
-        const sellID_6 = await renExSettlement.hashOrder(...SELL6);
-        await testUtils.openBuyOrder(orderbook, broker, accounts[8], buyID_6);
-        await testUtils.openSellOrder(orderbook, broker, accounts[6], sellID_6);
-        await orderbook.confirmOrder(buyID_6, sellID_6, { from: darknode });
-
-        // Submit orders
-        await renExSettlement.submitOrder(...BUY6);
-        await renExSettlement.submitOrder(...SELL6);
-
-        // Attempt to settle
-        await renExSettlement.submitMatch(
-            buyID_6,
-            sellID_6,
-        ).should.be.rejectedWith(null, /invalid opcode/);
-
-        // Deregister token
-        await renExTokens.deregisterToken(VPT);
     });
 
     it("should fail for excessive gas price", async () => {

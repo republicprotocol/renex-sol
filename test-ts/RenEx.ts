@@ -5,6 +5,7 @@ const RepublicToken = artifacts.require("RepublicToken");
 const DarknodeRegistry = artifacts.require("DarknodeRegistry");
 const DGXMock = artifacts.require("DGXMock");
 const RenExTokens = artifacts.require("RenExTokens");
+const PreciseToken = artifacts.require("PreciseToken");
 
 import * as testUtils from "./helper/testUtils";
 import { TokenCodes, market } from "./helper/testUtils";
@@ -15,11 +16,23 @@ contract("RenEx", function (accounts: string[]) {
     const buyer = accounts[0];
     const seller = accounts[1];
     let details;
+    const VPT = 0x3;
 
     const DGXREN = market(TokenCodes.DGX, TokenCodes.REN);
     const ETHREN = market(TokenCodes.ETH, TokenCodes.REN);
+    const ETHVPT = market(TokenCodes.ETH, VPT);
 
     before(async function () {
+        let dnr = await DarknodeRegistry.deployed();
+        const orderbook = await Orderbook.deployed();
+        // darknodeRewardVault = await DarknodeRewardVault.deployed();
+        const renExSettlement = await RenExSettlement.deployed();
+        const renExBalances = await RenExBalances.deployed();
+        const renExTokens = await RenExTokens.deployed();
+
+        // PriceToken
+        const preciseToken = await PreciseToken.new();
+
         const ren = await RepublicToken.deployed();
         const tokenAddresses = {
             [TokenCodes.BTC]: testUtils.MockBTC,
@@ -27,19 +40,20 @@ contract("RenEx", function (accounts: string[]) {
             [TokenCodes.LTC]: testUtils.MockBTC,
             [TokenCodes.DGX]: await DGXMock.deployed(),
             [TokenCodes.REN]: ren,
+            [VPT]: preciseToken,
         };
 
-        let dnr = await DarknodeRegistry.deployed();
-        const orderbook = await Orderbook.deployed();
-        // darknodeRewardVault = await DarknodeRewardVault.deployed();
-        const renExSettlement = await RenExSettlement.deployed();
-        const renExBalances = await RenExBalances.deployed();
-
-        const renExTokens = await RenExTokens.deployed();
+        // Register LTC
         renExTokens.registerToken(
             TokenCodes.LTC,
             tokenAddresses[TokenCodes.LTC].address,
             await tokenAddresses[TokenCodes.LTC].decimals()
+        );
+
+        // Register VPT
+        renExTokens.registerToken(
+            VPT, tokenAddresses[VPT].address,
+            await tokenAddresses[VPT].decimals()
         );
 
         // Register darknode
@@ -178,5 +192,13 @@ contract("RenEx", function (accounts: string[]) {
 
         await settleOrders.apply(this, [buy, sell, ...details])
             .should.be.rejectedWith(null, /invalid settlement id/);
+
+        // Token with too many decimals
+        buy = { tokens: ETHVPT, price: 1e-12, volume: 1e-12 /* VPT */ };
+        sell = { tokens: ETHVPT, price: 1e-12, volume: 1e-12 /* VPT */ };
+
+        await settleOrders.apply(this, [buy, sell, ...details])
+            .should.be.rejectedWith(null, /invalid opcode/);
+
     });
 });

@@ -23,6 +23,10 @@ contract RenExSettlement is Ownable {
     uint32 constant public RENEX_SETTLEMENT_ID = 1;
     uint32 constant public RENEX_ATOMIC_SETTLEMENT_ID = 2;
 
+    // Constants used in the price / volume inputs.
+    int16 constant private PRICE_OFFSET = 12;
+    int16 constant private VOLUME_OFFSET = 12;
+
     // Constructor parameters, updatable by the owner
     Orderbook public orderbookContract;
     RenExTokens public renExTokensContract;
@@ -125,14 +129,22 @@ contract RenExSettlement is Ownable {
 
     /// @notice Stores the details of an order.
     ///
-    /// @param _details Miscellaneous details.
-    /// @param _settlementID The ID of the settlement.
-    /// @param _tokens Two 32-bit token codes concatenated.
-    /// @param _price The order price in the priority token per non-priority.
-    /// @param _volume The order volume in the non-priority token.
-    /// @param _minimumVolume The order minimum volume in the non-priority token.
+    /// @param _prefix The miscellaneous details of the order required for
+    ///        calculating the order id.
+    /// @param _settlement The settlement identifier.
+    /// @param _tokens The encoding of the token pair (buy token is encoded as
+    ///        the first 32 bytes and sell token is encoded as the last 32
+    ///        bytes).
+    /// @param _price The price of the order (the price is interpreted as the
+    ///        cost for 1 standard unit of the non-priority token, in
+    ///        1e12 (i.e. PRICE_OFFSET) units of the priority token).
+    /// @param _volume The volume of the order. Intepreted as the maximum number
+    ///        of 1e-12 (i.e. VOLUME_OFFSET) units of the non-priority token
+    ///        that can be traded by this order.)
+    /// @param _minimumVolume The minimum volume the trader is willing to
+    ///        accept (It's encoding is the same as that of the volume).
     function submitOrder(
-        bytes _details,
+        bytes _prefix,
         uint64 _settlementID,
         uint64 _tokens,
         uint256 _price,
@@ -140,7 +152,7 @@ contract RenExSettlement is Ownable {
         uint256 _minimumVolume
     ) external withGasPriceLimit(submissionGasPriceLimit) {
         SettlementUtils.OrderDetails memory order = SettlementUtils.OrderDetails({
-            details: _details,
+            details: _prefix,
             settlementID: _settlementID,
             tokens: _tokens,
             price: _price,
@@ -193,7 +205,16 @@ contract RenExSettlement is Ownable {
         require(priorityTokenRegistered, "unregistered sell token");
 
         // Calculate and store settlement details
-        prepareMatchSettlement(_buyID, _sellID, priorityToken, secondToken, priorityTokenAddress, secondTokenAddress, priorityTokenDecimals, secondTokenDecimals);
+        calculateSettlementDetails(
+            _buyID,
+            _sellID,
+            priorityToken,
+            secondToken,
+            priorityTokenAddress,
+            secondTokenAddress,
+            priorityTokenDecimals,
+            secondTokenDecimals
+        );
 
         // Note: verifyMatch checks that the buy and sell settlement IDs match
         uint64 settlementID = orderDetails[_buyID].settlementID;
@@ -259,22 +280,8 @@ contract RenExSettlement is Ownable {
         );
     }
 
-    /// @notice Calculates the hash of the provided order.
-    ///
-    /// @param _prefix The miscellaneous details of the order required for
-    ///        calculating the order id.
-    /// @param _settlement The settlement identifier.
-    /// @param _tokens The encoding of the token pair (buy token is encoded as
-    ///        the first 32 bytes and sell token is encoded as the last 32
-    ///        bytes).
-    /// @param _price The price of the order (the price is interpreted as the
-    ///        cost for 1 standard unit of the priority token, in 1e-12 units
-    ///        of the non-priority token).
-    /// @param _volume The volume of the order (The volume is interpreted as
-    ///        the maximum number of 1e-12 units of the sell token that can
-    ///        be traded by this order.)
-    /// @param _minimumVolume The minimum volume the trader is willing to
-    ///        accept (It's encoding is the same as that of the volume).
+    /// @notice Calculates the hash of the provided order. See `submitOrder`
+    /// paramater desriptions.
     ///
     /// @return Hash of the order.
     function hashOrder(
@@ -317,38 +324,10 @@ contract RenExSettlement is Ownable {
         );
     }
 
-    /// @notice Settles the order match by updating the balances on the
-    /// RenExBalances contract.
+    /// @notice Transfers fees for RenExAtomic matches.
     ///
     /// @param _buyID The buy order ID.
     /// @param _sellID The sell order ID.
-    function prepareMatchSettlement(
-        bytes32 _buyID, bytes32 _sellID,
-        uint32 priorityToken, uint32 secondToken,
-        address priorityTokenAddress, address secondTokenAddress,
-        uint8 priorityTokenDecimals, uint8 secondTokenDecimals
-    ) private {
-        // Calculate the midprice (using numerator and denominator to not loose
-        // precision).
-        uint256 priceN = orderDetails[_buyID].price + orderDetails[_sellID].price;
-        uint256 priceD = 2;
-
-        uint256 minVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume); // in non-priority
-
-        uint256 priorityTokenVolume = joinFraction(minVolume.mul(priceN), priceD, int16(priorityTokenDecimals) - 24);
-        uint256 secondTokenVolume = joinFraction(minVolume, 1, int16(secondTokenDecimals) - 12);
-
-        matchDetails[_buyID][_sellID] = MatchDetails({
-            priorityTokenVolume: priorityTokenVolume,
-            secondTokenVolume: secondTokenVolume,
-            priorityToken: priorityToken,
-            secondToken: secondToken,
-            priorityTokenAddress: priorityTokenAddress,
-            secondTokenAddress: secondTokenAddress,
-            timestamp: now
-        });
-    }
-
     function payFees(
         bytes32 _buyID, bytes32 _sellID
     ) private {
@@ -369,6 +348,41 @@ contract RenExSettlement is Ownable {
         renExBalancesContract.transferBalanceWithFee(orderTrader[_sellID], 0x0, tokenAddress, 0, fee, orderSubmitter[_sellID]);
     }
 
+    /// @notice Settles the order match by updating the balances on the
+    /// RenExBalances contract.
+    ///
+    /// @param _buyID The buy order ID.
+    /// @param _sellID The sell order ID.
+    function calculateSettlementDetails(
+        bytes32 _buyID, bytes32 _sellID,
+        uint32 priorityToken, uint32 secondToken,
+        address priorityTokenAddress, address secondTokenAddress,
+        uint8 priorityTokenDecimals, uint8 secondTokenDecimals
+    ) private {
+        // Calculate the midprice (using numerator and denominator to not loose
+        // precision).
+        uint256 priceN = orderDetails[_buyID].price + orderDetails[_sellID].price;
+        uint256 priceD = 2;
+
+        uint256 minVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume); // in non-priority
+
+        uint256 priorityTokenVolume = joinFraction(minVolume.mul(priceN), priceD, int16(priorityTokenDecimals) - PRICE_OFFSET - VOLUME_OFFSET);
+        uint256 secondTokenVolume = joinFraction(minVolume, 1, int16(secondTokenDecimals) - VOLUME_OFFSET);
+
+        matchDetails[_buyID][_sellID] = MatchDetails({
+            priorityTokenVolume: priorityTokenVolume,
+            secondTokenVolume: secondTokenVolume,
+            priorityToken: priorityToken,
+            secondToken: secondToken,
+            priorityTokenAddress: priorityTokenAddress,
+            secondTokenAddress: secondTokenAddress,
+            timestamp: now
+        });
+    }
+
+    /// @notice Order parity is set by the order tokens are listed. This returns
+    /// whether an order is a buy or a sell.
+    /// @return true if _orderID is a buy order.
     function isBuyOrder(bytes32 _orderID) private view returns (bool) {
         uint64 tokens = orderDetails[_orderID].tokens;
         uint32 firstToken = uint32(tokens >> 32);
@@ -376,11 +390,14 @@ contract RenExSettlement is Ownable {
         return (firstToken < secondToken);
     }
 
+    /// @return (value - fee, fee) where fee is 0.2% of value
     function subtractDarknodeFee(uint256 value) private pure returns (uint256, uint256) {
         uint256 newValue = (value * (DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
         return (newValue, value - newValue);
     }
 
+    /// @return true if _tokenAddress is 0x0, representing a token that is not
+    /// on Ethereum
     function isEthereumBased(address _tokenAddress) private pure returns (bool) {
         return (_tokenAddress != address(0x0));
     }

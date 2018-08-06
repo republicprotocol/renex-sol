@@ -1,11 +1,9 @@
 pragma solidity ^0.4.24;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 /// @notice RenExTokens is a registry of tokens that can be traded on RenEx.
 contract RenExTokens is Ownable {
-    using SafeMath for uint256;
 
     struct TokenDetails {
         address addr;

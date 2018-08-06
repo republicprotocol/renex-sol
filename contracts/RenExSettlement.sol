@@ -390,17 +390,20 @@ contract RenExSettlement is Ownable {
         uint8 _buyTokenDecimals,
         uint8 _sellTokenDecimals
     ) private pure returns (uint256, uint256) {
+        // TODO: Use SafeMath
+
         uint256 minVolumeN;
         uint256 minVolumeQ;
-        if (_buyVolume * (10**12) / (_priceN / _priceD) <= _sellVolume) {
-            minVolumeN = _buyVolume * (10**12) * _priceD;
+        // buyVolume * (10**12) / price
+        if (_buyVolume.mul(10**12) / (_priceN / _priceD) <= _sellVolume) {
+            minVolumeN = _buyVolume.mul(10**12).mul(_priceD);
             minVolumeQ = _priceN;
         } else {
             minVolumeN = _sellVolume;
             minVolumeQ = 1;
         }
 
-        uint256 lowTokenValue = joinFraction(minVolumeN * _priceN, minVolumeQ * _priceD, int16(_sellTokenDecimals) - 24);
+        uint256 lowTokenValue = joinFraction(minVolumeN.mul(_priceN), minVolumeQ.mul(_priceD), int16(_sellTokenDecimals) - 24);
         uint256 highTokenValue = joinFraction(minVolumeN, minVolumeQ, int16(_buyTokenDecimals) - 12);
 
         return (lowTokenValue, highTokenValue);
@@ -409,8 +412,11 @@ contract RenExSettlement is Ownable {
     /// @notice Computes (numerator / denominator) * 10 ** scale
     function joinFraction(uint256 numerator, uint256 denominator, int16 scale) private pure returns (uint256) {
         if (scale >= 0) {
-            return numerator * 10 ** uint256(scale) / denominator;
+            // Check that (10**scale) doesn't overflow
+            assert(scale <= 78); // 78 = log10(2**256)
+            return numerator.mul(10 ** uint256(scale)) / denominator;
         } else {
+            assert((-scale) <= 78); // 78 = log10(2**256)            
             return (numerator / denominator) / 10 ** uint256(-scale);
         }
     }

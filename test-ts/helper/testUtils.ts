@@ -22,6 +22,10 @@ export function PUBK(i: string) {
     return web3.utils.sha3(i);
 }
 
+export const secondsFromNow = (seconds: number) => {
+    return Math.round((new Date()).getTime() / 1000) + seconds;
+};
+
 export async function waitForEpoch(dnr: any) {
     const timeout = MINIMUM_EPOCH_INTERVAL * 0.1;
     while (true) {

@@ -223,27 +223,6 @@ contract("RenExSettlement", function (accounts: string[]) {
             sellID_5,
         ).should.be.rejectedWith(null, /invalid opcode/);
 
-        // Repeat with PreciseToken as priority token
-
-        // Open and confirm orders
-        const BUY6 = [web3.utils.sha3("5"), 1, "0x300000100", 1, 1, 0];
-        const SELL6 = [web3.utils.sha3("5"), 1, "0x10000000003", 1, 1, 0];
-        const buyID_6 = await renExSettlement.hashOrder(...BUY6);
-        const sellID_6 = await renExSettlement.hashOrder(...SELL6);
-        await steps.openBuyOrder(orderbook, broker, accounts[8], buyID_6);
-        await steps.openSellOrder(orderbook, broker, accounts[6], sellID_6);
-        await orderbook.confirmOrder(buyID_6, sellID_6, { from: darknode });
-
-        // Submit orders
-        await renExSettlement.submitOrder(...BUY6);
-        await renExSettlement.submitOrder(...SELL6);
-
-        // Attempt to settle
-        await renExSettlement.submitMatch(
-            buyID_6,
-            sellID_6,
-        ).should.be.rejectedWith(null, /invalid opcode/);
-
         // Deregister token
         await renExTokens.deregisterToken(VPT);
     });

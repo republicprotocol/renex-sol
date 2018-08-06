@@ -7,6 +7,7 @@ const RenExBalances = artifacts.require("RenExBalances");
 import BigNumber from "bignumber.js";
 
 import "./helper/testUtils";
+import { TransactionReceipt, Log } from "web3/types";
 
 contract("RenExBalances", function (accounts: string[]) {
 
@@ -212,7 +213,7 @@ contract("RenExBalances", function (accounts: string[]) {
     });
 });
 
-async function getFee(txP: any) { // TODO: Use web3 transaction type
+async function getFee(txP: Promise<{ receipt: TransactionReceipt, tx: string; logs: Log[] }>) {
     const tx = await txP;
     const gasAmount = new BigNumber(tx.receipt.gasUsed);
     const gasPrice = new BigNumber((await web3.eth.getTransaction(tx.tx)).gasPrice);

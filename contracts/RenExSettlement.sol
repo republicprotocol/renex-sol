@@ -392,7 +392,8 @@ contract RenExSettlement is Ownable {
             assert(scale <= 77); // log10(2**256) = 77.06
             return numerator.mul(10 ** uint256(scale)) / denominator;
         } else {
-            assert((-scale) <= 77); // log10(2**256) = 77.06
+            // joinFraction is only called with a minimum possible scale of -24
+            // assert((-scale) <= 77); // log10(2**256) = 77.06
             return (numerator / denominator) / 10 ** uint256(-scale);
         }
     }

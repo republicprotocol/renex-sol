@@ -292,8 +292,7 @@ export async function submitMatch(
     const lowTokenInstance = tokenAddresses[lowToken];
     const highTokenInstance = tokenAddresses[highToken];
 
-    buy.expiry = buy.expiry || 1641026487;
-    buy.type = 1;
+    buy.expiry = buy.expiry || testUtils.secondsFromNow(1000);
     buy.tokens = `0x${tokens.toString("hex")}`;
     const expectedBuyID = await renExSettlement.hashOrder(getPreBytes(buy), buy.settlement, buy.tokens, buy.price.multipliedBy(10 ** 12), buy.volume.multipliedBy(10 ** 12), buy.minimumVolume.multipliedBy(10 ** 12));
     if (buy.orderID !== undefined) {
@@ -304,8 +303,7 @@ export async function submitMatch(
     let buyHash = prefix + buy.orderID.slice(2);
     buy.signature = await web3.eth.sign(buyHash, buyer);
 
-    sell.type = 1; // type
-    sell.expiry = sell.expiry || 1641026487; // FIXME: expiry
+    sell.expiry = sell.expiry || testUtils.secondsFromNow(1000);
     sell.tokens = `0x${sellTokens.toString("hex")}`; // tokens
     const expectedSellID = await renExSettlement.hashOrder(getPreBytes(sell), sell.settlement, sell.tokens, sell.price.multipliedBy(10 ** 12), sell.volume.multipliedBy(10 ** 12), sell.minimumVolume.multipliedBy(10 ** 12));
     if (sell.orderID !== undefined) {

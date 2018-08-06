@@ -1,16 +1,12 @@
 const Swap = artifacts.require("RenExAtomicSwapper");
 
-import "./helper/testUtils";
+import { secondsFromNow } from "./helper/testUtils";
 
 import { SHA256 } from "crypto-js";
 import * as HEX from "crypto-js/enc-hex";
 
 const random32Bytes = () => {
     return `0x${SHA256(Math.random().toString()).toString()}`;
-};
-
-const secondsFromNow = (seconds: number) => {
-    return Math.round((new Date()).getTime() / 1000) + seconds;
 };
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

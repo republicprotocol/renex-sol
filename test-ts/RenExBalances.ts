@@ -47,11 +47,8 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.deposit(TOKEN2.address, deposit2, { from: accounts[0] });
 
         // Check that balance in renExBalances is updated
-        const { 0: tokens, 1: balances } = await renExBalances.getBalances.call(accounts[0]);
-        tokens[0].should.equal(TOKEN1.address);
-        tokens[1].should.equal(TOKEN2.address);
-        balances[0].toString().should.equal(deposit1.toFixed());
-        balances[1].toString().should.equal(deposit2.toFixed());
+        (await renExBalances.traderBalances(accounts[0], TOKEN1.address)).should.bignumber.equal(deposit1);
+        (await renExBalances.traderBalances(accounts[0], TOKEN2.address)).should.bignumber.equal(deposit2);
 
         // Check that the correct amount of tokens has been withdrawn
         (await TOKEN1.balanceOf(accounts[0])).toString().should.equal(previous1.minus(deposit1).toFixed());
@@ -88,13 +85,9 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.deposit(TOKEN1.address, deposit2, { from: TRADER_B });
 
         // Check that balance in renExBalances is updated
-        const { 0: tokens1, 1: balances1 } = await renExBalances.getBalances(TRADER_A);
-        tokens1[0].should.equal(TOKEN1.address);
-        balances1[0].toString().should.equal(deposit1.toFixed());
+        (await renExBalances.traderBalances(TRADER_A, TOKEN1.address)).should.bignumber.equal(deposit1);
 
-        const { 0: tokens2, 1: balances2 } = await renExBalances.getBalances(TRADER_B);
-        tokens2[0].should.equal(TOKEN1.address);
-        balances2[0].toString().should.equal(deposit2.toFixed());
+        (await renExBalances.traderBalances(TRADER_B, TOKEN1.address)).should.bignumber.equal(deposit2);
 
         // Check that the correct amount of tokens has been withdrawn
         (await TOKEN1.balanceOf(TRADER_A)).toString().should.equal(previous1.minus(deposit1).toFixed());
@@ -118,7 +111,7 @@ contract("RenExBalances", function (accounts: string[]) {
 
         // Withdraw more than deposited amount
         await renExBalances.withdraw(TOKEN1.address, deposit1 * 2, { from: accounts[0] })
-            .should.be.rejectedWith(null, /insufficient balance/);
+            .should.be.rejectedWith(null, /insufficient funds/);
 
         // Token transfer fails
         await TOKEN1.pause();
@@ -131,7 +124,7 @@ contract("RenExBalances", function (accounts: string[]) {
 
         // Withdraw again
         await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] })
-            .should.be.rejectedWith(null, /insufficient balance/);
+            .should.be.rejectedWith(null, /insufficient funds/);
     });
 
     it("can deposit and withdraw multiple times", async () => {

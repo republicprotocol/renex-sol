@@ -86,20 +86,16 @@ contract("Slasher", function (accounts: string[]) {
 
         // Store the original balances
         let beforeBurntBalance = await darknodeRewardVault.darknodeBalances(0x0, eth_address);
-        let [beforeGuiltyTokens, beforeGuiltyBalances] = await renExBalances.getBalances(guiltyAddress);
-        let [beforeInnocentTokens, beforeInnocentBalances] = await renExBalances.getBalances(innocentAddress);
-        let beforeGuiltyBalance = beforeGuiltyBalances[beforeGuiltyTokens.indexOf(eth_address)];
-        let beforeInnocentBalance = beforeInnocentBalances[beforeInnocentTokens.indexOf(eth_address)];
+        let beforeGuiltyBalance = await renExBalances.traderBalances(guiltyAddress, eth_address);
+        let beforeInnocentBalance = await renExBalances.traderBalances(innocentAddress, eth_address);
 
         // Slash the fees
         await renExSettlement.slash(guiltyOrderID, { from: slasher });
 
         // Check the new balances
         let afterBurntBalance = await darknodeRewardVault.darknodeBalances(0x0, eth_address);
-        let [afterGuiltyTokens, afterGuiltyBalances] = await renExBalances.getBalances(guiltyAddress);
-        let [afterInnocentTokens, afterInnocentBalances] = await renExBalances.getBalances(innocentAddress);
-        let afterGuiltyBalance = afterGuiltyBalances[afterGuiltyTokens.indexOf(eth_address)];
-        let afterInnocentBalance = afterInnocentBalances[afterInnocentTokens.indexOf(eth_address)];
+        let afterGuiltyBalance = await renExBalances.traderBalances(guiltyAddress, eth_address);
+        let afterInnocentBalance = await renExBalances.traderBalances(innocentAddress, eth_address);
 
         // Make sure fees were reallocated correctly
         let burntBalanceDiff = afterBurntBalance.sub(beforeBurntBalance);

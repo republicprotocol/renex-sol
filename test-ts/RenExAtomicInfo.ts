@@ -42,12 +42,30 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
         (await info.swapDetails(orderID)).should.equal(swap);
     });
 
+    it("details can only be submitted once", async () => {
+        const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
+
+        swap = testUtils.randomID();
+        await info.submitDetails(orderID, swap, { from: trader });
+        await info.submitDetails(orderID, swap, { from: trader })
+            .should.be.rejectedWith(null, /already submitted/);
+    });
+
     it("can submit and retrieve addresses", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
 
         addr = testUtils.randomID();
         await info.setOwnerAddress(orderID, addr, { from: trader });
         (await info.getOwnerAddress(orderID)).should.equal(addr, { from: trader });
+    });
+
+    it("address can only set once", async () => {
+        const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
+
+        addr = testUtils.randomID();
+        await info.setOwnerAddress(orderID, addr, { from: trader });
+        await info.setOwnerAddress(orderID, trader, { from: trader })
+            .should.be.rejectedWith(null, /already set/);
     });
 
     it("can authorise another address to submit details", async () => {

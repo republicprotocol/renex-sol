@@ -1,12 +1,9 @@
 const Swap = artifacts.require("RenExAtomicSwapper");
 
-import { randomID, secondsFromNow } from "./helper/testUtils";
+import { randomID, secondsFromNow, sleep, second } from "./helper/testUtils";
 
 import { SHA256 } from "crypto-js";
 import * as HEX from "crypto-js/enc-hex";
-
-export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-export const second = 1000;
 
 contract("RenExAtomicSwapper", function (accounts: string[]) {
 

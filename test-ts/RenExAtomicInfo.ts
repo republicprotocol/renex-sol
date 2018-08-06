@@ -4,7 +4,6 @@ import * as testUtils from "./helper/testUtils";
 
 const RenExAtomicInfo = artifacts.require("RenExAtomicInfo");
 const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
 const DarknodeRegistry = artifacts.require("DarknodeRegistry");
 const Orderbook = artifacts.require("Orderbook");
 

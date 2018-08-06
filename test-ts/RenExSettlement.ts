@@ -1,5 +1,3 @@
-// tslint:disable:max-line-length
-
 const RenExBalances = artifacts.require("RenExBalances");
 const RenExSettlement = artifacts.require("RenExSettlement");
 const Orderbook = artifacts.require("Orderbook");
@@ -10,9 +8,7 @@ const RenExTokens = artifacts.require("RenExTokens");
 const PreciseToken = artifacts.require("PreciseToken");
 
 import * as testUtils from "./helper/testUtils";
-import { TokenCodes } from "./helper/testUtils";
-
-import BigNumber from "bignumber.js";
+import { TokenCodes, buyMarket, sellMarket } from "./helper/testUtils";
 
 contract("RenExSettlement", function (accounts: string[]) {
 
@@ -24,27 +20,28 @@ contract("RenExSettlement", function (accounts: string[]) {
     let buyID_3, sellID_3;
     let buyID_4;
 
-    const BUY1 = [web3.utils.sha3("0"), 1, "0x300000007", 10, 10000, 0];
-    const SELL1 = [web3.utils.sha3("0"), 1, "0x700000003", 10, 1000, 0];
-    const BUY2 = [web3.utils.sha3("0"), 1, "0x1", 12, 10000, 0];
-    const SELL2 = [web3.utils.sha3("0"), 1, "0x100000000", 12, 1000, 0];
-    const BUY3 = [web3.utils.sha3("0"), 1, "0x1", 15, 10000, 0];
-    const SELL3 = [web3.utils.sha3("0"), 1, "0x100000000", 12, 10000, 0];
-    const BUY4 = [web3.utils.sha3("0"), 1, "0x1", 17, 10000, 0];
+    const BUY1 = [web3.utils.sha3("0"), 1, buyMarket("0x3", "0x7"), 10, 10000, 0];
+    const SELL1 = [web3.utils.sha3("1"), 1, sellMarket("0x3", "0x7"), 10, 1000, 0];
+    const BUY2 = [web3.utils.sha3("2"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 10000, 0];
+    const SELL2 = [web3.utils.sha3("3"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 1000, 0];
+    const BUY3 = [web3.utils.sha3("4"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 15, 10000, 0];
+    const SELL3 = [web3.utils.sha3("5"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 10000, 0];
+    const BUY4 = [web3.utils.sha3("6"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 17, 10000, 0];
+    const SELL4 = [web3.utils.sha3("7"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 1000, 0];
+    const SELL5 = [web3.utils.sha3("8"), 2, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 10, 1000, 0];
 
     before(async function () {
         const ren = await RepublicToken.deployed();
 
         tokenAddresses = {
-            [TokenCodes.BTC]: { address: testUtils.Ox0, decimals: () => new BigNumber(8), approve: () => null },
-            [TokenCodes.ETH]: { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: () => new BigNumber(18), approve: () => null },
+            [TokenCodes.BTC]: testUtils.MockBTC,
+            [TokenCodes.ETH]: testUtils.MockETH,
             [TokenCodes.DGX]: await DGXMock.deployed(),
             [TokenCodes.REN]: ren,
         };
 
         let dnr = await DarknodeRegistry.deployed();
         orderbook = await Orderbook.deployed();
-        // darknodeRewardVault = await DarknodeRewardVault.deployed();
         renExTokens = await RenExTokens.deployed();
         renExSettlement = await RenExSettlement.deployed();
         renExBalances = await RenExBalances.deployed();
@@ -138,7 +135,8 @@ contract("RenExSettlement", function (accounts: string[]) {
         await renExSettlement.submitOrder(...SELL2).should.be.rejectedWith(null, /order already submitted/);
 
         // Can't submit order that's not in orderbook (different order details):
-        await renExSettlement.submitOrder(web3.utils.sha3("1"), 1, "0x100000000", 12, 1000, 0).should.be.rejectedWith(null, /uncofirmed order/);
+        await renExSettlement.submitOrder(...SELL4)
+            .should.be.rejectedWith(null, /uncofirmed order/);
 
         // Can't submit order that's not confirmed
         await renExSettlement.submitOrder(...BUY4).should.be.rejectedWith(null, /uncofirmed order/);
@@ -202,22 +200,22 @@ contract("RenExSettlement", function (accounts: string[]) {
         await renExTokens.registerToken(VPT, preciseToken.address, 255);
 
         // Open and confirm orders
-        const BUY5 = [web3.utils.sha3("5"), 1, "0x3", 1, 1, 0];
-        const SELL5 = [web3.utils.sha3("5"), 1, "0x300000000", 1, 1, 0];
-        const buyID_5 = await renExSettlement.hashOrder(...BUY5);
-        const sellID_5 = await renExSettlement.hashOrder(...SELL5);
-        await testUtils.openBuyOrder(orderbook, broker, accounts[8], buyID_5);
-        await testUtils.openSellOrder(orderbook, broker, accounts[6], sellID_5);
-        await orderbook.confirmOrder(buyID_5, sellID_5, { from: darknode });
+        const BUY6 = [web3.utils.sha3("5"), 1, buyMarket(TokenCodes.BTC, VPT), 1, 1, 0];
+        const SELL6 = [web3.utils.sha3("5"), 1, sellMarket(TokenCodes.BTC, VPT), 1, 1, 0];
+        const buyID_6 = await renExSettlement.hashOrder(...BUY6);
+        const sellID_6 = await renExSettlement.hashOrder(...SELL6);
+        await testUtils.openBuyOrder(orderbook, broker, accounts[8], buyID_6);
+        await testUtils.openSellOrder(orderbook, broker, accounts[6], sellID_6);
+        await orderbook.confirmOrder(buyID_6, sellID_6, { from: darknode });
 
         // Submit orders
-        await renExSettlement.submitOrder(...BUY5);
-        await renExSettlement.submitOrder(...SELL5);
+        await renExSettlement.submitOrder(...BUY6);
+        await renExSettlement.submitOrder(...SELL6);
 
         // Attempt to settle
         await renExSettlement.submitMatch(
-            buyID_5,
-            sellID_5,
+            buyID_6,
+            sellID_6,
         ).should.be.rejectedWith(null, /invalid opcode/);
 
         // Deregister token
@@ -229,7 +227,8 @@ contract("RenExSettlement", function (accounts: string[]) {
         const previousGasPriceLimit = await renExSettlement.submissionGasPriceLimit();
         await renExSettlement.updateSubmissionGasPriceLimit(0x0);
 
-        await renExSettlement.submitOrder(web3.utils.sha3("0"), 2, "0x100000000", 10, 1000, 0).should.be.rejectedWith(null, /gas price too high/);
+        await renExSettlement.submitOrder(...SELL5)
+            .should.be.rejectedWith(null, /gas price too high/);
 
         // Reset gas price limit
         await renExSettlement.updateSubmissionGasPriceLimit(previousGasPriceLimit);

@@ -40,6 +40,18 @@ export enum TokenCodes {
     REN = 0x10000,
 }
 
+export const MockBTC = {
+    address: Ox0,
+    decimals: () => new BigNumber(8),
+    approve: () => null
+};
+
+export const MockETH = {
+    address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+    decimals: () => new BigNumber(18),
+    approve: () => null
+};
+
 // Makes a public key for a darknode
 export function PUBK(i: string) {
     return web3.utils.sha3(i);
@@ -48,6 +60,9 @@ export function PUBK(i: string) {
 export const secondsFromNow = (seconds: number) => {
     return Math.round((new Date()).getTime() / 1000) + seconds;
 };
+
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export const second = 1000;
 
 export async function waitForEpoch(dnr: any) {
     const timeout = MINIMUM_EPOCH_INTERVAL * 0.1;
@@ -67,6 +82,11 @@ export async function waitForEpoch(dnr: any) {
 export const market = (low, high) => {
     return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
 };
+export const buyMarket = market;
+export const sellMarket = (high, low) => {
+    return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
+};
+
 export const randomID = () => {
     return web3.utils.sha3(Math.random().toString());
 };

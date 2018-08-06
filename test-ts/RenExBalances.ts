@@ -14,7 +14,7 @@ contract("RenExBalances", function (accounts: string[]) {
     let ETH, REN, TOKEN1, TOKEN2;
 
     beforeEach(async function () {
-        ETH = { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" };
+        ETH = testUtils.MockETH;
         REN = await RepublicToken.deployed();
         TOKEN1 = await RepublicToken.new();
         TOKEN2 = await ABCToken.deployed();

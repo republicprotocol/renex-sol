@@ -15,7 +15,7 @@ import { BN } from "bn.js";
 
 import * as testUtils from "./helper/testUtils";
 
-contract.only("RenEx", function (accounts: string[]) {
+contract("RenEx", function (accounts: string[]) {
 
     const buyer = accounts[0];
     const seller = accounts[1];
@@ -111,7 +111,7 @@ contract.only("RenEx", function (accounts: string[]) {
             .should.eql([0.19999995 /* ETH */, 2.001e-9 /* REN */]);
     });
 
-    it.only("order 7", async () => {
+    it("order 7", async () => {
         // Prices are at lowest precision possible, and midprice is even more
         // precise. If the midprice is rounded, this test will fail.
         const tokens = market(ETH, REN);

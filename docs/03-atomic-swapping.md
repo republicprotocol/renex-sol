@@ -6,7 +6,7 @@ For easier understanding of the concept of atomic swaps, let's look at an exampl
 
 ![Atomic Swap between ETH and BTC](./images/03-atomic-swapping-overview.jpg "Atomic Swap between ETH and BTC")
 
-The match is found and Alice and Bob know each others order ids.
+At this point in time the match is found, Alice and Bob know each others' order ids.
 
 **(1) Alice & Bob Submit Addresses**
   Alice sends her Bitcoin Address to Bob, and Bob sends his Ethereum address to Alice, by calling the `setOwnerAddress(bytes32 _orderID, bytes _owner)` function on RenExAtomicInfo contract.

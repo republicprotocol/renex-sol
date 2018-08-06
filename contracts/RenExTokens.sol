@@ -11,9 +11,11 @@ contract RenExTokens is Ownable {
         bool registered;
     }
 
+    // Storage
     mapping(uint32 => TokenDetails) public tokens;
     mapping(uint32 => bool) private detailsSubmitted;
 
+    // Events
     event LogTokenRegistered(uint32 tokenCode, address tokenAddress, uint8 tokenDecimals);
     event LogTokenDeregistered(uint32 tokenCode);
 

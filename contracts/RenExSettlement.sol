@@ -15,8 +15,6 @@ import "./RenExTokens.sol";
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
-    address public slasherAddress;
-
     /// @notice Fees are in RenEx are 0.2% and to represent this in integers it
     /// is broken into a numerator and denominator.
     uint256 constant public DARKNODE_FEES_NUMERATOR = 2;
@@ -24,10 +22,11 @@ contract RenExSettlement is Ownable {
     uint32 constant public RENEX_SETTLEMENT_ID = 1;
     uint32 constant public RENEX_ATOMIC_SETTLEMENT_ID = 2;
 
+    // Constructor parameters, updatable by the owner
     Orderbook public orderbookContract;
     RenExTokens public renExTokensContract;
     RenExBalances public renExBalancesContract;
-
+    address public slasherAddress;
     uint256 public submissionGasPriceLimit;
 
     enum OrderStatus {None, Submitted, Settled, Slashed}
@@ -44,6 +43,7 @@ contract RenExSettlement is Ownable {
         uint256 timestamp;
     }
 
+    // Events
     event LogOrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
     event LogRenExBalancesUpdated(RenExBalances previousRenExBalances, RenExBalances nextRenExBalances);
     event LogSubmissionGasPriceLimitUpdated(uint256 previousSubmissionGasPriceLimit, uint256 nextSubmissionGasPriceLimit);
@@ -67,7 +67,8 @@ contract RenExSettlement is Ownable {
         _;
     }
 
-    /// @notice Restricts a function to only being called by the slasher address.
+    /// @notice Restricts a function to only being called by the slasher
+    /// address.
     modifier onlySlasher() {
         require(msg.sender == slasherAddress, "unauthorised");
         _;
@@ -81,14 +82,14 @@ contract RenExSettlement is Ownable {
         Orderbook _orderbookContract,
         RenExTokens _renExTokensContract,
         RenExBalances _renExBalancesContract,
-        uint256 _submissionGasPriceLimit,
-        address _slasherAddress
+        address _slasherAddress,
+        uint256 _submissionGasPriceLimit
     ) public {
         orderbookContract = _orderbookContract;
         renExTokensContract = _renExTokensContract;
         renExBalancesContract = _renExBalancesContract;
-        submissionGasPriceLimit = _submissionGasPriceLimit;
         slasherAddress = _slasherAddress;
+        submissionGasPriceLimit = _submissionGasPriceLimit;
     }
 
     /// @notice The of the contract can update the Orderbook address.
@@ -99,19 +100,23 @@ contract RenExSettlement is Ownable {
     }
 
     /// @notice The owner of the contract can update the RenExBalances address.
-    /// @param _newRenExBalancesContract The address of the new RenExBalances contract.
+    /// @param _newRenExBalancesContract The address of the new RenExBalances
+    ///       contract.
     function updateRenExBalances(RenExBalances _newRenExBalancesContract) external onlyOwner {
         emit LogRenExBalancesUpdated(renExBalancesContract, _newRenExBalancesContract);
         renExBalancesContract = _newRenExBalancesContract;
     }
 
-    /// @notice The owner of the contract can update the submission gas price limit.
+    /// @notice The owner of the contract can update the submission gas price
+    /// limit.
     /// @param _newSubmissionGasPriceLimit The new gas price limit.
     function updateSubmissionGasPriceLimit(uint256 _newSubmissionGasPriceLimit) external onlyOwner {
         emit LogSubmissionGasPriceLimitUpdated(submissionGasPriceLimit, _newSubmissionGasPriceLimit);
         submissionGasPriceLimit = _newSubmissionGasPriceLimit;
     }
 
+    /// @notice The owner of the contract can update the slasher address.
+    /// @param _newSlasherAddress The new slasher address.
     function updateSlasher(address _newSlasherAddress) external onlyOwner {
         emit LogSlasherUpdated(slasherAddress, _newSlasherAddress);
         slasherAddress = _newSlasherAddress;
@@ -205,11 +210,12 @@ contract RenExSettlement is Ownable {
         orderStatus[_sellID] = OrderStatus.Settled;
     }
 
-    /// @notice Slashes the bond of a guilty trader. This is called when an atomic
-    /// swap is not executed successfully. The bond of the trader who caused the
-    /// swap to fail has their bond taken from them and split between the innocent
-    /// trader and the watchdog.
+    /// @notice Slashes the bond of a guilty trader. This is called when an
+    /// atomic swap is not executed successfully. The bond of the trader who
+    /// caused the swap to fail has their bond taken from them and split between
+    /// the innocent trader and the watchdog.
     /// Only one order in a match can be slashed.
+    ///
     /// @param _guiltyOrderID the 32 byte ID of the order of the guilty trader
     function slash(
         bytes32 _guiltyOrderID
@@ -323,6 +329,9 @@ contract RenExSettlement is Ownable {
     ) private {
         // Verify details
 
+        /// @dev (The stack depth is preventing additional local variables)
+        // Calculate the midprice (using numerator and denominator to not loose
+        // prceision).
         // uint256 priceN = orderDetails[_buyID].price + orderDetails[_sellID].price;
         // uint256 priceD = 2;
 
@@ -390,8 +399,6 @@ contract RenExSettlement is Ownable {
         uint8 _buyTokenDecimals,
         uint8 _sellTokenDecimals
     ) private pure returns (uint256, uint256) {
-        // TODO: Use SafeMath
-
         uint256 minVolumeN;
         uint256 minVolumeQ;
         // buyVolume * (10**12) / price

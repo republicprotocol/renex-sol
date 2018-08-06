@@ -39,8 +39,8 @@ module.exports = async function (deployer, network) {
                 Orderbook.address,
                 RenExTokens.address,
                 RenExBalances.address,
-                config.SUBMIT_ORDER_GAS_LIMIT,
                 config.SLASHER_ADDRESS,
+                config.SUBMIT_ORDER_GAS_LIMIT,
             );
         })
 

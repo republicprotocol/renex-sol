@@ -94,6 +94,7 @@ contract RenExBalances is Ownable {
         if (address(_token) == ETHEREUM) {
             require(msg.value == _value, "mismatched value parameter and tx value");
         } else {
+            require(msg.value == 0, "unexpected ether transfer");
             require(_token.transferFrom(trader, this, _value), "token trasfer failed");
         }
         privateIncrementBalance(trader, _token, _value);

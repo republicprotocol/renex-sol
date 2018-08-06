@@ -8,6 +8,7 @@ import BigNumber from "bignumber.js";
 
 import "./helper/testUtils";
 import { TransactionReceipt, Log } from "web3/types";
+// import { async } from './helper/testUtils';
 
 contract("RenExBalances", function (accounts: string[]) {
 
@@ -211,6 +212,12 @@ contract("RenExBalances", function (accounts: string[]) {
         // Revert change
         await renExBalances.updateRenExSettlementContract(renExSettlement.address);
     });
+
+    it("cannot transfer ether and erc20 in a single transaction", async() => {
+        await TOKEN1.approve(renExBalances.address, 2);
+        await renExBalances.deposit(TOKEN1.address, 2, {value: 2})
+            .should.be.rejectedWith(null, /unexpected ether transfer/);
+    })
 });
 
 async function getFee(txP: Promise<{ receipt: TransactionReceipt, tx: string; logs: Log[] }>) {

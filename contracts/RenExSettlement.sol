@@ -16,12 +16,14 @@ import "./RenExTokens.sol";
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
-    /// @notice Fees are in RenEx are 0.2% and to represent this in integers it
-    /// is broken into a numerator and denominator.
-    uint256 constant public DARKNODE_FEES_NUMERATOR = 2;
-    uint256 constant public DARKNODE_FEES_DENOMINATOR = 1000;
+    // This contract handles the settlements with ID 1 and 2.
     uint32 constant public RENEX_SETTLEMENT_ID = 1;
     uint32 constant public RENEX_ATOMIC_SETTLEMENT_ID = 2;
+
+    // Fees in RenEx are 0.2%. To represent this as integers, it is broken into
+    // a numerator and denominator.
+    uint256 constant public DARKNODE_FEES_NUMERATOR = 2;
+    uint256 constant public DARKNODE_FEES_DENOMINATOR = 1000;
 
     // Constants used in the price / volume inputs.
     int16 constant private PRICE_OFFSET = 12;
@@ -35,8 +37,6 @@ contract RenExSettlement is Ownable {
     uint256 public submissionGasPriceLimit;
 
     enum OrderStatus {None, Submitted, Settled, Slashed}
-    enum OrderType {Midpoint, Limit}
-    enum OrderParity {Buy, Sell}
 
     struct MatchDetails {
         uint256 priorityTokenVolume;
@@ -50,6 +50,7 @@ contract RenExSettlement is Ownable {
 
     // Events
     event LogOrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
+    event LogRenExTokensUpdated(RenExTokens previousRenExTokens, RenExTokens nextRenExTokens);
     event LogRenExBalancesUpdated(RenExBalances previousRenExBalances, RenExBalances nextRenExBalances);
     event LogSubmissionGasPriceLimitUpdated(uint256 previousSubmissionGasPriceLimit, uint256 nextSubmissionGasPriceLimit);
     event LogSlasherUpdated(address previousSlasher, address nextSlasher);
@@ -60,11 +61,11 @@ contract RenExSettlement is Ownable {
     mapping(bytes32 => address) public orderSubmitter;
     mapping(bytes32 => OrderStatus) public orderStatus;
 
-    // Match storage
+    // Match storage (match details are indexed by [buyID][sellID])
     mapping(bytes32 => mapping(bytes32 => MatchDetails)) public matchDetails;
 
-    /// @notice Limit a function from being called with a gas price higher than
-    /// the specified limit.
+    /// @notice Prevents a function from being called with a gas price higher
+    /// than the specified limit.
     ///
     /// @param _gasPriceLimit The gas price upper-limit in Wei.
     modifier withGasPriceLimit(uint256 _gasPriceLimit) {
@@ -97,13 +98,21 @@ contract RenExSettlement is Ownable {
         submissionGasPriceLimit = _submissionGasPriceLimit;
     }
 
-    /// @notice The of the contract can update the Orderbook address.
+    /// @notice The owner of the contract can update the Orderbook address.
     /// @param _newOrderbookContract The address of the new Orderbook contract.
     function updateOrderbook(Orderbook _newOrderbookContract) external onlyOwner {
         emit LogOrderbookUpdated(orderbookContract, _newOrderbookContract);
         orderbookContract = _newOrderbookContract;
     }
 
+    /// @notice The owner of the contract can update the RenExTokens address.
+    /// @param _newRenExTokensContract The address of the new RenExTokens
+    ///       contract.
+    function updateRenExTokens(RenExTokens _newRenExTokensContract) external onlyOwner {
+        emit LogRenExTokensUpdated(renExTokensContract, _newRenExTokensContract);
+        renExTokensContract = _newRenExTokensContract;
+    }
+    
     /// @notice The owner of the contract can update the RenExBalances address.
     /// @param _newRenExBalancesContract The address of the new RenExBalances
     ///       contract.
@@ -112,8 +121,8 @@ contract RenExSettlement is Ownable {
         renExBalancesContract = _newRenExBalancesContract;
     }
 
-    /// @notice The owner of the contract can update the submission gas price
-    /// limit.
+    /// @notice The owner of the contract can update the order submission gas
+    /// price limit.
     /// @param _newSubmissionGasPriceLimit The new gas price limit.
     function updateSubmissionGasPriceLimit(uint256 _newSubmissionGasPriceLimit) external onlyOwner {
         emit LogSubmissionGasPriceLimitUpdated(submissionGasPriceLimit, _newSubmissionGasPriceLimit);
@@ -174,29 +183,31 @@ contract RenExSettlement is Ownable {
     /// @notice Settles two orders that are matched. `submitOrder` must have been
     /// called for each order before this function is called.
     ///
-    /// @param _buyID the 32 byte ID of the buy order
-    /// @param _sellID the 32 byte ID of the sell order
+    /// @param _buyID The 32 byte ID of the buy order.
+    /// @param _sellID The 32 byte ID of the sell order.
     function submitMatch(bytes32 _buyID, bytes32 _sellID) external {
         require(orderStatus[_buyID] == OrderStatus.Submitted, "invalid buy status");
         require(orderStatus[_sellID] == OrderStatus.Submitted, "invalid sell status");
 
-        // Verify that the two orders should have been matched
+        // Verify that the two order details are compatible.
         require(SettlementUtils.verifyMatchDetails(orderDetails[_buyID], orderDetails[_sellID]), "incompatible orders");
 
-        // Verify that the two orders have been confirmed to one another
+        // Verify that the two orders have been confirmed to one another.
         require(orderbookContract.orderMatch(_buyID) == _sellID, "unconfirmed orders");
 
-        // Verify that the order traders are distinct
+        // Verify that the order traders are distinct.
         require(orderbookContract.orderTrader(_buyID) != orderbookContract.orderTrader(_sellID), "orders from same trader");
 
         // Calculate token codes
         uint32 priorityToken = uint32(orderDetails[_buyID].tokens >> 32);
         uint32 secondaryToken = uint32(orderDetails[_buyID].tokens);
 
-        // Verify that the buy's tokens represent a buy order
+        // Verify that the buy's tokens represent a buy order.
+        // Note: verifyMatchDetails already verifies that the tokens are a
+        // match, so if the left order is a buy, the right order must be a sell.
         require(priorityToken < secondaryToken, "first order is not a buy");
 
-        // Retrieve token details
+        // Retrieve token details.
         (
             address priorityTokenAddress,
             uint8 priorityTokenDecimals,
@@ -208,11 +219,11 @@ contract RenExSettlement is Ownable {
             bool secondaryTokenRegistered
         ) = renExTokensContract.tokens(secondaryToken);
 
-        // Require that the tokens have been registered
+        // Require that the tokens have been registered.
         require(secondaryTokenRegistered, "unregistered buy token");
         require(priorityTokenRegistered, "unregistered sell token");
 
-        // Calculate and store settlement details
+        // Calculate and store settlement details.
         calculateSettlementDetails(
             _buyID,
             _sellID,
@@ -224,7 +235,7 @@ contract RenExSettlement is Ownable {
             secondaryTokenDecimals
         );
 
-        /// @dev verifyMatch already checks that the order settlement IDs match
+        // Note: verifyMatch already checks that the order settlements match.
         uint64 settlementID = orderDetails[_buyID].settlementID;
         if (settlementID == RENEX_ATOMIC_SETTLEMENT_ID) {
             // Pay darknode fees
@@ -236,17 +247,22 @@ contract RenExSettlement is Ownable {
             revert("invalid settlement id");
         }
 
+        // Store that the orders have been settled.
         orderStatus[_buyID] = OrderStatus.Settled;
         orderStatus[_sellID] = OrderStatus.Settled;
     }
 
     /// @notice Slashes the bond of a guilty trader. This is called when an
-    /// atomic swap is not executed successfully. The bond of the trader who
-    /// caused the swap to fail has their bond taken from them and split between
-    /// the innocent trader and the watchdog.
+    /// atomic swap is not executed successfully.
+    /// To open an atomic order, a trader must have a balance equivalent to
+    /// 0.6% of the trade in the Ethereum-based token. 0.2% is always paid in
+    /// darknode fees when the order is matched. If the remaining amount is
+    /// is slashed, it is distributed as follows:
+    ///   1) 0.2% goes to the other trader, covering their fee
+    ///   2) 0.2% goes to the slasher address
     /// Only one order in a match can be slashed.
     ///
-    /// @param _guiltyOrderID the 32 byte ID of the order of the guilty trader
+    /// @param _guiltyOrderID The 32 byte ID of the order of the guilty trader.
     function slash(
         bytes32 _guiltyOrderID
     ) external onlySlasher {
@@ -277,21 +293,21 @@ contract RenExSettlement is Ownable {
             revert("non-eth tokens");
         }
 
-        // Transfer the fee amount to the other trader and to 0x0 (burn)
+        // Transfer the fee amount to the other trader and to the slasher.
         renExBalancesContract.transferBalanceWithFee(
             orderTrader[_guiltyOrderID],
             orderTrader[innocentOrderID],
             tokenAddress,
             fee,
             fee,
-            0x0
+            slasherAddress
         );
     }
 
     /// @notice Calculates the hash of the provided order. See `submitOrder`
     /// paramater desriptions.
     ///
-    /// @return Hash of the order.
+    /// @return The 32-byte hash of the order.
     function hashOrder(
         bytes _prefix,
         uint64 _settlementID,
@@ -320,15 +336,28 @@ contract RenExSettlement is Ownable {
     ) private {
         MatchDetails memory details = matchDetails[_buyID][_sellID];
 
+        // Calculate darknode fees
         (uint256 priorityTokenFinal, uint256 priorityTokenFee) = subtractDarknodeFee(details.priorityTokenVolume);
         (uint256 secondaryTokenFinal, uint256 secondaryTokenFee) = subtractDarknodeFee(details.secondaryTokenVolume);
 
-        // Transfer values
+        // Transfer priority token value
         renExBalancesContract.transferBalanceWithFee(
-            orderTrader[_buyID], orderTrader[_sellID], details.priorityTokenAddress, priorityTokenFinal, priorityTokenFee, orderSubmitter[_buyID]
+            orderTrader[_buyID],
+            orderTrader[_sellID],
+            details.priorityTokenAddress,
+            priorityTokenFinal,
+            priorityTokenFee,
+            orderSubmitter[_buyID]
         );
+
+        // Transfer secondary token value
         renExBalancesContract.transferBalanceWithFee(
-            orderTrader[_sellID], orderTrader[_buyID], details.secondaryTokenAddress, secondaryTokenFinal, secondaryTokenFee, orderSubmitter[_sellID]
+            orderTrader[_sellID],
+            orderTrader[_buyID],
+            details.secondaryTokenAddress,
+            secondaryTokenFinal,
+            secondaryTokenFee,
+            orderSubmitter[_sellID]
         );
     }
 
@@ -344,7 +373,7 @@ contract RenExSettlement is Ownable {
         uint256 fee;
         address tokenAddress;
         // Pay fees in ethereum-based token, defaulting to secondary token if
-        // both tokens are on Ethereum.
+        // both tokens are Ethereum-based.
         if (isEthereumBased(details.secondaryTokenAddress)) {
             tokenAddress = details.secondaryTokenAddress;
             (, fee) = subtractDarknodeFee(details.secondaryTokenVolume);
@@ -356,6 +385,8 @@ contract RenExSettlement is Ownable {
             // tokens are non-Ethereum based.
             return;
         }
+
+        // Transfer fees.
         renExBalancesContract.transferBalanceWithFee(orderTrader[_buyID], 0x0, tokenAddress, 0, fee, orderSubmitter[_buyID]);
         renExBalancesContract.transferBalanceWithFee(orderTrader[_sellID], 0x0, tokenAddress, 0, fee, orderSubmitter[_sellID]);
     }
@@ -376,11 +407,13 @@ contract RenExSettlement is Ownable {
         uint256 priceN = orderDetails[_buyID].price + orderDetails[_sellID].price;
         uint256 priceD = 2;
 
-        uint256 minVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume); // in non-priority
+        // Calculate the lower of the two volumes (in the secondary token)
+        uint256 minVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume);
 
         uint256 priorityTokenVolume = joinFraction(minVolume.mul(priceN), priceD, int16(priorityTokenDecimals) - PRICE_OFFSET - VOLUME_OFFSET);
         uint256 secondaryTokenVolume = joinFraction(minVolume, 1, int16(secondaryTokenDecimals) - VOLUME_OFFSET);
 
+        // Store the match details
         matchDetails[_buyID][_sellID] = MatchDetails({
             priorityTokenVolume: priorityTokenVolume,
             secondaryTokenVolume: secondaryTokenVolume,

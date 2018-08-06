@@ -142,29 +142,42 @@ contract("RenEx", function (accounts: string[]) {
 
     it("invalid orders should revert", async () => {
         const tokens = market(DGX, REN);
+
+        // Seller volume too low
         let buy: any = { tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 2 /* REN */ };
         let sell: any = { tokens, price: 1, volume: 1 /* REN */ };
-
         await submitMatch(buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook)
             .should.be.rejectedWith(null, /incompatible orders/);
 
+        // Buyer volume too low
         buy = { tokens, price: 1, volume: 1 /* DGX */ };
         sell = { tokens, price: 1, volume: 2 /* REN */, minimumVolume: 2 /* REN */ };
-
         await submitMatch(buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook)
             .should.be.rejectedWith(null, /incompatible orders/);
 
+        // Prices don't match
         buy = { tokens, price: 1, volume: 1 /* DGX */ };
         sell = { tokens, price: 1.05, volume: 1 /* REN */, minimumVolume: 1 /* DGX */ };
-
         await submitMatch(buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook)
             .should.be.rejectedWith(null, /incompatible orders/);
 
+        // Prices don't match
         buy = { tokens, priceC: 200, priceQ: 38, volume: 1 /* DGX */ };
         sell = { tokens, priceC: 200, priceQ: 39, volume: 1 /* REN */, minimumVolume: 1 /* DGX */ };
-
         await submitMatch(buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook)
             .should.be.rejectedWith(null, /incompatible orders/);
+
+        // Orders opened by the same trader
+        buy = { tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+        sell = { tokens, price: 0.95, volume: 1 /* REN */ };
+        await submitMatch(buy, sell, buyer, buyer, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook)
+            .should.be.rejectedWith(null, /orders from same trader/);
+
+        // Invalid tokens
+        buy = { tokens: market(REN, DGX), price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+        sell = { tokens: market(REN, DGX), price: 0.95, volume: 1 /* REN */ };
+        await submitMatch(buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook)
+            .should.be.rejectedWith(null, /not a buy order/);
 
         // // Invalid price (c component)
         // buy = { tokens, priceC: 2000, priceQ: 38, volume: 1 /* DGX */ };

@@ -128,12 +128,12 @@ contract("Slasher", function (accounts: string[]) {
         );
 
         // Slash the fees
-        await renExSettlement.slash(buyOrderID, { from: slasher });
-
-        await renExSettlement.slash(buyOrderID, { from: slasher })
-            .should.be.rejectedWith(null, /invalid order status/); // already slashed
+        await renExSettlement.slash(sellOrderID, { from: slasher });
 
         await renExSettlement.slash(sellOrderID, { from: slasher })
+            .should.be.rejectedWith(null, /invalid order status/); // already slashed
+
+        await renExSettlement.slash(buyOrderID, { from: slasher })
             .should.be.rejectedWith(null, /invalid order status/); // already slashed
     });
 

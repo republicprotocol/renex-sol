@@ -7,6 +7,7 @@ const RepublicToken = artifacts.require("RepublicToken");
 const DarknodeRegistry = artifacts.require("DarknodeRegistry");
 const DGXMock = artifacts.require("DGXMock");
 const RenExTokens = artifacts.require("RenExTokens");
+const PreciseToken = artifacts.require("PreciseToken");
 
 import * as testUtils from "./helper/testUtils";
 import BigNumber from "bignumber.js";
@@ -63,14 +64,14 @@ contract("RenExSettlement", function (accounts: string[]) {
 
         await tokenAddresses[REN].approve(orderbook.address, 100 * 1e18, { from: broker });
 
-        sellID_1 = await renExSettlement.hashOrder(...SELL1);
         buyID_1 = await renExSettlement.hashOrder(...BUY1);
+        sellID_1 = await renExSettlement.hashOrder(...SELL1);
 
-        sellID_2 = await renExSettlement.hashOrder(...SELL2);
         buyID_2 = await renExSettlement.hashOrder(...BUY2);
+        sellID_2 = await renExSettlement.hashOrder(...SELL2);
 
-        sellID_3 = await renExSettlement.hashOrder(...SELL3);
         buyID_3 = await renExSettlement.hashOrder(...BUY3);
+        sellID_3 = await renExSettlement.hashOrder(...SELL3);
 
         buyID_4 = await renExSettlement.hashOrder(...BUY4);
 
@@ -146,24 +147,21 @@ contract("RenExSettlement", function (accounts: string[]) {
         await renExSettlement.submitOrder(...BUY4).should.be.rejectedWith(null, /uncofirmed order/);
     });
 
-    // it("verifyOrder", async () => {
-    //     // await settlementTest.verifyOrder(buyID_1.replace("a", "b"))
-    //     //     .should.be.rejectedWith(null, /revert/); //
-    //     // await settlementTest.verifyOrder(sellID_1.replace("a", "b"))
-    //     //     .should.be.rejectedWith(null, /revert/); //
-    // });
-
-    it("submitMatch", async () => {
+    it("submitMatch checks the buy order status", async () => {
         await renExSettlement.submitMatch(
             randomID(),
             sellID_1,
         ).should.be.rejectedWith(null, /invalid buy status/);
+    });
 
+    it("submitMatch checks the sell order status", async () => {
         await renExSettlement.submitMatch(
             buyID_1,
             randomID(),
         ).should.be.rejectedWith(null, /invalid sell status/);
+    });
 
+    it("submitMatch checks that the orders are compatible", async () => {
         // Two buys
         await renExSettlement.submitMatch(
             buyID_1,
@@ -181,20 +179,50 @@ contract("RenExSettlement", function (accounts: string[]) {
             sellID_3,
             buyID_2,
         ).should.be.rejectedWith(null, /unconfirmed orders/);
+    });
 
+    it("submitMatch checks the token registration", async () => {
         // Buy token that is not registered
         await renExSettlement.submitMatch(
             buyID_1,
             sellID_1,
         ).should.be.rejectedWith(null, /unregistered buy token/);
 
-        // FIXME: Fix test
-        // await renExTokens.deregisterToken(ETH);
-        // await renExSettlement.submitMatch(
-        //     buyID_2,
-        //     sellID_2,
-        // ).should.be.rejectedWith(null, /unregistered sell token/);
-        // await renExTokens.registerToken(ETH, tokenAddresses[ETH].address, 18);
+        // Sell token that is not registered
+        await renExTokens.deregisterToken(BTC);
+        await renExSettlement.submitMatch(
+            buyID_2,
+            sellID_2,
+        ).should.be.rejectedWith(null, /unregistered sell token/);
+        await renExTokens.registerToken(BTC, tokenAddresses[BTC].address, 8);
+    });
+
+    it("submitMatch errors for token with more than log10(2**256) decimals", async () => {
+
+        // Register new token with 255 decimals
+        const preciseToken = await PreciseToken.new();
+        const VPT = 0x3;
+        await renExTokens.registerToken(VPT, preciseToken.address, 255);
+
+        // Open and confirm orders
+        const BUY5 = [web3.utils.sha3("5"), 1, "0x3", 1, 1, 0];
+        const SELL5 = [web3.utils.sha3("5"), 1, "0x300000000", 1, 1, 0];
+        const buyID_5 = await renExSettlement.hashOrder(...BUY5);
+        const sellID_5 = await renExSettlement.hashOrder(...SELL5);
+        await steps.openBuyOrder(orderbook, broker, accounts[8], buyID_5);
+        await steps.openSellOrder(orderbook, broker, accounts[6], sellID_5);
+        await orderbook.confirmOrder(buyID_5, sellID_5, { from: darknode });
+
+        // Submit orders
+        await renExSettlement.submitOrder(...BUY5);
+        await renExSettlement.submitOrder(...SELL5);
+
+        // Attempt to settle
+        await renExSettlement.submitMatch(
+            buyID_5,
+            sellID_5,
+        ).should.be.rejectedWith(null, /invalid opcode/);
+        await renExTokens.deregisterToken(VPT);
     });
 
     it("should fail for excessive gas price", async () => {

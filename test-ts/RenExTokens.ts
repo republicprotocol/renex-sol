@@ -103,10 +103,6 @@ contract("RenExTokens", function (accounts: string[]) {
         const address1 = tokenInstances[token1].address;
         const decimals1 = await tokenInstances[token1].decimals();
 
-        const token2 = tokens[1];
-        const address2 = tokenInstances[token2].address;
-        const decimals2 = await tokenInstances[token2].decimals();
-
         // Register
         await renExTokens.registerToken(token1, address1, decimals1);
 
@@ -114,12 +110,17 @@ contract("RenExTokens", function (accounts: string[]) {
         await renExTokens.deregisterToken(token1);
 
         // Attempt to reregister with different details
-        await renExTokens.registerToken(token1, address2, decimals2)
+        await renExTokens.registerToken(token1, tokenInstances[tokens[1]].address, decimals1)
             .should.be.rejectedWith(null, /different address/);
+        await renExTokens.registerToken(token1, address1, 1)
+            .should.be.rejectedWith(null, /different decimals/);
+
+        // Can reregister with the same details
+        await renExTokens.registerToken(token1, address1, decimals1);
 
         const tokenDetails = await renExTokens.tokens(token1);
         (tokenDetails.addr).should.equal(address1);
         (tokenDetails.decimals.toString()).should.equal(decimals1.toString());
-        (tokenDetails.registered).should.be.false;
+        (tokenDetails.registered).should.be.true;
     });
 });

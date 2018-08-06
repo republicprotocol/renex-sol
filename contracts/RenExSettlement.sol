@@ -420,10 +420,10 @@ contract RenExSettlement is Ownable {
     function joinFraction(uint256 numerator, uint256 denominator, int16 scale) private pure returns (uint256) {
         if (scale >= 0) {
             // Check that (10**scale) doesn't overflow
-            assert(scale <= 78); // 78 = log10(2**256)
+            assert(scale <= 77); // log10(2**256) = 77.06
             return numerator.mul(10 ** uint256(scale)) / denominator;
         } else {
-            assert((-scale) <= 78); // 78 = log10(2**256)            
+            assert((-scale) <= 77); // log10(2**256) = 77.06
             return (numerator / denominator) / 10 ** uint256(-scale);
         }
     }

@@ -38,7 +38,7 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
     it("can submit and retrieve swap details", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
 
-        swap = "0x567890";
+        swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: trader });
         (await info.swapDetails(orderID)).should.equal(swap);
     });
@@ -46,7 +46,7 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
     it("can submit and retrieve addresses", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
 
-        addr = "0x567890";
+        addr = testUtils.randomID();
         await info.setOwnerAddress(orderID, addr, { from: trader });
         (await info.getOwnerAddress(orderID)).should.equal(addr, { from: trader });
     });
@@ -55,7 +55,7 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
         await info.authoriseSwapper(box, { from: trader });
 
-        swap = "0x567890";
+        swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: box });
         (await info.swapDetails(orderID)).should.equal(swap);
     });
@@ -65,7 +65,7 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
         await info.authoriseSwapper(box, { from: trader });
         await info.deauthoriseSwapper(box, { from: trader });
 
-        swap = "0x567890";
+        swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: box })
             .should.be.rejectedWith(null, /not authorised/);
 
@@ -75,7 +75,7 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
     it("non-authorised address can't submit details", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
 
-        swap = "0x567890";
+        swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: attacker })
             .should.be.rejectedWith(null, /not authorised/);
 

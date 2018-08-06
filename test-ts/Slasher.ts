@@ -72,7 +72,7 @@ contract("Slasher", function (accounts: string[]) {
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
         let [btcAmount, ethAmount, buyOrderID, sellOrderID] = await submitMatch(
-            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true
         );
         btcAmount.should.eql(0.975 /* BTC */);
         ethAmount.should.eql(1 /* ETH */);
@@ -124,7 +124,7 @@ contract("Slasher", function (accounts: string[]) {
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
         let [, , buyOrderID, sellOrderID] = await submitMatch(
-            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true
         );
 
         // Slash the fees
@@ -143,7 +143,7 @@ contract("Slasher", function (accounts: string[]) {
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
 
         let [, , buyOrderID, _] = await submitMatch(
-            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true
         );
 
         // Slash the fees
@@ -157,7 +157,7 @@ contract("Slasher", function (accounts: string[]) {
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
 
         let [, , buyOrderID, _] = await submitMatch(
-            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true
         );
 
         // Slash the fees
@@ -172,7 +172,7 @@ contract("Slasher", function (accounts: string[]) {
         const sell = { tokens, price: 0.95, volume: 1 /* REN */ };
 
         let [, , guiltyOrderID, _] = await submitMatch(
-            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true
         );
 
         await renExSettlement.slash(guiltyOrderID, { from: slasher })
@@ -185,7 +185,7 @@ contract("Slasher", function (accounts: string[]) {
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
         let [, , buyOrderID, sellOrderID] = await submitMatch(
-            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, false, true
+            buy, sell, buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true
         );
         let guiltyTrader = buyer;
         let innocentTrader = seller;

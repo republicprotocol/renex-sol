@@ -40,11 +40,11 @@ contract RenExSettlement is Ownable {
 
     struct MatchDetails {
         uint256 priorityTokenVolume;
-        uint256 secondTokenVolume;
+        uint256 secondaryTokenVolume;
         uint32 priorityToken;
-        uint32 secondToken;
+        uint32 secondaryToken;
         address priorityTokenAddress;
-        address secondTokenAddress;
+        address secondaryTokenAddress;
         uint256 timestamp;
     }
 
@@ -189,19 +189,27 @@ contract RenExSettlement is Ownable {
         // Verify that the order traders are distinct
         require(orderbookContract.orderTrader(_buyID) != orderbookContract.orderTrader(_sellID), "orders from same trader");
 
-        // Verify that the buy's tokens represent a buy order
-        require(isBuyOrder(_buyID), "not a buy order");
-
         // Calculate token codes
         uint32 priorityToken = uint32(orderDetails[_buyID].tokens >> 32);
-        uint32 secondToken = uint32(orderDetails[_buyID].tokens);
+        uint32 secondaryToken = uint32(orderDetails[_buyID].tokens);
+
+        // Verify that the buy's tokens represent a buy order
+        require(priorityToken < secondaryToken, "first order is not a buy");
 
         // Retrieve token details
-        (address priorityTokenAddress, uint8 priorityTokenDecimals, bool priorityTokenRegistered) = renExTokensContract.tokens(priorityToken);
-        (address secondTokenAddress, uint8 secondTokenDecimals, bool secondTokenRegistered) = renExTokensContract.tokens(secondToken);
+        (
+            address priorityTokenAddress,
+            uint8 priorityTokenDecimals,
+            bool priorityTokenRegistered
+        ) = renExTokensContract.tokens(priorityToken);
+        (
+            address secondaryTokenAddress,
+            uint8 secondaryTokenDecimals,
+            bool secondaryTokenRegistered
+        ) = renExTokensContract.tokens(secondaryToken);
 
         // Require that the tokens have been registered
-        require(secondTokenRegistered, "unregistered buy token");
+        require(secondaryTokenRegistered, "unregistered buy token");
         require(priorityTokenRegistered, "unregistered sell token");
 
         // Calculate and store settlement details
@@ -209,14 +217,14 @@ contract RenExSettlement is Ownable {
             _buyID,
             _sellID,
             priorityToken,
-            secondToken,
+            secondaryToken,
             priorityTokenAddress,
-            secondTokenAddress,
+            secondaryTokenAddress,
             priorityTokenDecimals,
-            secondTokenDecimals
+            secondaryTokenDecimals
         );
 
-        // Note: verifyMatch checks that the buy and sell settlement IDs match
+        /// @dev verifyMatch already checks that the order settlement IDs match
         uint64 settlementID = orderDetails[_buyID].settlementID;
         if (settlementID == RENEX_ATOMIC_SETTLEMENT_ID) {
             // Pay darknode fees
@@ -259,9 +267,9 @@ contract RenExSettlement is Ownable {
 
         uint256 fee;
         address tokenAddress;
-        if (isEthereumBased(details.secondTokenAddress)) {
-            tokenAddress = details.secondTokenAddress;
-            (,fee) = subtractDarknodeFee(details.secondTokenVolume);
+        if (isEthereumBased(details.secondaryTokenAddress)) {
+            tokenAddress = details.secondaryTokenAddress;
+            (,fee) = subtractDarknodeFee(details.secondaryTokenVolume);
         } else if (isEthereumBased(details.priorityTokenAddress)) {
             tokenAddress = details.priorityTokenAddress;
             (,fee) = subtractDarknodeFee(details.priorityTokenVolume);
@@ -313,14 +321,14 @@ contract RenExSettlement is Ownable {
         MatchDetails memory details = matchDetails[_buyID][_sellID];
 
         (uint256 priorityTokenFinal, uint256 priorityTokenFee) = subtractDarknodeFee(details.priorityTokenVolume);
-        (uint256 secondTokenFinal, uint256 secondTokenFee) = subtractDarknodeFee(details.secondTokenVolume);
+        (uint256 secondaryTokenFinal, uint256 secondaryTokenFee) = subtractDarknodeFee(details.secondaryTokenVolume);
 
         // Transfer values
         renExBalancesContract.transferBalanceWithFee(
             orderTrader[_buyID], orderTrader[_sellID], details.priorityTokenAddress, priorityTokenFinal, priorityTokenFee, orderSubmitter[_buyID]
         );
         renExBalancesContract.transferBalanceWithFee(
-            orderTrader[_sellID], orderTrader[_buyID], details.secondTokenAddress, secondTokenFinal, secondTokenFee, orderSubmitter[_sellID]
+            orderTrader[_sellID], orderTrader[_buyID], details.secondaryTokenAddress, secondaryTokenFinal, secondaryTokenFee, orderSubmitter[_sellID]
         );
     }
 
@@ -335,13 +343,17 @@ contract RenExSettlement is Ownable {
 
         uint256 fee;
         address tokenAddress;
-        if (isEthereumBased(details.secondTokenAddress)) {
-            tokenAddress = details.secondTokenAddress;
-            (, fee) = subtractDarknodeFee(details.secondTokenVolume);
+        // Pay fees in ethereum-based token, defaulting to secondary token if
+        // both tokens are on Ethereum.
+        if (isEthereumBased(details.secondaryTokenAddress)) {
+            tokenAddress = details.secondaryTokenAddress;
+            (, fee) = subtractDarknodeFee(details.secondaryTokenVolume);
         } else if (isEthereumBased(details.priorityTokenAddress)) {
             tokenAddress = details.priorityTokenAddress;
             (, fee) = subtractDarknodeFee(details.priorityTokenVolume);
         } else {
+            // Fees aren't currently supported for atomic swaps where both
+            // tokens are non-Ethereum based.
             return;
         }
         renExBalancesContract.transferBalanceWithFee(orderTrader[_buyID], 0x0, tokenAddress, 0, fee, orderSubmitter[_buyID]);
@@ -355,9 +367,9 @@ contract RenExSettlement is Ownable {
     /// @param _sellID The sell order ID.
     function calculateSettlementDetails(
         bytes32 _buyID, bytes32 _sellID,
-        uint32 priorityToken, uint32 secondToken,
-        address priorityTokenAddress, address secondTokenAddress,
-        uint8 priorityTokenDecimals, uint8 secondTokenDecimals
+        uint32 priorityToken, uint32 secondaryToken,
+        address priorityTokenAddress, address secondaryTokenAddress,
+        uint8 priorityTokenDecimals, uint8 secondaryTokenDecimals
     ) private {
         // Calculate the midprice (using numerator and denominator to not loose
         // precision).
@@ -367,15 +379,15 @@ contract RenExSettlement is Ownable {
         uint256 minVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume); // in non-priority
 
         uint256 priorityTokenVolume = joinFraction(minVolume.mul(priceN), priceD, int16(priorityTokenDecimals) - PRICE_OFFSET - VOLUME_OFFSET);
-        uint256 secondTokenVolume = joinFraction(minVolume, 1, int16(secondTokenDecimals) - VOLUME_OFFSET);
+        uint256 secondaryTokenVolume = joinFraction(minVolume, 1, int16(secondaryTokenDecimals) - VOLUME_OFFSET);
 
         matchDetails[_buyID][_sellID] = MatchDetails({
             priorityTokenVolume: priorityTokenVolume,
-            secondTokenVolume: secondTokenVolume,
+            secondaryTokenVolume: secondaryTokenVolume,
             priorityToken: priorityToken,
-            secondToken: secondToken,
+            secondaryToken: secondaryToken,
             priorityTokenAddress: priorityTokenAddress,
-            secondTokenAddress: secondTokenAddress,
+            secondaryTokenAddress: secondaryTokenAddress,
             timestamp: now
         });
     }
@@ -386,8 +398,8 @@ contract RenExSettlement is Ownable {
     function isBuyOrder(bytes32 _orderID) private view returns (bool) {
         uint64 tokens = orderDetails[_orderID].tokens;
         uint32 firstToken = uint32(tokens >> 32);
-        uint32 secondToken = uint32(tokens);
-        return (firstToken < secondToken);
+        uint32 secondaryToken = uint32(tokens);
+        return (firstToken < secondaryToken);
     }
 
     /// @return (value - fee, fee) where fee is 0.2% of value

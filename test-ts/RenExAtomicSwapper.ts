@@ -1,13 +1,9 @@
 const Swap = artifacts.require("RenExAtomicSwapper");
 
-import { secondsFromNow } from "./helper/testUtils";
+import { randomID, secondsFromNow } from "./helper/testUtils";
 
 import { SHA256 } from "crypto-js";
 import * as HEX from "crypto-js/enc-hex";
-
-const random32Bytes = () => {
-    return `0x${SHA256(Math.random().toString()).toString()}`;
-};
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const second = 1000;
@@ -17,14 +13,13 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
     let swap;
     const alice = accounts[1];
     const bob = accounts[2];
-    const eve = accounts[3];
 
     before(async function () {
         swap = await Swap.deployed();
     });
 
     it("can perform atomic swap", async () => {
-        const swapID = random32Bytes(), secret = random32Bytes();
+        const swapID = randomID(), secret = randomID();
         const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
 
         await swap.initiate(swapID, bob, secretLock, secondsFromNow(60 * 60 * 24), { from: alice, value: 100000 });
@@ -37,7 +32,7 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
     });
 
     it("can refund an atomic swap", async () => {
-        const swapID = random32Bytes(), secret = random32Bytes();
+        const swapID = randomID(), secret = randomID();
         const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
 
         await swap.initiate(swapID, bob, secretLock, 0, { from: alice, value: 100000 });
@@ -45,7 +40,7 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
     });
 
     it("operations check order status", async () => {
-        const swapID = random32Bytes(), secret = random32Bytes();
+        const swapID = randomID(), secret = randomID();
         const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
 
         // Can only initiate for INVALID swaps
@@ -68,7 +63,7 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
     });
 
     it("can return details", async () => {
-        const swapID = random32Bytes(), secret = random32Bytes();
+        const swapID = randomID(), secret = randomID();
         const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
 
         // Before initiating
@@ -93,6 +88,5 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
         (await swap.initiatable(swapID)).should.be.false;
         (await swap.refundable(swapID)).should.be.false;
         (await swap.redeemable(swapID)).should.be.false;
-
     });
 });

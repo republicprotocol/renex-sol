@@ -25,6 +25,11 @@ export enum OrderParity {
     SELL = 1,
 }
 
+export enum Settlements {
+    RenEx = 1,
+    RenExAtomic = 2,
+}
+
 // Tokens used for testing only. These tokens do not represent the tokens that
 // will be supported by RenEx.
 export enum TokenCodes {

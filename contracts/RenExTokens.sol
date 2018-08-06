@@ -7,27 +7,24 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 contract RenExTokens is Ownable {
     using SafeMath for uint256;
 
-
     struct TokenDetails {
         address addr;
         uint8 decimals;
         bool registered;
     }
 
-    /********** STORAGE ******************************************************/
     mapping(uint32 => TokenDetails) public tokens;
     mapping(uint32 => bool) private detailsSubmitted;
 
-    /********** EVENTS *******************************************************/
     event LogTokenRegistered(uint32 tokenCode, address tokenAddress, uint8 tokenDecimals);
     event LogTokenDeregistered(uint32 tokenCode);
 
     /// @notice Allows the owner to register and the details for a token.
     /// Once details have been submitted, they cannot be overwritten.
     ///
-    /// @param _tokenCode a unique 32-bit token identifier
-    /// @param _tokenAddress the address of the token
-    /// @param _tokenDecimals the decimals to use for the token
+    /// @param _tokenCode A unique 32-bit token identifier.
+    /// @param _tokenAddress The address of the token.
+    /// @param _tokenDecimals The decimals to use for the token.
     function registerToken(uint32 _tokenCode, address _tokenAddress, uint8 _tokenDecimals) public onlyOwner {
         require(!tokens[_tokenCode].registered, "already registered");
 
@@ -47,9 +44,10 @@ contract RenExTokens is Ownable {
         emit LogTokenRegistered(_tokenCode, _tokenAddress, _tokenDecimals);
     }
 
-    /// @notice Sets a token as being deregistered
+    /// @notice Sets a token as being deregistered. The details are still stored
+    /// to prevent the token from being reregistered with different details.
     ///
-    /// @param _tokenCode the unique 32-bit token identifier
+    /// @param _tokenCode The unique 32-bit token identifier.
     function deregisterToken(uint32 _tokenCode) external onlyOwner {
         require(tokens[_tokenCode].registered, "not registered");
 

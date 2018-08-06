@@ -58,18 +58,21 @@ contract RenExSettlement is Ownable {
     // Match storage
     mapping(bytes32 => mapping(bytes32 => MatchDetails)) public matchDetails;
 
-    modifier withGasPriceLimit(uint256 gasPriceLimit) {
-        require(tx.gasprice <= gasPriceLimit, "gas price too high");
+    /// @notice Limit a function from being called with a gas price higher than
+    /// the specified limit.
+    ///
+    /// @param _gasPriceLimit The gas price upper-limit in Wei.
+    modifier withGasPriceLimit(uint256 _gasPriceLimit) {
+        require(tx.gasprice <= _gasPriceLimit, "gas price too high");
         _;
     }
 
+    /// @notice Restricts a function to only being called by the slasher address.
     modifier onlySlasher() {
         require(msg.sender == slasherAddress, "unauthorised");
         _;
     }
 
-    /// @notice constructor
-    ///
     /// @param _orderbookContract The address of the Orderbook contract.
     /// @param _renExBalancesContract The address of the RenExBalances
     ///        contract.
@@ -101,7 +104,7 @@ contract RenExSettlement is Ownable {
         emit LogRenExBalancesUpdated(renExBalancesContract, _newRenExBalancesContract);
         renExBalancesContract = _newRenExBalancesContract;
     }
-    
+
     /// @notice The owner of the contract can update the submission gas price limit.
     /// @param _newSubmissionGasPriceLimit The new gas price limit.
     function updateSubmissionGasPriceLimit(uint256 _newSubmissionGasPriceLimit) external onlyOwner {
@@ -114,14 +117,14 @@ contract RenExSettlement is Ownable {
         slasherAddress = _newSlasherAddress;
     }
 
-    /// @notice Stores the details of an order
+    /// @notice Stores the details of an order.
     ///
-    /// @param _details miscellaneous details 
-    /// @param _settlementID id of the settlement
-    /// @param _tokens two 32-bit token codes concatenated (with the lowest first)
-    /// @param _price the order price
-    /// @param _volume the order volume
-    /// @param _minimumVolume the order minimum volume
+    /// @param _details Miscellaneous details.
+    /// @param _settlementID The ID of the settlement.
+    /// @param _tokens Two 32-bit token codes concatenated.
+    /// @param _price The order price.
+    /// @param _volume The order volume.
+    /// @param _minimumVolume The order minimum volume.
     function submitOrder(
         bytes _details,
         uint64 _settlementID,
@@ -206,6 +209,7 @@ contract RenExSettlement is Ownable {
     /// swap is not executed successfully. The bond of the trader who caused the
     /// swap to fail has their bond taken from them and split between the innocent
     /// trader and the watchdog.
+    /// Only one order in a match can be slashed.
     /// @param _guiltyOrderID the 32 byte ID of the order of the guilty trader
     function slash(
         bytes32 _guiltyOrderID
@@ -218,7 +222,7 @@ contract RenExSettlement is Ownable {
         require(orderStatus[innocentOrderID] == OrderStatus.Settled, "invalid order status");
         orderStatus[_guiltyOrderID] = OrderStatus.Slashed;
 
-        MatchDetails memory details;                
+        MatchDetails memory details;
         if (isBuyOrder(_guiltyOrderID)) {
             details = matchDetails[_guiltyOrderID][innocentOrderID];
         } else {
@@ -250,19 +254,19 @@ contract RenExSettlement is Ownable {
 
     /// @notice Calculates the hash of the provided order.
     ///
-    /// @param _prefix The miscellaneous details of the order required for 
+    /// @param _prefix The miscellaneous details of the order required for
     ///        calculating the order id.
     /// @param _settlement The settlement identifier.
     /// @param _tokens The encoding of the token pair (buy token is encoded as
-    ///        the first 32 bytes and sell token is encoded as the last 32 
+    ///        the first 32 bytes and sell token is encoded as the last 32
     ///        bytes).
-    /// @param _price The price of the order (the price is interpreted as the 
+    /// @param _price The price of the order (the price is interpreted as the
     ///        cost for 1 standard unit of the priority token, in 1e-12 units
     ///        of the non-priority token).
-    /// @param _volume The volume of the order (The volume is interpreted as 
-    ///        the maximum number of 1e-12 units of the sell token that can 
+    /// @param _volume The volume of the order (The volume is interpreted as
+    ///        the maximum number of 1e-12 units of the sell token that can
     ///        be traded by this order.)
-    /// @param _minimumVolume The minimum volume the trader is willing to 
+    /// @param _minimumVolume The minimum volume the trader is willing to
     ///        accept (It's encoding is the same as that of the volume).
     ///
     /// @return Hash of the order.
@@ -284,7 +288,7 @@ contract RenExSettlement is Ownable {
         }));
     }
 
-    /// @notice Settles the order match by updating the balances on the 
+    /// @notice Settles the order match by updating the balances on the
     /// RenExBalances contract.
     ///
     /// @param _buyID The buy order ID.
@@ -293,7 +297,7 @@ contract RenExSettlement is Ownable {
         bytes32 _buyID, bytes32 _sellID
     ) private {
         MatchDetails memory details = matchDetails[_buyID][_sellID];
-        
+
         (uint256 lowTokenFinal, uint256 lowTokenFee) = subtractDarknodeFee(details.lowTokenVolume);
         (uint256 highTokenFinal, uint256 highTokenFee) = subtractDarknodeFee(details.highTokenVolume);
 
@@ -306,7 +310,7 @@ contract RenExSettlement is Ownable {
         );
     }
 
-    /// @notice Settles the order match by updating the balances on the 
+    /// @notice Settles the order match by updating the balances on the
     /// RenExBalances contract.
     ///
     /// @param _buyID The buy order ID.
@@ -330,7 +334,7 @@ contract RenExSettlement is Ownable {
             buyTokenDecimals,
             sellTokenDecimals
         );
-        
+
         matchDetails[_buyID][_sellID] = MatchDetails({
             lowTokenVolume: lowTokenVolume,
             highTokenVolume: highTokenVolume,

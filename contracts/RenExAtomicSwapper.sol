@@ -28,37 +28,37 @@ contract RenExAtomicSwapper {
     event LogExpire(bytes32 _swapID);
     event LogClose(bytes32 _swapID, bytes32 _secretKey);
 
-    /// @notice Throws if the swap is not invalid 
+    /// @notice Throws if the swap is not invalid.
     modifier onlyInvalidSwaps(bytes32 _swapID) {
         require(swapStates[_swapID] == States.INVALID, "swap opened previously");
         _;
     }
 
-    /// @notice Throws if the swap is not open 
+    /// @notice Throws if the swap is not open.
     modifier onlyOpenSwaps(bytes32 _swapID) {
         require(swapStates[_swapID] == States.OPEN, "swap not open");
         _;
     }
 
-    /// @notice Throws if the swap is not closed 
+    /// @notice Throws if the swap is not closed.
     modifier onlyClosedSwaps(bytes32 _swapID) {
         require(swapStates[_swapID] == States.CLOSED, "swap not redeemed");
         _;
     }
 
-    /// @notice Throws if the swap is not expirable 
+    /// @notice Throws if the swap is not expirable.
     modifier onlyExpirableSwaps(bytes32 _swapID) {
         require(now >= swaps[_swapID].timelock, "swap not expirable");
         _;
     }
-    
-    /// @notice Throws if the secret key is not valid
+
+    /// @notice Throws if the secret key is not valid.
     modifier onlyWithSecretKey(bytes32 _swapID, bytes32 _secretKey) {
         require(swaps[_swapID].secretLock == sha256(abi.encodePacked(_secretKey)), "invalid secret");
         _;
     }
 
-    /// @notice Initiates the atomic swap
+    /// @notice Initiates the atomic swap.
     ///
     /// @param _swapID The unique atomic swap id.
     /// @param _withdrawTrader The address of the withdrawing trader.
@@ -81,7 +81,7 @@ contract RenExAtomicSwapper {
         emit LogOpen(_swapID, _withdrawTrader, _secretLock);
     }
 
-    /// @notice Redeems an atomic swap
+    /// @notice Redeems an atomic swap.
     ///
     /// @param _swapID The unique atomic swap id.
     /// @param _secretKey The secret of the atomic swap.
@@ -99,7 +99,7 @@ contract RenExAtomicSwapper {
         emit LogClose(_swapID, _secretKey);
     }
 
-    /// @notice Refunds an atomic swap
+    /// @notice Refunds an atomic swap.
     ///
     /// @param _swapID The unique atomic swap id.
     function refund(bytes32 _swapID) external onlyOpenSwaps(_swapID) onlyExpirableSwaps(_swapID) {
@@ -114,7 +114,7 @@ contract RenExAtomicSwapper {
         emit LogExpire(_swapID);
     }
 
-    /// @notice Audits an atomic swap
+    /// @notice Audits an atomic swap.
     ///
     /// @param _swapID The unique atomic swap id.
     function audit(bytes32 _swapID) external view returns (uint256 timelock, uint256 value, address to, address from, bytes32 secretLock) {
@@ -122,7 +122,7 @@ contract RenExAtomicSwapper {
         return (swap.timelock, swap.value, swap.withdrawTrader, swap.ethTrader, swap.secretLock);
     }
 
-    /// @notice Audits the secret of an atomic swap
+    /// @notice Audits the secret of an atomic swap.
     ///
     /// @param _swapID The unique atomic swap id.
     function auditSecret(bytes32 _swapID) external view onlyClosedSwaps(_swapID) returns (bytes32 secretKey) {

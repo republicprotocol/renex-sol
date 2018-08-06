@@ -160,6 +160,7 @@ contract RenExSettlement is Ownable {
         uint256 _volume,
         uint256 _minimumVolume
     ) external withGasPriceLimit(submissionGasPriceLimit) {
+
         SettlementUtils.OrderDetails memory order = SettlementUtils.OrderDetails({
             details: _prefix,
             settlementID: _settlementID,
@@ -168,14 +169,13 @@ contract RenExSettlement is Ownable {
             volume: _volume,
             minimumVolume: _minimumVolume
         });
-
         bytes32 orderID = SettlementUtils.hashOrder(order);
-        orderSubmitter[orderID] = msg.sender;
 
         require(orderStatus[orderID] == OrderStatus.None, "order already submitted");
-        orderStatus[orderID] = OrderStatus.Submitted;
-        require(orderbookContract.orderState(orderID) == Orderbook.OrderState.Confirmed, "uncofirmed order");
+        require(orderbookContract.orderState(orderID) == Orderbook.OrderState.Confirmed, "unconfirmed order");
 
+        orderSubmitter[orderID] = msg.sender;
+        orderStatus[orderID] = OrderStatus.Submitted;
         orderTrader[orderID] = orderbookContract.orderTrader(orderID);
         orderDetails[orderID] = order;
     }

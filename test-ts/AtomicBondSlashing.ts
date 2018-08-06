@@ -85,7 +85,7 @@ contract("Slasher", function (accounts: string[]) {
         let fees = web3.utils.toWei(feeNum.dividedBy(feeDen).toFixed(), "ether");
 
         // Store the original balances
-        let beforeBurntBalance = await darknodeRewardVault.darknodeBalances(0x0, eth_address);
+        let beforeBurntBalance = await darknodeRewardVault.darknodeBalances(slasher, eth_address);
         let beforeGuiltyBalance = await renExBalances.traderBalances(guiltyAddress, eth_address);
         let beforeInnocentBalance = await renExBalances.traderBalances(innocentAddress, eth_address);
 
@@ -93,7 +93,7 @@ contract("Slasher", function (accounts: string[]) {
         await renExSettlement.slash(guiltyOrderID, { from: slasher });
 
         // Check the new balances
-        let afterBurntBalance = await darknodeRewardVault.darknodeBalances(0x0, eth_address);
+        let afterBurntBalance = await darknodeRewardVault.darknodeBalances(slasher, eth_address);
         let afterGuiltyBalance = await renExBalances.traderBalances(guiltyAddress, eth_address);
         let afterInnocentBalance = await renExBalances.traderBalances(innocentAddress, eth_address);
 

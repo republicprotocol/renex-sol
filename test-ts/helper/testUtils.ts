@@ -20,11 +20,6 @@ export const Ox0 = NULL;
 
 export const GWEI = 1000000000;
 
-export enum OrderParity {
-    BUY = 0,
-    SELL = 1,
-}
-
 export enum Settlements {
     RenEx = 1,
     RenExAtomic = 2,

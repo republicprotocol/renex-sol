@@ -18,10 +18,10 @@ contract RenExBalances is Ownable {
     address constant public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     // Events
-    event BalanceDecreased(address trader, ERC20 token, uint256 value);
-    event BalanceIncreased(address trader, ERC20 token, uint256 value);
-    event RenExSettlementContractUpdated(address indexed newRenExSettlementContract);
-    event RewardVaultContractUpdated(address indexed newRewardVaultContract);
+    event LogBalanceDecreased(address trader, ERC20 token, uint256 value);
+    event LogBalanceIncreased(address trader, ERC20 token, uint256 value);
+    event LogRenExSettlementContractUpdated(address indexed newRenExSettlementContract);
+    event LogRewardVaultContractUpdated(address indexed newRewardVaultContract);
 
     // Storage
     mapping(address => address[]) public traderTokens;
@@ -45,7 +45,7 @@ contract RenExBalances is Ownable {
     ///
     /// @param _newSettlementContract the address of the new settlement contract
     function updateRenExSettlementContract(RenExSettlement _newSettlementContract) external onlyOwner {
-        emit RenExSettlementContractUpdated(_newSettlementContract);
+        emit LogRenExSettlementContractUpdated(_newSettlementContract);
         settlementContract = _newSettlementContract;
     }
 
@@ -54,7 +54,7 @@ contract RenExBalances is Ownable {
     ///
     /// @param _newRewardVaultContract the address of the new reward vault contract
     function updateRewardVault(DarknodeRewardVault _newRewardVaultContract) external onlyOwner {
-        emit RewardVaultContractUpdated(_newRewardVaultContract);
+        emit LogRewardVaultContractUpdated(_newRewardVaultContract);
         rewardVaultContract = _newRewardVaultContract;
     }
 
@@ -148,13 +148,13 @@ contract RenExBalances is Ownable {
 
         traderBalances[_trader][_token] = traderBalances[_trader][_token].add(_value);
 
-        emit BalanceIncreased(_trader, _token, _value);
+        emit LogBalanceIncreased(_trader, _token, _value);
     }
 
     function privateDecrementBalance(address _trader, ERC20 _token, uint256 _value) private {
         require(traderBalances[_trader][_token] >= _value, "insufficient funds");
         traderBalances[_trader][_token] = traderBalances[_trader][_token].sub(_value);
 
-        emit BalanceDecreased(_trader, _token, _value);
+        emit LogBalanceDecreased(_trader, _token, _value);
     }
 }

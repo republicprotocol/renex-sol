@@ -9,7 +9,7 @@ import "republic-sol/contracts/DarknodeSlasher.sol";
 import "republic-sol/contracts/tests/ABCToken.sol";
 import "republic-sol/contracts/tests/XYZToken.sol";
 
-import "./AtomicInfo.sol";
+import "./RenExAtomicInfo.sol";
 import "./RenExAtomicSwapper.sol";
 import "./RenExBalances.sol";
 import "./RenExSettlement.sol";

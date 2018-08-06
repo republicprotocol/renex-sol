@@ -131,7 +131,7 @@ contract RenExSettlement is Ownable {
     ///
     /// @param _prefix The miscellaneous details of the order required for
     ///        calculating the order id.
-    /// @param _settlement The settlement identifier.
+    /// @param _settlementID The settlement identifier.
     /// @param _tokens The encoding of the token pair (buy token is encoded as
     ///        the first 32 bytes and sell token is encoded as the last 32
     ///        bytes).
@@ -286,7 +286,7 @@ contract RenExSettlement is Ownable {
     /// @return Hash of the order.
     function hashOrder(
         bytes _prefix,
-        uint64 _settlement,
+        uint64 _settlementID,
         uint64 _tokens,
         uint256 _price,
         uint256 _volume,
@@ -294,7 +294,7 @@ contract RenExSettlement is Ownable {
     ) external pure returns (bytes32) {
         return SettlementUtils.hashOrder(SettlementUtils.OrderDetails({
             details: _prefix,
-            settlementID: _settlement,
+            settlementID: _settlementID,
             tokens: _tokens,
             price: _price,
             volume: _volume,

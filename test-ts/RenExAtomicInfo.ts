@@ -2,13 +2,13 @@
 import * as chai from "chai";
 import * as testUtils from "./helper/testUtils";
 
-const AtomicInfo = artifacts.require("AtomicInfo");
+const RenExAtomicInfo = artifacts.require("RenExAtomicInfo");
 const RepublicToken = artifacts.require("RepublicToken");
 const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
 const DarknodeRegistry = artifacts.require("DarknodeRegistry");
 const Orderbook = artifacts.require("Orderbook");
 
-contract("AtomicInfo", function (accounts: string[]) {
+contract("RenExAtomicInfo", function (accounts: string[]) {
 
     let info, swap, addr, orderbook;
     const darknode = accounts[0];
@@ -32,7 +32,7 @@ contract("AtomicInfo", function (accounts: string[]) {
         await dnr.register(darknode, testUtils.PUBK("1"), testUtils.MINIMUM_BOND, { from: darknode });
         await testUtils.waitForEpoch(dnr);
 
-        info = await AtomicInfo.deployed();
+        info = await RenExAtomicInfo.deployed();
     });
 
     it("can submit and retrieve swap details", async () => {

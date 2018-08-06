@@ -212,4 +212,11 @@ contract("RenExBalances", function (accounts: string[]) {
         // Revert change
         await renExBalances.updateRenExSettlementContract(renExSettlement.address);
     });
+
+    it("cannot transfer ether and erc20 in a single transaction", async () => {
+        await TOKEN1.approve(renExBalances.address, 2);
+        await renExBalances.deposit(TOKEN1.address, 2, { value: 2 })
+            .should.be.rejectedWith(null, /unexpected ether transfer/);
+    });
+
 });

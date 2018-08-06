@@ -4,12 +4,12 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "republic-sol/contracts/Orderbook.sol";
 
-/// @notice AtomicInfo is a way for two traders performing an atomic swap to
+/// @notice RenExAtomicInfo is a way for two traders performing an atomic swap to
 /// transmit data to one another.
 /// Traders are able to authorise other addresses to transmit data for their
 /// trades, allowing traders to open orders with one wallet (e.g. Metamask) and
 /// perform the trade with another (e.g. the keystore used by Swapper)
-contract AtomicInfo is Ownable {
+contract RenExAtomicInfo is Ownable {
 
     Orderbook public orderbookContract;
 

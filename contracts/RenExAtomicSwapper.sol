@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
-/// @notice RenExAtomicSwapper implements the Ethereum side of the atomic swap
-/// interface.
+/// @notice RenExAtomicSwapper implements the RenEx atomic swapping interface
+/// for Ether values. Does not support ERC20 tokens.
 contract RenExAtomicSwapper {
 
     struct Swap {
@@ -20,15 +20,17 @@ contract RenExAtomicSwapper {
         EXPIRED
     }
 
-    mapping (bytes32 => Swap) private swaps;
-    mapping (bytes32 => States) private swapStates;
-    mapping (bytes32 => uint256) public redeemedAt;
-
+    // Events
     event LogOpen(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock);
     event LogExpire(bytes32 _swapID);
     event LogClose(bytes32 _swapID, bytes32 _secretKey);
 
-    /// @notice Throws if the swap is not invalid.
+    // Storage
+    mapping (bytes32 => Swap) private swaps;
+    mapping (bytes32 => States) private swapStates;
+    mapping (bytes32 => uint256) public redeemedAt;
+
+    /// @notice Throws if the swap is not invalid (i.e. has already been opened)
     modifier onlyInvalidSwaps(bytes32 _swapID) {
         require(swapStates[_swapID] == States.INVALID, "swap opened previously");
         _;
@@ -72,7 +74,7 @@ contract RenExAtomicSwapper {
             ethTrader: msg.sender,
             withdrawTrader: _withdrawTrader,
             secretLock: _secretLock,
-            secretKey: bytes32(0)
+            secretKey: 0x0
         });
         swaps[_swapID] = swap;
         swapStates[_swapID] = States.OPEN;

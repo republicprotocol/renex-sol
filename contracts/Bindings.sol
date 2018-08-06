@@ -16,7 +16,8 @@ import "./RenExSettlement.sol";
 import "./RenExTokens.sol";
 import "./RenExTokens.sol";
 
-/// @notice Bindings imports all of the contracts for generating the Go bindings.
+/// @notice Bindings imports all of the contracts for generating the Go
+/// bindings.
 contract Bindings {
     // CONTRACT LEFT BLANK INTENTIONALLY
 }

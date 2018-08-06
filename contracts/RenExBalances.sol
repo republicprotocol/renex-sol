@@ -20,13 +20,11 @@ contract RenExBalances is Ownable {
     // Events
     event LogBalanceDecreased(address trader, ERC20 token, uint256 value);
     event LogBalanceIncreased(address trader, ERC20 token, uint256 value);
-    event LogRenExSettlementContractUpdated(address indexed newRenExSettlementContract);
-    event LogRewardVaultContractUpdated(address indexed newRewardVaultContract);
+    event LogRenExSettlementContractUpdated(address previousRenExSettlementContract, address newRenExSettlementContract);
+    event LogRewardVaultContractUpdated(address previousRewardVaultContract, address newRewardVaultContract);
 
     // Storage
-    mapping(address => address[]) public traderTokens;
     mapping(address => mapping(address => uint256)) public traderBalances;
-    mapping(address => mapping(address => bool)) private activeTraderToken;
 
     /// @param _rewardVaultContract The address of the RewardVault contract.
     constructor(DarknodeRewardVault _rewardVaultContract) public {
@@ -45,7 +43,7 @@ contract RenExBalances is Ownable {
     ///
     /// @param _newSettlementContract the address of the new settlement contract
     function updateRenExSettlementContract(RenExSettlement _newSettlementContract) external onlyOwner {
-        emit LogRenExSettlementContractUpdated(_newSettlementContract);
+        emit LogRenExSettlementContractUpdated(settlementContract, _newSettlementContract);
         settlementContract = _newSettlementContract;
     }
 
@@ -54,12 +52,13 @@ contract RenExBalances is Ownable {
     ///
     /// @param _newRewardVaultContract the address of the new reward vault contract
     function updateRewardVault(DarknodeRewardVault _newRewardVaultContract) external onlyOwner {
-        emit LogRewardVaultContractUpdated(_newRewardVaultContract);
+        emit LogRewardVaultContractUpdated(rewardVaultContract, _newRewardVaultContract);
         rewardVaultContract = _newRewardVaultContract;
     }
 
     /// @notice Transfer a token value from one trader to another, transferring
-    /// a fee to the RewardVault.
+    /// a fee to the RewardVault. Can only be called by the RenExSettlement
+    /// contract.
     ///
     /// @param _traderFrom The address of the trader to decrement the balance of.
     /// @param _traderTo The address of the trader to increment the balance of.
@@ -109,8 +108,6 @@ contract RenExBalances is Ownable {
     function withdraw(ERC20 _token, uint256 _value) external {
         address trader = msg.sender;
 
-        require(traderBalances[trader][_token] >= _value, "insufficient balance");
-
         privateDecrementBalance(trader, _token, _value);
         if (address(_token) == ETHEREUM) {
             trader.transfer(_value);
@@ -119,33 +116,7 @@ contract RenExBalances is Ownable {
         }
     }
 
-    /// @notice Retrieves the list of token addresses that the trader has
-    /// previously had balances for and a list of the corresponding token
-    /// balances.
-    ///
-    /// @param _trader The address of the trader.
-    /// @return [
-    ///     The array of token addresses,
-    ///     The array of token balances in tokens' smallest units
-    /// ]
-    function getBalances(address _trader) public view returns (address[], uint256[]) {
-        address[] memory tokens = traderTokens[_trader];
-        uint256[] memory tokenBalances = new uint256[](tokens.length);
-
-        for (uint256 i = 0; i < tokens.length; i++) {
-            tokenBalances[i] = traderBalances[_trader][tokens[i]];
-        }
-
-        return (tokens, tokenBalances);
-    }
-
     function privateIncrementBalance(address _trader, ERC20 _token, uint256 _value) private {
-        // Check if it's the first time the trader
-        if (!activeTraderToken[_trader][_token]) {
-            activeTraderToken[_trader][_token] = true;
-            traderTokens[_trader].push(_token);
-        }
-
         traderBalances[_trader][_token] = traderBalances[_trader][_token].add(_value);
 
         emit LogBalanceIncreased(_trader, _token, _value);

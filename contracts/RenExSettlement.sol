@@ -1,8 +1,9 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/math/Math.sol";
 
 import "republic-sol/contracts/Orderbook.sol";
 import "republic-sol/contracts/SettlementUtils.sol";
@@ -34,12 +35,12 @@ contract RenExSettlement is Ownable {
     enum OrderParity {Buy, Sell}
 
     struct MatchDetails {
-        uint256 lowTokenVolume;
-        uint256 highTokenVolume;
-        uint32 lowToken;
-        uint32 highToken;
-        address lowTokenAddress;
-        address highTokenAddress;
+        uint256 priorityTokenVolume;
+        uint256 secondTokenVolume;
+        uint32 priorityToken;
+        uint32 secondToken;
+        address priorityTokenAddress;
+        address secondTokenAddress;
         uint256 timestamp;
     }
 
@@ -127,9 +128,9 @@ contract RenExSettlement is Ownable {
     /// @param _details Miscellaneous details.
     /// @param _settlementID The ID of the settlement.
     /// @param _tokens Two 32-bit token codes concatenated.
-    /// @param _price The order price.
-    /// @param _volume The order volume.
-    /// @param _minimumVolume The order minimum volume.
+    /// @param _price The order price in the priority token per non-priority.
+    /// @param _volume The order volume in the non-priority token.
+    /// @param _minimumVolume The order minimum volume in the non-priority token.
     function submitOrder(
         bytes _details,
         uint64 _settlementID,
@@ -180,19 +181,19 @@ contract RenExSettlement is Ownable {
         require(isBuyOrder(_buyID), "not a buy order");
 
         // Calculate token codes
-        uint32 buyToken = uint32(orderDetails[_buyID].tokens);
-        uint32 sellToken = uint32(orderDetails[_buyID].tokens >> 32);
+        uint32 priorityToken = uint32(orderDetails[_buyID].tokens >> 32);
+        uint32 secondToken = uint32(orderDetails[_buyID].tokens);
 
         // Retrieve token details
-        (address buyTokenAddress, uint8 buyTokenDecimals, bool buyTokenRegistered) = renExTokensContract.tokens(buyToken);
-        (address sellTokenAddress, uint8 sellTokenDecimals, bool sellTokenRegistered) = renExTokensContract.tokens(sellToken);
+        (address priorityTokenAddress, uint8 priorityTokenDecimals, bool priorityTokenRegistered) = renExTokensContract.tokens(priorityToken);
+        (address secondTokenAddress, uint8 secondTokenDecimals, bool secondTokenRegistered) = renExTokensContract.tokens(secondToken);
 
         // Require that the tokens have been registered
-        require(buyTokenRegistered, "unregistered buy token");
-        require(sellTokenRegistered, "unregistered sell token");
+        require(secondTokenRegistered, "unregistered buy token");
+        require(priorityTokenRegistered, "unregistered sell token");
 
         // Calculate and store settlement details
-        prepareMatchSettlement(_buyID, _sellID, buyToken, sellToken, buyTokenAddress, sellTokenAddress, buyTokenDecimals, sellTokenDecimals);
+        prepareMatchSettlement(_buyID, _sellID, priorityToken, secondToken, priorityTokenAddress, secondTokenAddress, priorityTokenDecimals, secondTokenDecimals);
 
         // Note: verifyMatch checks that the buy and sell settlement IDs match
         uint64 settlementID = orderDetails[_buyID].settlementID;
@@ -237,12 +238,12 @@ contract RenExSettlement is Ownable {
 
         uint256 fee;
         address tokenAddress;
-        if (isEthereumBased(details.highTokenAddress)) {
-            tokenAddress = details.highTokenAddress;
-            (,fee) = subtractDarknodeFee(details.highTokenVolume);
-        } else if (isEthereumBased(details.lowTokenAddress)) {
-            tokenAddress = details.lowTokenAddress;
-            (,fee) = subtractDarknodeFee(details.lowTokenVolume);
+        if (isEthereumBased(details.secondTokenAddress)) {
+            tokenAddress = details.secondTokenAddress;
+            (,fee) = subtractDarknodeFee(details.secondTokenVolume);
+        } else if (isEthereumBased(details.priorityTokenAddress)) {
+            tokenAddress = details.priorityTokenAddress;
+            (,fee) = subtractDarknodeFee(details.priorityTokenVolume);
         } else {
             revert("non-eth tokens");
         }
@@ -304,15 +305,15 @@ contract RenExSettlement is Ownable {
     ) private {
         MatchDetails memory details = matchDetails[_buyID][_sellID];
 
-        (uint256 lowTokenFinal, uint256 lowTokenFee) = subtractDarknodeFee(details.lowTokenVolume);
-        (uint256 highTokenFinal, uint256 highTokenFee) = subtractDarknodeFee(details.highTokenVolume);
+        (uint256 priorityTokenFinal, uint256 priorityTokenFee) = subtractDarknodeFee(details.priorityTokenVolume);
+        (uint256 secondTokenFinal, uint256 secondTokenFee) = subtractDarknodeFee(details.secondTokenVolume);
 
         // Transfer values
         renExBalancesContract.transferBalanceWithFee(
-            orderTrader[_buyID], orderTrader[_sellID], details.lowTokenAddress, lowTokenFinal, lowTokenFee, orderSubmitter[_buyID]
+            orderTrader[_buyID], orderTrader[_sellID], details.priorityTokenAddress, priorityTokenFinal, priorityTokenFee, orderSubmitter[_buyID]
         );
         renExBalancesContract.transferBalanceWithFee(
-            orderTrader[_sellID], orderTrader[_buyID], details.highTokenAddress, highTokenFinal, highTokenFee, orderSubmitter[_sellID]
+            orderTrader[_sellID], orderTrader[_buyID], details.secondTokenAddress, secondTokenFinal, secondTokenFee, orderSubmitter[_sellID]
         );
     }
 
@@ -323,34 +324,27 @@ contract RenExSettlement is Ownable {
     /// @param _sellID The sell order ID.
     function prepareMatchSettlement(
         bytes32 _buyID, bytes32 _sellID,
-        uint32 buyToken, uint32 sellToken,
-        address buyTokenAddress, address sellTokenAddress,
-        uint8 buyTokenDecimals, uint8 sellTokenDecimals
+        uint32 priorityToken, uint32 secondToken,
+        address priorityTokenAddress, address secondTokenAddress,
+        uint8 priorityTokenDecimals, uint8 secondTokenDecimals
     ) private {
-        // Verify details
-
-        /// @dev (The stack depth is preventing additional local variables)
         // Calculate the midprice (using numerator and denominator to not loose
-        // prceision).
-        // uint256 priceN = orderDetails[_buyID].price + orderDetails[_sellID].price;
+        // precision).
+        uint256 priceN = (orderDetails[_buyID].price + orderDetails[_sellID].price);
         // uint256 priceD = 2;
 
-        (uint256 lowTokenVolume, uint256 highTokenVolume) = settlementDetails(
-            orderDetails[_buyID].price + orderDetails[_sellID].price, /* priceN */
-            2, /* priceD */
-            orderDetails[_buyID].volume,
-            orderDetails[_sellID].volume,
-            buyTokenDecimals,
-            sellTokenDecimals
-        );
+        uint256 minVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume); // in non-priority
+
+        uint256 priorityTokenVolume = joinFraction(minVolume.mul(priceN), 2, int16(priorityTokenDecimals) - 24);
+        uint256 secondTokenVolume = joinFraction(minVolume, 1, int16(secondTokenDecimals) - 12);
 
         matchDetails[_buyID][_sellID] = MatchDetails({
-            lowTokenVolume: lowTokenVolume,
-            highTokenVolume: highTokenVolume,
-            lowToken: sellToken,
-            highToken: buyToken,
-            lowTokenAddress: sellTokenAddress,
-            highTokenAddress: buyTokenAddress,
+            priorityTokenVolume: priorityTokenVolume,
+            secondTokenVolume: secondTokenVolume,
+            priorityToken: priorityToken,
+            secondToken: secondToken,
+            priorityTokenAddress: priorityTokenAddress,
+            secondTokenAddress: secondTokenAddress,
             timestamp: now
         });
     }
@@ -362,12 +356,12 @@ contract RenExSettlement is Ownable {
 
         uint256 fee;
         address tokenAddress;
-        if (isEthereumBased(details.highTokenAddress)) {
-            tokenAddress = details.highTokenAddress;
-            (, fee) = subtractDarknodeFee(details.highTokenVolume);
-        } else if (isEthereumBased(details.lowTokenAddress)) {
-            tokenAddress = details.lowTokenAddress;
-            (, fee) = subtractDarknodeFee(details.lowTokenVolume);
+        if (isEthereumBased(details.secondTokenAddress)) {
+            tokenAddress = details.secondTokenAddress;
+            (, fee) = subtractDarknodeFee(details.secondTokenVolume);
+        } else if (isEthereumBased(details.priorityTokenAddress)) {
+            tokenAddress = details.priorityTokenAddress;
+            (, fee) = subtractDarknodeFee(details.priorityTokenVolume);
         } else {
             return;
         }
@@ -389,31 +383,6 @@ contract RenExSettlement is Ownable {
 
     function isEthereumBased(address _tokenAddress) private pure returns (bool) {
         return (_tokenAddress != address(0x0));
-    }
-
-    function settlementDetails(
-        uint256 _priceN,
-        uint256 _priceD,
-        uint256 _buyVolume,
-        uint256 _sellVolume,
-        uint8 _buyTokenDecimals,
-        uint8 _sellTokenDecimals
-    ) private pure returns (uint256, uint256) {
-        uint256 minVolumeN;
-        uint256 minVolumeQ;
-        // buyVolume * (10**12) / price
-        if (_buyVolume.mul(10**12) / (_priceN / _priceD) <= _sellVolume) {
-            minVolumeN = _buyVolume.mul(10**12).mul(_priceD);
-            minVolumeQ = _priceN;
-        } else {
-            minVolumeN = _sellVolume;
-            minVolumeQ = 1;
-        }
-
-        uint256 lowTokenValue = joinFraction(minVolumeN.mul(_priceN), minVolumeQ.mul(_priceD), int16(_sellTokenDecimals) - 24);
-        uint256 highTokenValue = joinFraction(minVolumeN, minVolumeQ, int16(_buyTokenDecimals) - 12);
-
-        return (lowTokenValue, highTokenValue);
     }
 
     /// @notice Computes (numerator / denominator) * 10 ** scale

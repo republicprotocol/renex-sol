@@ -91,6 +91,15 @@ contract("RenExSettlement", function (accounts: string[]) {
         (await renExSettlement.orderbookContract()).should.equal(orderbook.address);
     });
 
+    it("can update renex tokens", async () => {
+        await renExSettlement.updateRenExTokens(0x0);
+        (await renExSettlement.renExTokensContract()).should.equal(testUtils.Ox0);
+        await renExSettlement.updateRenExTokens(renExTokens.address, { from: accounts[1] })
+            .should.be.rejectedWith(null, /revert/); // not owner
+        await renExSettlement.updateRenExTokens(renExTokens.address);
+        (await renExSettlement.renExTokensContract()).should.equal(renExTokens.address);
+    });
+
     it("can update renex balances", async () => {
         await renExSettlement.updateRenExBalances(0x0);
         (await renExSettlement.renExBalancesContract()).should.equal(testUtils.Ox0);

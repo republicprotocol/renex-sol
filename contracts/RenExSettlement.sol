@@ -330,12 +330,12 @@ contract RenExSettlement is Ownable {
     ) private {
         // Calculate the midprice (using numerator and denominator to not loose
         // precision).
-        uint256 priceN = (orderDetails[_buyID].price + orderDetails[_sellID].price);
-        // uint256 priceD = 2;
+        uint256 priceN = orderDetails[_buyID].price + orderDetails[_sellID].price;
+        uint256 priceD = 2;
 
         uint256 minVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume); // in non-priority
 
-        uint256 priorityTokenVolume = joinFraction(minVolume.mul(priceN), 2, int16(priorityTokenDecimals) - 24);
+        uint256 priorityTokenVolume = joinFraction(minVolume.mul(priceN), priceD, int16(priorityTokenDecimals) - 24);
         uint256 secondTokenVolume = joinFraction(minVolume, 1, int16(secondTokenDecimals) - 12);
 
         matchDetails[_buyID][_sellID] = MatchDetails({

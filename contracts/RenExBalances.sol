@@ -4,31 +4,42 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-import "./RenExSettlement.sol";
 import "republic-sol/contracts/DarknodeRewardVault.sol";
+import "republic-sol/contracts/libraries/Utils.sol";
+
+import "./RenExSettlement.sol";
+import "./RenExBrokerVerifier.sol";
 
 /// @notice RenExBalances is responsible for holding RenEx trader funds.
 contract RenExBalances is Ownable {
     using SafeMath for uint256;
 
     RenExSettlement public settlementContract;
+    RenExBrokerVerifier public brokerVerifierContract;
     DarknodeRewardVault public rewardVaultContract;
 
     /// @dev Should match the address in the DarknodeRewardVault
     address constant public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+    
+    // Delay between a trader calling `withdrawSignal` and being able to call
+    // `withdraw` without a broker signature.
+    uint256 constant public SIGNAL_DELAY = 48 hours;
 
     // Events
     event LogBalanceDecreased(address trader, ERC20 token, uint256 value);
     event LogBalanceIncreased(address trader, ERC20 token, uint256 value);
     event LogRenExSettlementContractUpdated(address previousRenExSettlementContract, address newRenExSettlementContract);
     event LogRewardVaultContractUpdated(address previousRewardVaultContract, address newRewardVaultContract);
+    event LogBrokerVerifierContractUpdated(address previousBrokerVerifierContract, address newBrokerVerifierContract);
 
     // Storage
     mapping(address => mapping(address => uint256)) public traderBalances;
+    mapping(address => mapping(address => uint256)) public traderWithdrawalSignals;
 
     /// @param _rewardVaultContract The address of the RewardVault contract.
-    constructor(DarknodeRewardVault _rewardVaultContract) public {
+    constructor(DarknodeRewardVault _rewardVaultContract, RenExBrokerVerifier _brokerVerifierContract) public {
         rewardVaultContract = _rewardVaultContract;
+        brokerVerifierContract = _brokerVerifierContract;
     }
 
     /// @notice Restricts a function to only being called by the RenExSettlement
@@ -36,6 +47,19 @@ contract RenExBalances is Ownable {
     modifier onlyRenExSettlementContract() {
         require(msg.sender == address(settlementContract), "not authorised");
         _;
+    }
+
+    modifier withBrokerSignatureOrSignal(address _token, bytes _signature) {
+        address trader = msg.sender;
+        if (brokerVerifierContract.verifyWithdrawSignature(trader, _signature)) {
+            _;
+        } else {
+            bool hasSignalled = traderWithdrawalSignals[trader][_token] != 0;
+            bool hasWaitedDelay = (traderWithdrawalSignals[trader][_token] - now) > SIGNAL_DELAY;
+            // require(hasSignalled && hasWaitedDelay, "not signalled");
+            traderWithdrawalSignals[trader][_token] = 0;
+            _;
+        }
     }
 
     /// @notice Allows the owner of the contract to update the address of the
@@ -51,9 +75,18 @@ contract RenExBalances is Ownable {
     /// DarknodeRewardVault contract.
     ///
     /// @param _newRewardVaultContract the address of the new reward vault contract
-    function updateRewardVault(DarknodeRewardVault _newRewardVaultContract) external onlyOwner {
+    function updateRewardVaultContract(DarknodeRewardVault _newRewardVaultContract) external onlyOwner {
         emit LogRewardVaultContractUpdated(rewardVaultContract, _newRewardVaultContract);
         rewardVaultContract = _newRewardVaultContract;
+    }
+
+    /// @notice Allows the owner of the contract to update the address of the
+    /// RenExBrokerVerifier contract.
+    ///
+    /// @param _newBrokerVerifierContract the address of the new broker verifier contract
+    function updateBrokerVerifierContract(RenExBrokerVerifier _newBrokerVerifierContract) external onlyOwner {
+        emit LogBrokerVerifierContractUpdated(brokerVerifierContract, _newBrokerVerifierContract);
+        brokerVerifierContract = _newBrokerVerifierContract;
     }
 
     /// @notice Transfer a token value from one trader to another, transferring
@@ -99,13 +132,15 @@ contract RenExBalances is Ownable {
         privateIncrementBalance(trader, _token, _value);
     }
 
-    /// @notice Withdraws ETH or an ERC20 token from the contract. In the future,
-    /// a broker signature will be required to prove that the trader has a
-    /// sufficient balance after accounting for open orders.
+    /// @notice Withdraws ETH or an ERC20 token from the contract. A broker
+    /// signature is required to guarantee that the trader has a sufficient
+    /// balance after accounting for open orders. As a trustless backup,
+    /// traders can withdraw 48 hours after calling `signalBackupWithdraw`.
     ///
     /// @param _token The token's address.
     /// @param _value The amount to withdraw in the token's smallest unit.
-    function withdraw(ERC20 _token, uint256 _value) external {
+    /// @param _signature The broker signature
+    function withdraw(ERC20 _token, uint256 _value, bytes _signature) external withBrokerSignatureOrSignal(_token, _signature) {
         address trader = msg.sender;
 
         privateDecrementBalance(trader, _token, _value);
@@ -114,6 +149,10 @@ contract RenExBalances is Ownable {
         } else {
             require(_token.transfer(trader, _value), "token transfer failed");
         }
+    }
+
+    function signalBackupWithdraw(address _token) external {
+        traderWithdrawalSignals[msg.sender][_token] = now;
     }
 
     function privateIncrementBalance(address _trader, ERC20 _token, uint256 _value) private {

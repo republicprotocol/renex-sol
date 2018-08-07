@@ -11,8 +11,9 @@ import "republic-sol/contracts/SettlementUtils.sol";
 import "./RenExBalances.sol";
 import "./RenExTokens.sol";
 
-/// @notice RenExSettlement is responsible for holding trader funds and settling
-/// matched order values.
+/// @notice RenExSettlement implements the Settlement interface. It implements
+/// the on-chain settlement for the RenEx settlement layer, and the fee payment
+/// for the RenExAtomic settlement layer.
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
@@ -144,14 +145,14 @@ contract RenExSettlement is Ownable {
     /// @param _tokens The encoding of the token pair (buy token is encoded as
     ///        the first 32 bytes and sell token is encoded as the last 32
     ///        bytes).
-    /// @param _price The price of the order (the price is interpreted as the
-    ///        cost for 1 standard unit of the non-priority token, in
-    ///        1e12 (i.e. PRICE_OFFSET) units of the priority token).
+    /// @param _price The price of the order. Interpreted as the cost for 1
+    ///        standard unit of the non-priority token, in 1e12 (i.e.
+    ///        PRICE_OFFSET) units of the priority token).
     /// @param _volume The volume of the order. Intepreted as the maximum number
     ///        of 1e-12 (i.e. VOLUME_OFFSET) units of the non-priority token
-    ///        that can be traded by this order.)
+    ///        that can be traded by this order.
     /// @param _minimumVolume The minimum volume the trader is willing to
-    ///        accept (It's encoding is the same as that of the volume).
+    ///        accept. Encoded the same as the volume.
     function submitOrder(
         bytes _prefix,
         uint64 _settlementID,
@@ -454,7 +455,10 @@ contract RenExSettlement is Ownable {
             assert(scale <= 77); // log10(2**256) = 77.06
             return numerator.mul(10 ** uint256(scale)) / denominator;
         } else {
-            // joinFraction is only called with a minimum possible scale of -24
+            /// @dev If scale is less than -77, 10**-scale would overflow.
+            // For now, -scale > -24 (when a token has 0 decimals and
+            // VOLUME_OFFSET and PRICE_OFFSET are each 12). It is unlikely these
+            // will be increased to add to more than 77.
             // assert((-scale) <= 77); // log10(2**256) = 77.06
             return (numerator / denominator) / 10 ** uint256(-scale);
         }

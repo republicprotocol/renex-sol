@@ -1,44 +1,28 @@
-const RepublicToken = artifacts.require("RepublicToken");
-const BitcoinMock = artifacts.require("BitcoinMock");
-const DGXMock = artifacts.require("DGXMock");
-const RenExTokens = artifacts.require("RenExTokens");
-
-import * as chai from "chai";
-import * as chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-chai.should();
-
-enum TokenStatus {
-    NeverRegistered = "0",
-    Registered = "1",
-    Deregistered = "2"
-}
+import * as testUtils from "./helper/testUtils";
+import { RenExTokensContract } from "./bindings/ren_ex_tokens";
 
 contract("RenExTokens", function (accounts: string[]) {
 
-    const BTC = 0x0;
     const ETH = 0x1;
-    const DGX = 0x100;
     const REN = 0x10000;
-    const tokens = [BTC, ETH, DGX, REN];
+    const tokens = [ETH, REN];
 
-    let renExTokens, tokenInstances;
+    let renExTokens: RenExTokensContract;
+    let tokenInstances;
 
-    beforeEach(async function () {
+    before(async function () {
         tokenInstances = {
-            [BTC]: await BitcoinMock.new(),
-            [ETH]: { address: "0x0000000000000000000000000000000000000000", decimals: () => Promise.resolve(18) },
-            [DGX]: await DGXMock.new(),
-            [REN]: await RepublicToken.new(),
+            [ETH]: { address: testUtils.Ox0, decimals: () => Promise.resolve(18) },
+            [REN]: await artifacts.require("RepublicToken").new(),
         };
 
-        renExTokens = await RenExTokens.new();
+        renExTokens = await artifacts.require("RenExTokens").new();
     });
 
     it("owner can register and deregister tokens", async () => {
         for (const token of tokens) {
             const tokenDetails = await renExTokens.tokens(token);
-            (tokenDetails.status.toString()).should.equal(TokenStatus.NeverRegistered);
+            (tokenDetails.registered).should.be.false;
         }
 
         for (const token of tokens) {
@@ -55,7 +39,7 @@ contract("RenExTokens", function (accounts: string[]) {
             const tokenDetails = await renExTokens.tokens(token);
             (tokenDetails.addr).should.equal(address);
             (tokenDetails.decimals.toString()).should.equal(decimals.toString());
-            (tokenDetails.status.toString()).should.equal(TokenStatus.Registered);
+            (tokenDetails.registered).should.be.true;
         }
         for (const token of tokens) {
             const address = tokenInstances[token].address;
@@ -67,7 +51,7 @@ contract("RenExTokens", function (accounts: string[]) {
             const tokenDetails = await renExTokens.tokens(token);
             (tokenDetails.addr).should.equal(address);
             (tokenDetails.decimals.toString()).should.equal(decimals.toString());
-            (tokenDetails.status.toString()).should.equal(TokenStatus.Deregistered);
+            (tokenDetails.registered).should.be.false;
         }
     });
 
@@ -118,10 +102,6 @@ contract("RenExTokens", function (accounts: string[]) {
         const address1 = tokenInstances[token1].address;
         const decimals1 = await tokenInstances[token1].decimals();
 
-        const token2 = tokens[0];
-        const address2 = tokenInstances[token2].address;
-        const decimals2 = await tokenInstances[token2].decimals();
-
         // Register
         await renExTokens.registerToken(token1, address1, decimals1);
 
@@ -129,11 +109,17 @@ contract("RenExTokens", function (accounts: string[]) {
         await renExTokens.deregisterToken(token1);
 
         // Attempt to reregister with different details
-        await renExTokens.registerToken(token1, address2, decimals2);
+        await renExTokens.registerToken(token1, tokenInstances[tokens[1]].address, decimals1)
+            .should.be.rejectedWith(null, /different address/);
+        await renExTokens.registerToken(token1, address1, 1)
+            .should.be.rejectedWith(null, /different decimals/);
+
+        // Can reregister with the same details
+        await renExTokens.registerToken(token1, address1, decimals1);
 
         const tokenDetails = await renExTokens.tokens(token1);
         (tokenDetails.addr).should.equal(address1);
         (tokenDetails.decimals.toString()).should.equal(decimals1.toString());
-        (tokenDetails.status.toString()).should.equal(TokenStatus.Registered);
+        (tokenDetails.registered).should.be.true;
     });
 });

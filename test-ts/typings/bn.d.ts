@@ -18,7 +18,7 @@ declare module "bn.js" {
         public static min(left: BN, right: BN): BN;
         public static max(left: BN, right: BN): BN;
 
-        constructor(input: number | string | number[] | Buffer, base?: number | "hex", endian?: Endianness);
+        constructor(input: number | string | number[] | Buffer | BN, base?: number | "hex", endian?: Endianness);
 
         public clone(): BN;
         public copy(dest: BN): void;

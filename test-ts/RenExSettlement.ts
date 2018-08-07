@@ -1,55 +1,108 @@
-// tslint:disable:max-line-length
-
-const RenExSettlement = artifacts.require("RenExSettlement");
-
-import * as chai from "chai";
-import * as chaiAsPromised from "chai-as-promised";
-import { setupContracts } from "./RenEx";
-chai.use(chaiAsPromised);
-chai.should();
-
-const GWEI = 1000000000;
+import * as testUtils from "./helper/testUtils";
+import { TokenCodes, buyMarket, sellMarket } from "./helper/testUtils";
+import { OrderbookContract } from "./bindings/orderbook";
+import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExTokensContract } from "./bindings/ren_ex_tokens";
 
 contract("RenExSettlement", function (accounts: string[]) {
 
     const darknode = accounts[2];
     const broker = accounts[3];
-    let tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens;
+    let tokenAddresses;
+    let orderbook: OrderbookContract;
+    let renExSettlement: RenExSettlementContract;
+    let renExBalances: RenExBalancesContract;
+    let renExTokens: RenExTokensContract;
     let buyID_1, sellID_1;
     let buyID_2, sellID_2;
-    let buyID_3;
+    let buyID_3, sellID_3;
+    let buyID_4;
+
+    const BUY1 = [web3.utils.sha3("0"), 1, buyMarket("0x3", "0x7"), 10, 10000, 0];
+    const SELL1 = [web3.utils.sha3("1"), 1, sellMarket("0x3", "0x7"), 10, 1000, 0];
+    const BUY2 = [web3.utils.sha3("2"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 10000, 0];
+    const SELL2 = [web3.utils.sha3("3"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 1000, 0];
+    const BUY3 = [web3.utils.sha3("4"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 15, 10000, 0];
+    const SELL3 = [web3.utils.sha3("5"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 10000, 0];
+    const BUY4 = [web3.utils.sha3("6"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 17, 10000, 0];
+    const SELL4 = [web3.utils.sha3("7"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 1000, 0];
+    const SELL5 = [web3.utils.sha3("8"), 2, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 10, 1000, 0];
 
     before(async function () {
-        ({ tokenAddresses, orderbook, renExSettlement, renExBalances, renExTokens } = await setupContracts(darknode, 0x0, broker));
+        const ren = await artifacts.require("RepublicToken").deployed();
 
-        buyID_1 = "0x3294b14400e04e16266c300389ca4e890edb0c45139858769c8c1c9e78164fc9";
-        await orderbook.openBuyOrder("0x32d455737ebe67b1ac9da90cd1095efa9761273e609462f04fca158a179498744ec86813f55462e600ecdb267f1f7ce0b1d31e12bc5bae1038f1f83b8196e8ff01", buyID_1, { from: broker });
-        sellID_1 = "0xc3e9e8d1682ea8e366a5f1e8f50c4ea9b573ecffb91b412981284be9430517e6";
-        await orderbook.openSellOrder("0x08d0731acb2d9e0bc6cd426c44d4b04775b2f467bfa9efcda1a508acb67308b41579bbbd4cf79aa15f02f52a58d11a429a9726d6c4a2fafc601a32f7f541268300", sellID_1, { from: broker });
-        await orderbook.confirmOrder(buyID_1, [sellID_1], { from: darknode });
+        tokenAddresses = {
+            [TokenCodes.BTC]: testUtils.MockBTC,
+            [TokenCodes.ETH]: testUtils.MockETH,
+            [TokenCodes.DGX]: await artifacts.require("DGXMock").deployed(),
+            [TokenCodes.REN]: ren,
+        };
 
-        buyID_2 = "0x4c8b9f7e9c7abdbeb1290dc566c651f34cb0a0e7e223fae96b90457c724ff983";
-        await orderbook.openBuyOrder("0xd2f07c5ed1dac9500066844fe89b9a57882004f72be216624090ce5570eb8cdf6f261d8ce518e6625872739074ae722d701e09be0fca565f1c9f7d079283e9b601", buyID_2, { from: broker });
-        sellID_2 = "0x9e800b8389d7443feef2bfe265935541251151c872866979d53520c119226971";
-        await orderbook.openSellOrder("0xd9b460b2553f5f9404578167f817ad0edfa0efbe5a7a46ebdeeecef77a246153616483186300ecdf61bcccde90f0626ac3e18a868cac38435849ee5c24661fc800", sellID_2, { from: broker });
-        await orderbook.confirmOrder(buyID_2, [sellID_2], { from: darknode });
+        let dnr = await artifacts.require("DarknodeRegistry").deployed();
+        orderbook = await artifacts.require("Orderbook").deployed();
+        renExTokens = await artifacts.require("RenExTokens").deployed();
+        renExSettlement = await artifacts.require("RenExSettlement").deployed();
+        renExBalances = await artifacts.require("RenExBalances").deployed();
 
-        buyID_3 = "0xfdfe3a9515260199d49d82619f02f144be694e0daf04b1372525f4d623a4f7dd";
-        await orderbook.openBuyOrder("0x8c3600cecec60ad3d6fef0eaccdff07afc23ae1403852124a774142bb8d61df80489708bd0988a3c7d0b0ddc4c7b2b0ded7afc0f0baca83bfe41b86531f048f801", buyID_3, { from: broker });
+        // Broker
+        await ren.transfer(broker, testUtils.INGRESS_FEE * 100);
+        await ren.approve(orderbook.address, testUtils.INGRESS_FEE * 100, { from: broker });
+
+        // Register darknode
+        await ren.transfer(darknode, testUtils.MINIMUM_BOND);
+        await ren.approve(dnr.address, testUtils.MINIMUM_BOND, { from: darknode });
+        await dnr.register(darknode, testUtils.PUBK("1"), testUtils.MINIMUM_BOND, { from: darknode });
+        await testUtils.waitForEpoch(dnr);
+
+        await tokenAddresses[TokenCodes.REN].approve(orderbook.address, 100 * 1e18, { from: broker });
+
+        buyID_1 = await renExSettlement.hashOrder.apply(this, [...BUY1]);
+        sellID_1 = await renExSettlement.hashOrder.apply(this, [...SELL1]);
+
+        buyID_2 = await renExSettlement.hashOrder.apply(this, [...BUY2]);
+        sellID_2 = await renExSettlement.hashOrder.apply(this, [...SELL2]);
+
+        buyID_3 = await renExSettlement.hashOrder.apply(this, [...BUY3]);
+        sellID_3 = await renExSettlement.hashOrder.apply(this, [...SELL3]);
+
+        buyID_4 = await renExSettlement.hashOrder.apply(this, [...BUY4]);
+
+        await testUtils.openBuyOrder(orderbook, broker, accounts[5], buyID_1);
+        await testUtils.openBuyOrder(orderbook, broker, accounts[6], buyID_2);
+        await testUtils.openBuyOrder(orderbook, broker, accounts[7], buyID_3);
+        await testUtils.openBuyOrder(orderbook, broker, accounts[8], buyID_4);
+
+        await testUtils.openSellOrder(orderbook, broker, accounts[6], sellID_1);
+        await testUtils.openSellOrder(orderbook, broker, accounts[5], sellID_2);
+        await testUtils.openSellOrder(orderbook, broker, accounts[8], sellID_3);
+
+        await orderbook.confirmOrder(buyID_1, sellID_1, { from: darknode });
+        await orderbook.confirmOrder(buyID_2, sellID_2, { from: darknode });
+        await orderbook.confirmOrder(buyID_3, sellID_3, { from: darknode });
     });
 
     it("can update orderbook", async () => {
-        await renExSettlement.updateOrderbook(0x0);
-        (await renExSettlement.orderbookContract()).should.equal("0x0000000000000000000000000000000000000000");
+        await renExSettlement.updateOrderbook(testUtils.NULL);
+        (await renExSettlement.orderbookContract()).should.equal(testUtils.Ox0);
         await renExSettlement.updateOrderbook(orderbook.address, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
         await renExSettlement.updateOrderbook(orderbook.address);
         (await renExSettlement.orderbookContract()).should.equal(orderbook.address);
     });
 
+    it("can update renex tokens", async () => {
+        await renExSettlement.updateRenExTokens(testUtils.NULL);
+        (await renExSettlement.renExTokensContract()).should.equal(testUtils.Ox0);
+        await renExSettlement.updateRenExTokens(renExTokens.address, { from: accounts[1] })
+            .should.be.rejectedWith(null, /revert/); // not owner
+        await renExSettlement.updateRenExTokens(renExTokens.address);
+        (await renExSettlement.renExTokensContract()).should.equal(renExTokens.address);
+    });
+
     it("can update renex balances", async () => {
-        await renExSettlement.updateRenExBalances(0x0);
-        (await renExSettlement.renExBalancesContract()).should.equal("0x0000000000000000000000000000000000000000");
+        await renExSettlement.updateRenExBalances(testUtils.NULL);
+        (await renExSettlement.renExBalancesContract()).should.equal(testUtils.Ox0);
         await renExSettlement.updateRenExBalances(renExBalances.address, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
         await renExSettlement.updateRenExBalances(renExBalances.address);
@@ -57,127 +110,63 @@ contract("RenExSettlement", function (accounts: string[]) {
     });
 
     it("can update submission gas price limit", async () => {
-        await renExSettlement.updateSubmissionGasPriceLimit(0x0);
+        await renExSettlement.updateSubmissionGasPriceLimit(testUtils.NULL);
         (await renExSettlement.submissionGasPriceLimit()).toString().should.equal("0");
-        await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI, { from: accounts[1] })
+        await renExSettlement.updateSubmissionGasPriceLimit(100 * testUtils.GWEI, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExSettlement.updateSubmissionGasPriceLimit(100 * GWEI);
-        (await renExSettlement.submissionGasPriceLimit()).toString().should.equal((100 * GWEI).toString());
+        await renExSettlement.updateSubmissionGasPriceLimit(100 * testUtils.GWEI);
+        (await renExSettlement.submissionGasPriceLimit()).toString().should.equal((100 * testUtils.GWEI).toString());
     });
 
     it("submitOrder", async () => {
         // sellID_1?
-        await renExSettlement.submitOrder(
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x000000000000000000000000000000000000000000000000000000005b2a43a2",
-            "0x0000000000000000000000000000000000000000000000000000000100010001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x8d981922c65b85a257f457ba3c29831aa4c3b1bd45dc3b280590fd5c89c69dc2",
-        );
+        await renExSettlement.submitOrder.apply(this, [...SELL1]);
 
         // buyID_1?
-        await renExSettlement.submitOrder(
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x000000000000000000000000000000000000000000000000000000005b2ae1b5",
-            "0x0000000000000000000000000000000000000000000000000000000100010001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x242efbba437ce0c8b22392130c3f688ca01492792a3a04899d66dce0ffa31b72",
-        );
+        await renExSettlement.submitOrder.apply(this, [...BUY1]);
 
         // sellID_2?
-        await renExSettlement.submitOrder(
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x000000000000000000000000000000000000000000000000000000005b298e47",
-            "0x0000000000000000000000000000000000000000000000000000000100000100",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0xccd3dd4361d50a9df13af30388e2574b5e9e875c638bdfd15efb47395686ac3d",
-        );
+        await renExSettlement.submitOrder.apply(this, [...SELL2]);
 
         // buyID_2?
-        await renExSettlement.submitOrder(
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x000000000000000000000000000000000000000000000000000000005b2a2706",
-            "0x0000000000000000000000000000000000000000000000000000000100000100",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x799f3c0f186049d0e59e51bd145d23b30a6a7657ef591ce345ab6f89ef9cbad7",
-        );
+        await renExSettlement.submitOrder.apply(this, [...BUY2]);
+
+        // sellID_3?
+        await renExSettlement.submitOrder.apply(this, [...SELL3]);
+
+        // buyID_3?
+        await renExSettlement.submitOrder.apply(this, [...BUY3]);
     });
 
     it("submitOrder (rejected)", async () => {
         // Can't submit order twice:
-        await renExSettlement.submitOrder(
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x000000000000000000000000000000000000000000000000000000005b2ae1b5",
-            "0x0000000000000000000000000000000000000000000000000000000100010001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x242efbba437ce0c8b22392130c3f688ca01492792a3a04899d66dce0ffa31b72",
-        ).should.be.rejectedWith(null, /order already submitted/);
+        await renExSettlement.submitOrder.apply(this, [...SELL2])
+            .should.be.rejectedWith(null, /order already submitted/);
 
-        // Can't submit order that's not in orderbook (different timestamp):
-        await renExSettlement.submitOrder(
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x000000000000000000000000000000000000000000000000000000005b2ae1b6",
-            "0x0000000000000000000000000000000000000000000000000000000100010001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x242efbba437ce0c8b22392130c3f688ca01492792a3a04899d66dce0ffa31b72",
-        ).should.be.rejectedWith(null, /uncofirmed order/);
+        // Can't submit order that's not in orderbook (different order details):
+        await renExSettlement.submitOrder.apply(this, [...SELL4])
+            .should.be.rejectedWith(null, /unconfirmed order/);
 
         // Can't submit order that's not confirmed
-        await renExSettlement.submitOrder(
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x000000000000000000000000000000000000000000000000000000005b29a423",
-            "0x0000000000000000000000000000000000000000000000000000000100010000",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x0a9e48cc69067083dabadb12d0ffeda12e1e9a014f9b3ad0277157f5d0b9d7e2",
-        ).should.be.rejectedWith(null, /uncofirmed order/);
+        await renExSettlement.submitOrder.apply(this, [...BUY4])
+            .should.be.rejectedWith(null, /unconfirmed order/);
     });
 
-    // it("verifyOrder", async () => {
-    //     // await settlementTest.verifyOrder(buyID_1.replace("a", "b"))
-    //     //     .should.be.rejectedWith(null, /revert/); //
-    //     // await settlementTest.verifyOrder(sellID_1.replace("a", "b"))
-    //     //     .should.be.rejectedWith(null, /revert/); //
-    // });
-
-    it("submitMatch", async () => {
+    it("submitMatch checks the buy order status", async () => {
         await renExSettlement.submitMatch(
-            randomID(),
+            testUtils.randomID(),
             sellID_1,
         ).should.be.rejectedWith(null, /invalid buy status/);
+    });
 
+    it("submitMatch checks the sell order status", async () => {
         await renExSettlement.submitMatch(
             buyID_1,
-            randomID(),
+            testUtils.randomID(),
         ).should.be.rejectedWith(null, /invalid sell status/);
+    });
 
+    it("submitMatch checks that the orders are compatible", async () => {
         // Two buys
         await renExSettlement.submitMatch(
             buyID_1,
@@ -192,42 +181,36 @@ contract("RenExSettlement", function (accounts: string[]) {
 
         // Orders that aren't matched to one another
         await renExSettlement.submitMatch(
+            sellID_3,
             buyID_2,
-            sellID_1,
-        ).should.be.rejectedWith(null, /invalid order pair/);
+        ).should.be.rejectedWith(null, /unconfirmed orders/);
+    });
 
+    it("submitMatch checks the token registration", async () => {
         // Buy token that is not registered
         await renExSettlement.submitMatch(
             buyID_1,
             sellID_1,
         ).should.be.rejectedWith(null, /unregistered buy token/);
 
-        await renExTokens.deregisterToken(ETH);
+        // Sell token that is not registered
+        await renExTokens.deregisterToken(TokenCodes.BTC);
         await renExSettlement.submitMatch(
             buyID_2,
             sellID_2,
         ).should.be.rejectedWith(null, /unregistered sell token/);
-        await renExTokens.registerToken(ETH, tokenAddresses[ETH].address, 18);
+        await renExTokens.registerToken(TokenCodes.BTC, tokenAddresses[TokenCodes.BTC].address, 8);
     });
 
     it("should fail for excessive gas price", async () => {
-        const _renExSettlement = await RenExSettlement.new(orderbook.address, renExTokens.address, renExBalances.address, 0, 0x0);
-        await _renExSettlement.submitOrder(
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x000000000000000000000000000000000000000000000000000000005b2a43a2",
-            "0x0000000000000000000000000000000000000000000000000000000100010001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "0x8d981922c65b85a257f457ba3c29831aa4c3b1bd45dc3b280590fd5c89c69dc2",
-        ).should.be.rejectedWith(null, /gas price too high/);
+        // Set gas price limit to 0
+        const previousGasPriceLimit = await renExSettlement.submissionGasPriceLimit();
+        await renExSettlement.updateSubmissionGasPriceLimit(0x0);
+
+        await renExSettlement.submitOrder.apply(this, [...SELL5])
+            .should.be.rejectedWith(null, /gas price too high/);
+
+        // Reset gas price limit
+        await renExSettlement.updateSubmissionGasPriceLimit(previousGasPriceLimit);
     });
 });
-
-const randomID = () => {
-    return web3.utils.sha3(Math.random().toString());
-};
-
-const ETH = 0x1;

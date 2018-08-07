@@ -1,0 +1,18 @@
+import { Tx, TransactionReceipt, Log } from "web3/types";
+import { BN } from "bn.js";
+
+export interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
+
+// tslint:disable:max-line-length
+export interface {{contractName}}Contract {
+{{#each methods}}
+    {{#this.constant}}
+    {{this.tsName}}({{> typed_params inputs=inputs}}): Promise<{{> return_type outputs=outputs}}>;
+    {{/this.constant}}
+    {{^this.constant}}
+    {{this.tsName}}({{> typed_params inputs=inputs}}): Promise<Transaction>;
+    {{/this.constant}}
+{{/each}}
+    address: string;
+}
+// tslint:enable:max-line-length

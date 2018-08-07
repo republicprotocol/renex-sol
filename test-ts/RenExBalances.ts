@@ -1,49 +1,59 @@
-const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
-const RenExSettlement = artifacts.require("RenExSettlement");
-const RenExBalances = artifacts.require("RenExBalances");
-const WithdrawBlock = artifacts.require("WithdrawBlock");
+import { RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
+import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
 
-import * as chai from "chai";
-import * as chaiAsPromised from "chai-as-promised";
-import BigNumber from "bignumber.js";
-chai.use(chaiAsPromised);
-chai.should();
+import * as testUtils from "./helper/testUtils";
+import { BN } from "bn.js";
 
 contract("RenExBalances", function (accounts: string[]) {
 
-    let renExBalances, renExSettlement, rewardVault;
+    let renExBalances: RenExBalancesContract;
+    let renExSettlement: RenExSettlementContract;
+    let rewardVault: DarknodeRewardVaultContract;
+    let renExBrokerVerifier: RenExBrokerVerifierContract;
     let ETH, REN, TOKEN1, TOKEN2;
+    const broker = accounts[9];
 
-    beforeEach(async function () {
-        ETH = { address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" };
-        REN = await RepublicToken.new();
-        TOKEN1 = await RepublicToken.new();
-        TOKEN2 = await RepublicToken.new();
+    before(async function () {
+        ETH = testUtils.MockETH;
+        REN = await artifacts.require("RepublicToken").deployed();
+        TOKEN1 = await artifacts.require("RepublicToken").new();
+        TOKEN2 = await artifacts.require("ABCToken").deployed();
+        rewardVault = await artifacts.require("DarknodeRewardVault").deployed();
+        renExBalances = await artifacts.require("RenExBalances").deployed();
+        renExSettlement = await artifacts.require("RenExSettlement").deployed();
 
-        rewardVault = await DarknodeRewardVault.new(0x0);
-        renExBalances = await RenExBalances.new(rewardVault.address);
-        const GWEI = 1000000000;
-        renExSettlement = await RenExSettlement.new(0x0, 0x0, renExBalances.address, 100 * GWEI, 0x0);
-        await renExBalances.updateRenExSettlementContract(renExSettlement.address);
+        // Register broker
+        renExBrokerVerifier = await artifacts.require("RenExBrokerVerifier").deployed();
+        await renExBrokerVerifier.registerBroker(broker);
     });
 
     it("can update Reward Vault address", async () => {
-        await renExBalances.updateRewardVault(0x0);
-        (await renExBalances.rewardVaultContract()).should.equal("0x0000000000000000000000000000000000000000");
-        await renExBalances.updateRewardVault(rewardVault.address, { from: accounts[1] })
+        await renExBalances.updateRewardVaultContract(testUtils.NULL);
+        (await renExBalances.rewardVaultContract()).should.equal(testUtils.Ox0);
+        await renExBalances.updateRewardVaultContract(rewardVault.address, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExBalances.updateRewardVault(rewardVault.address);
+        await renExBalances.updateRewardVaultContract(rewardVault.address);
         (await renExBalances.rewardVaultContract()).should.equal(rewardVault.address);
     });
 
+    it("can update Broker Verifier address", async () => {
+        await renExBalances.updateBrokerVerifierContract(testUtils.NULL);
+        (await renExBalances.brokerVerifierContract()).should.equal(testUtils.Ox0);
+        await renExBalances.updateBrokerVerifierContract(renExBrokerVerifier.address, { from: accounts[1] })
+            .should.be.rejectedWith(null, /revert/); // not owner
+        await renExBalances.updateBrokerVerifierContract(renExBrokerVerifier.address);
+        (await renExBalances.brokerVerifierContract()).should.equal(renExBrokerVerifier.address);
+    });
+
     it("can hold tokens for a trader", async () => {
-        const deposit1 = 100;
-        const deposit2 = 50;
+        const deposit1 = new BN(100);
+        const deposit2 = new BN(50);
 
         // Get ERC20 balance for tokens
-        const previous1 = new BigNumber(await TOKEN1.balanceOf(accounts[0]));
-        const previous2 = new BigNumber(await TOKEN2.balanceOf(accounts[0]));
+        const previous1 = new BN(await TOKEN1.balanceOf(accounts[0]));
+        const previous2 = new BN(await TOKEN2.balanceOf(accounts[0]));
 
         // Approve and deposit
         await TOKEN1.approve(renExBalances.address, deposit1, { from: accounts[0] });
@@ -52,62 +62,63 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.deposit(TOKEN2.address, deposit2, { from: accounts[0] });
 
         // Check that balance in renExBalances is updated
-        const { 0: tokens, 1: balances } = await renExBalances.getBalances.call(accounts[0]);
-        tokens[0].should.equal(TOKEN1.address);
-        tokens[1].should.equal(TOKEN2.address);
-        balances[0].toString().should.equal(deposit1.toFixed());
-        balances[1].toString().should.equal(deposit2.toFixed());
+        (await renExBalances.traderBalances(accounts[0], TOKEN1.address)).should.bignumber.equal(deposit1);
+        (await renExBalances.traderBalances(accounts[0], TOKEN2.address)).should.bignumber.equal(deposit2);
 
         // Check that the correct amount of tokens has been withdrawn
-        (await TOKEN1.balanceOf(accounts[0])).toString().should.equal(previous1.minus(deposit1).toFixed());
-        (await TOKEN2.balanceOf(accounts[0])).toString().should.equal(previous2.minus(deposit2).toFixed());
+        (await TOKEN1.balanceOf(accounts[0])).should.bignumber.equal(previous1.sub(deposit1));
+        (await TOKEN2.balanceOf(accounts[0])).should.bignumber.equal(previous2.sub(deposit2));
 
         // Withdraw
-        await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] });
-        await renExBalances.withdraw(TOKEN2.address, deposit2, { from: accounts[0] });
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] });
+        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        await renExBalances.withdraw(TOKEN2.address, deposit2, sig, { from: accounts[0] });
 
         // Check that the tokens have been returned
-        (await TOKEN1.balanceOf(accounts[0])).toString().should.equal(previous1.toFixed());
-        (await TOKEN2.balanceOf(accounts[0])).toString().should.equal(previous2.toFixed());
+        (await TOKEN1.balanceOf(accounts[0])).should.bignumber.equal(previous1);
+        (await TOKEN2.balanceOf(accounts[0])).should.bignumber.equal(previous2);
     });
 
     it("can hold tokens for multiple traders", async () => {
-        const deposit1 = 100;
-        const deposit2 = 50;
+        const deposit1 = new BN(100);
+        const deposit2 = new BN(50);
+
+        const TRADER_A = accounts[2];
+        const TRADER_B = accounts[3];
 
         // Give accounts[1] some tokens
-        await TOKEN1.transfer(accounts[1], deposit2 * 2);
+        await TOKEN1.transfer(TRADER_A, deposit1);
+        await TOKEN1.transfer(TRADER_B, deposit2);
 
         // Get ERC20 balance for TOKEN1 and TOKEN2
-        const previous1 = new BigNumber(await TOKEN1.balanceOf(accounts[0]));
-        const previous2 = new BigNumber(await TOKEN1.balanceOf(accounts[1]));
+        const previous1 = new BN(await TOKEN1.balanceOf(TRADER_A));
+        const previous2 = new BN(await TOKEN1.balanceOf(TRADER_B));
 
         // Approve and deposit
-        await TOKEN1.approve(renExBalances.address, deposit1, { from: accounts[0] });
-        await renExBalances.deposit(TOKEN1.address, deposit1, { from: accounts[0] });
-        await TOKEN1.approve(renExBalances.address, deposit2, { from: accounts[1] });
-        await renExBalances.deposit(TOKEN1.address, deposit2, { from: accounts[1] });
+        await TOKEN1.approve(renExBalances.address, deposit1, { from: TRADER_A });
+        await renExBalances.deposit(TOKEN1.address, deposit1, { from: TRADER_A });
+        await TOKEN1.approve(renExBalances.address, deposit2, { from: TRADER_B });
+        await renExBalances.deposit(TOKEN1.address, deposit2, { from: TRADER_B });
 
         // Check that balance in renExBalances is updated
-        const { 0: tokens1, 1: balances1 } = await renExBalances.getBalances(accounts[0]);
-        tokens1[0].should.equal(TOKEN1.address);
-        balances1[0].toString().should.equal(deposit1.toFixed());
+        (await renExBalances.traderBalances(TRADER_A, TOKEN1.address)).should.bignumber.equal(deposit1);
 
-        const { 0: tokens2, 1: balances2 } = await renExBalances.getBalances(accounts[1]);
-        tokens2[0].should.equal(TOKEN1.address);
-        balances2[0].toString().should.equal(deposit2.toFixed());
+        (await renExBalances.traderBalances(TRADER_B, TOKEN1.address)).should.bignumber.equal(deposit2);
 
         // Check that the correct amount of tokens has been withdrawn
-        (await TOKEN1.balanceOf(accounts[0])).toString().should.equal(previous1.minus(deposit1).toFixed());
-        (await TOKEN1.balanceOf(accounts[1])).toString().should.equal(previous2.minus(deposit2).toFixed());
+        (await TOKEN1.balanceOf(TRADER_A)).should.bignumber.equal(previous1.sub(deposit1));
+        (await TOKEN1.balanceOf(TRADER_B)).should.bignumber.equal(previous2.sub(deposit2));
 
         // Withdraw
-        await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] });
-        await renExBalances.withdraw(TOKEN1.address, deposit2, { from: accounts[1] });
+        const sigA = await testUtils.signWithdrawal(renExBrokerVerifier, broker, TRADER_A);
+        await renExBalances.withdraw(TOKEN1.address, deposit1, sigA, { from: TRADER_A });
+        const sigB = await testUtils.signWithdrawal(renExBrokerVerifier, broker, TRADER_B);
+        await renExBalances.withdraw(TOKEN1.address, deposit2, sigB, { from: TRADER_B });
 
         // Check that the tokens have been returned
-        (await TOKEN1.balanceOf(accounts[0])).toString().should.equal(previous1.toFixed());
-        (await TOKEN1.balanceOf(accounts[1])).toString().should.equal(previous2.toFixed());
+        (await TOKEN1.balanceOf(TRADER_A)).should.bignumber.equal(previous1);
+        (await TOKEN1.balanceOf(TRADER_B)).should.bignumber.equal(previous2);
     });
 
     it("throws for invalid withdrawal", async () => {
@@ -118,21 +129,25 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.deposit(TOKEN1.address, deposit1, { from: accounts[0] });
 
         // Withdraw more than deposited amount
-        await renExBalances.withdraw(TOKEN1.address, deposit1 * 2, { from: accounts[0] })
-            .should.be.rejectedWith(null, /insufficient balance/);
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        await renExBalances.withdraw(TOKEN1.address, deposit1 * 2, sig, { from: accounts[0] })
+            .should.be.rejectedWith(null, /insufficient funds/);
 
         // Token transfer fails
         await TOKEN1.pause();
-        await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] })
+        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] })
             .should.be.rejectedWith(null, /revert/); // ERC20 transfer fails
         await TOKEN1.unpause();
 
         // Withdraw
-        await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] });
+        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] });
 
         // Withdraw again
-        await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] })
-            .should.be.rejectedWith(null, /insufficient balance/);
+        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] })
+            .should.be.rejectedWith(null, /insufficient funds/);
     });
 
     it("can deposit and withdraw multiple times", async () => {
@@ -145,43 +160,42 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.deposit(TOKEN1.address, deposit2, { from: accounts[0] });
 
         // Withdraw
-        await renExBalances.withdraw(TOKEN1.address, deposit1, { from: accounts[0] });
-        await renExBalances.withdraw(TOKEN1.address, deposit2, { from: accounts[0] });
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] });
+        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        await renExBalances.withdraw(TOKEN1.address, deposit2, sig, { from: accounts[0] });
     });
 
     it("can hold ether for a trader", async () => {
-        const deposit1 = 1;
+        const deposit1 = new BN(1);
 
-        const previous = new BigNumber(await web3.eth.getBalance(accounts[0]));
+        const previous = new BN(await web3.eth.getBalance(accounts[0]));
 
         // Approve and deposit
-        const fee1 = await getFee(renExBalances.deposit(ETH.address, deposit1, { from: accounts[0], value: deposit1 }));
+        const fee1 = await testUtils.getFee(
+            renExBalances.deposit(ETH.address, deposit1, { from: accounts[0], value: deposit1.toString() })
+        );
 
         // Balance should be (previous - fee1 - deposit1)
         const after = (await web3.eth.getBalance(accounts[0]));
-        after.toString().should.equal(previous.minus(fee1).minus(deposit1).toFixed());
+        after.should.bignumber.equal(previous.sub(fee1).sub(deposit1));
 
         // Withdraw
-        const fee2 = await getFee(renExBalances.withdraw(ETH.address, deposit1, { from: accounts[0] }));
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        const fee2 = await testUtils.getFee(renExBalances.withdraw(ETH.address, deposit1, sig, { from: accounts[0] }));
 
         // Balance should be (previous - fee1 - fee2)
-        (await web3.eth.getBalance(accounts[0])).should.equal(previous.minus(fee1).minus(fee2).toFixed());
+        (await web3.eth.getBalance(accounts[0])).should.bignumber.equal(previous.sub(fee1).sub(fee2));
     });
 
-    it("only the settlement contract can call `incrementBalance` and `decrementBalance`", async () => {
-        await renExBalances.incrementBalance(
+    it("only the settlement contract can call `transferBalanceWithFee`", async () => {
+        await renExBalances.transferBalanceWithFee(
             accounts[1],
+            accounts[2],
             REN.address,
             1,
-            { from: accounts[1] }
-        ).should.be.rejectedWith(null, /not authorised/);
-
-        await renExBalances.decrementBalanceWithFee(
-            accounts[1],
-            REN.address,
             0,
-            0,
-            accounts[1],
+            testUtils.NULL,
             { from: accounts[1] }
         ).should.be.rejectedWith(null, /not authorised/);
     });
@@ -197,23 +211,6 @@ contract("RenExBalances", function (accounts: string[]) {
             .should.be.rejectedWith(null, /mismatched value parameter and tx value/);
     });
 
-    it("the RenExSettlement contract can approve and reject withdrawals", async () => {
-        const renExSettlementAlt = await WithdrawBlock.new();
-        await renExBalances.updateRenExSettlementContract(renExSettlementAlt.address);
-
-        const deposit = 10;
-        await TOKEN1.approve(renExBalances.address, deposit, { from: accounts[0] });
-        await renExBalances.deposit(TOKEN1.address, deposit, { from: accounts[0] });
-
-        // Withdrawal should not go through
-        await renExBalances.withdraw(TOKEN1.address, deposit, { from: accounts[0] })
-            .should.be.rejectedWith(null, /withdraw blocked/);
-
-        // Can withdraw after reverting settlement contract update
-        await renExBalances.updateRenExSettlementContract(renExSettlement.address);
-        await renExBalances.withdraw(TOKEN1.address, deposit, { from: accounts[0] });
-    });
-
     it("decrementBalance reverts for invalid withdrawals", async () => {
         const auth = accounts[8];
         await renExBalances.updateRenExSettlementContract(auth);
@@ -222,21 +219,81 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.deposit(ETH.address, deposit, { from: accounts[0], value: deposit });
 
         // Insufficient balance for fee
-        await renExBalances.decrementBalanceWithFee(accounts[0], ETH.address, 0, 20, accounts[0], { from: auth })
-            .should.be.rejectedWith(null, /insufficient funds for fee/);
+        await renExBalances.transferBalanceWithFee(
+            accounts[0], accounts[1], ETH.address, 0, 20, accounts[0], { from: auth }
+        ).should.be.rejectedWith(null, /insufficient funds for fee/);
 
         // Insufficient balance for fee
-        await renExBalances.decrementBalanceWithFee(accounts[0], ETH.address, 20, 0, accounts[0], { from: auth })
-            .should.be.rejectedWith(null, /insufficient funds/);
+        await renExBalances.transferBalanceWithFee(
+            accounts[0], accounts[1], ETH.address, 20, 0, accounts[0], { from: auth }
+        ).should.be.rejectedWith(null, /insufficient funds/);
 
         // Revert change
         await renExBalances.updateRenExSettlementContract(renExSettlement.address);
     });
-});
 
-async function getFee(txP: any) { // TODO: Use web3 transaction type
-    const tx = await txP;
-    const gasAmount = new BigNumber(tx.receipt.gasUsed);
-    const gasPrice = new BigNumber((await web3.eth.getTransaction(tx.tx)).gasPrice);
-    return gasPrice.multipliedBy(gasAmount);
-}
+    it("cannot transfer ether and erc20 in a single transaction", async () => {
+        await TOKEN1.approve(renExBalances.address, 2);
+        await renExBalances.deposit(TOKEN1.address, 2, { value: 2 })
+            .should.be.rejectedWith(null, /unexpected ether transfer/);
+    });
+
+    it("trade is blocked without broker signature", async () => {
+        const deposit1 = 100;
+
+        // Approve and deposit
+        await TOKEN1.approve(renExBalances.address, deposit1, { from: accounts[0] });
+        await renExBalances.deposit(TOKEN1.address, deposit1, { from: accounts[0] });
+
+        // Withdraw
+        await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
+            .should.be.rejectedWith(null, /not signalled/);
+    });
+
+    it("trade can wait 48 hours", async () => {
+        const deposit1 = 100;
+
+        // Approve and deposit
+        await TOKEN1.approve(renExBalances.address, deposit1 * 2, { from: accounts[0] });
+        await renExBalances.deposit(TOKEN1.address, deposit1 * 2, { from: accounts[0] });
+
+        let i = 0;
+        await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
+            .should.be.rejectedWith(null, /not signalled/);
+        
+        await renExBalances.signalBackupWithdraw(TOKEN1.address, { from: accounts[0] });
+
+        await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
+            .should.be.rejectedWith(null, /not signalled/);
+
+        // Increase time by 47 hours
+        const hour = 60 * 60;
+        testUtils.increaseTime(47 * hour);
+
+        await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
+            .should.be.rejectedWith(null, /not signalled/);
+        
+        // Inscrease time by another hour
+        testUtils.increaseTime(1 * hour + 10);
+
+        // Still can't withdraw other tokens
+        await renExBalances.withdraw(TOKEN2.address, deposit1, testUtils.NULL, { from: accounts[0] })
+            .should.be.rejectedWith(null, /not signalled/);
+
+        // Other traders can't withdraw token
+        await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[1] })
+            .should.be.rejectedWith(null, /not signalled/);
+
+        // Can now withdraw without signature
+        await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] });
+
+        // Can only withdraw once
+        await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
+        .should.be.rejectedWith(null, /not signalled/);
+
+        // Can withdraw normally
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] });
+    });
+
+});

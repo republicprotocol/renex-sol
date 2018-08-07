@@ -1,65 +1,63 @@
 pragma solidity ^0.4.24;
 
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-/**
-@title A registry of tokens that can be traded on RenEx
-@author Republic Protocol
-*/
+/// @notice RenExTokens is a registry of tokens that can be traded on RenEx.
 contract RenExTokens is Ownable {
-    using SafeMath for uint256;
-
-    // Once a token is registered, its address and tokens can't be changed
-    // If an ERC20 token's contract is upgraded with a new address, a new token
-    // code should be used
-    enum TokenStatus {
-        NeverRegistered,
-        Registered,
-        Deregistered
-    }
 
     struct TokenDetails {
         address addr;
         uint8 decimals;
-        TokenStatus status;
+        bool registered;
     }
 
+    // Storage
     mapping(uint32 => TokenDetails) public tokens;
+    mapping(uint32 => bool) private detailsSubmitted;
 
-    event TokenRegistered(uint32 tokenCode, ERC20 tokenAddress, uint8 tokenDecimals);
-    event TokenDeregistered(uint32 tokenCode);
+    // Events
+    event LogTokenRegistered(uint32 tokenCode, address tokenAddress, uint8 tokenDecimals);
+    event LogTokenDeregistered(uint32 tokenCode);
 
-    /**
-    @notice Sets a token as being registered and stores its details (only-owner)
-    @param _tokenCode a unique 32-bit token identifier
-    @param _tokenAddress the address of the ERC20-compatible token
-    @param _tokenDecimals the decimals to use for the token
-    */
-    function registerToken(uint32 _tokenCode, ERC20 _tokenAddress, uint8 _tokenDecimals) public onlyOwner {
-        TokenStatus previousStatus = tokens[_tokenCode].status;
-        require(previousStatus != TokenStatus.Registered, "already registered");
+    /// @notice Allows the owner to register and the details for a token.
+    /// Once details have been submitted, they cannot be overwritten.
+    /// To reregister the same token with different details (e.g. if the address
+    /// has changed), a different token identifier should be used and the
+    /// previous token identifier should be deregistered.
+    /// If a token is not Ethereum-based, the address will be set to 0x0.
+    ///
+    /// @param _tokenCode A unique 32-bit token identifier.
+    /// @param _tokenAddress The address of the token.
+    /// @param _tokenDecimals The decimals to use for the token.
+    function registerToken(uint32 _tokenCode, address _tokenAddress, uint8 _tokenDecimals) public onlyOwner {
+        require(!tokens[_tokenCode].registered, "already registered");
 
-        tokens[_tokenCode].status = TokenStatus.Registered;
-
-        if (previousStatus == TokenStatus.NeverRegistered) {
-            tokens[_tokenCode].addr = _tokenAddress;
-            tokens[_tokenCode].decimals = _tokenDecimals;
+        // If a token is being reregistered, the same details must be provided.
+        if (detailsSubmitted[_tokenCode]) {
+            require(tokens[_tokenCode].addr == _tokenAddress, "different address");
+            require(tokens[_tokenCode].decimals == _tokenDecimals, "different decimals");
+        } else {
+            detailsSubmitted[_tokenCode] = true;
         }
 
-        emit TokenRegistered(_tokenCode, _tokenAddress, _tokenDecimals);
+        tokens[_tokenCode] = TokenDetails({
+            addr: _tokenAddress,
+            decimals: _tokenDecimals,
+            registered: true
+        });
+
+        emit LogTokenRegistered(_tokenCode, _tokenAddress, _tokenDecimals);
     }
 
-    /**
-    @notice Sets a token as being deregistered
-    @param _tokenCode the unique 32-bit token identifier
-    */
-    function deregisterToken(uint32 _tokenCode) public onlyOwner {
-        require (tokens[_tokenCode].status == TokenStatus.Registered, "not registered");
+    /// @notice Sets a token as being deregistered. The details are still stored
+    /// to prevent the token from being reregistered with different details.
+    ///
+    /// @param _tokenCode The unique 32-bit token identifier.
+    function deregisterToken(uint32 _tokenCode) external onlyOwner {
+        require(tokens[_tokenCode].registered, "not registered");
 
-        tokens[_tokenCode].status = TokenStatus.Deregistered;
+        tokens[_tokenCode].registered = false;
 
-        emit TokenDeregistered(_tokenCode);
+        emit LogTokenDeregistered(_tokenCode);
     }
 }

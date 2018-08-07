@@ -22,7 +22,7 @@
     "license": "GPL-3.0-only",
     "dependencies": {
         "openzeppelin-solidity": "1.11.0",
-        "republic-sol": "git://github.com/republicprotocol/republic-sol.git#develop"
+        "republic-sol": "git://github.com/republicprotocol/republic-sol.git#master"
     },
     "devDependencies": {
         "@0xproject/abi-gen": "^1.0.4",

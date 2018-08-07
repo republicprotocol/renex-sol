@@ -48,6 +48,11 @@ contract RenExBalances is Ownable {
         _;
     }
 
+    /// @notice Restricts trader withdrawing to be called if a signature from a
+    /// RenEx broker is provided, or if a certain amount of time has passed
+    /// since a trader has called `signalBackupWithdraw`.
+    /// @dev If the trader is withdrawing after calling `signalBackupWithdraw`,
+    /// this will reset the time to zero, writing to storage.
     modifier withBrokerSignatureOrSignal(address _token, bytes _signature) {
         address trader = msg.sender;
         if (brokerVerifierContract.verifyWithdrawSignature(trader, _signature)) {
@@ -150,6 +155,14 @@ contract RenExBalances is Ownable {
         }
     }
 
+    /// @notice A trader can withdraw without needing a broker signature if they
+    /// first call `signalBackupWithdraw` for the token they want to withdraw.
+    /// The trader can only withdraw the particular token once for each call to
+    /// this function. Traders can signal the intent to withdraw multiple
+    /// tokens.
+    /// Once this function is called, brokers will not sign order-opens for the
+    /// trader until the trader has withdrawn, guaranteeing that they won't have
+    /// orders open for the particular token.
     function signalBackupWithdraw(address _token) external {
         traderWithdrawalSignals[msg.sender][_token] = now;
     }

@@ -58,6 +58,20 @@ export const secondsFromNow = (seconds: number) => {
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const second = 1000;
 
+export const increaseTime = async (seconds: number) => {
+    await new Promise((resolve, reject) => {
+        web3.currentProvider.send(
+            {jsonrpc: "2.0", method: "evm_increaseTime", params: [seconds], id: 0},
+            (err, value) => {
+                if (err) {
+                    reject(err);
+                }
+                resolve(value);
+            }
+        );
+    });
+};
+
 export async function waitForEpoch(dnr: any) {
     const timeout = MINIMUM_EPOCH_INTERVAL * 0.1;
     while (true) {

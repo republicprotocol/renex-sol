@@ -3,9 +3,6 @@ pragma solidity 0.4.24;
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "republic-sol/contracts/libraries/Utils.sol";
-import "republic-sol/contracts/BrokerVerifier.sol";
-
-import "./RenExSettlement.sol";
 
 /// @notice RenExBrokerVerifier implements the BrokerVerifier contract,
 /// verifying broker signatures for order opening and fund withdrawal.

@@ -5,7 +5,6 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "republic-sol/contracts/DarknodeRewardVault.sol";
-import "republic-sol/contracts/libraries/Utils.sol";
 
 import "./RenExSettlement.sol";
 import "./RenExBrokerVerifier.sol";
@@ -55,8 +54,8 @@ contract RenExBalances is Ownable {
             _;
         } else {
             bool hasSignalled = traderWithdrawalSignals[trader][_token] != 0;
-            bool hasWaitedDelay = (traderWithdrawalSignals[trader][_token] - now) > SIGNAL_DELAY;
-            // require(hasSignalled && hasWaitedDelay, "not signalled");
+            bool hasWaitedDelay = (now - traderWithdrawalSignals[trader][_token]) > SIGNAL_DELAY;
+            require(hasSignalled && hasWaitedDelay, "not signalled");
             traderWithdrawalSignals[trader][_token] = 0;
             _;
         }

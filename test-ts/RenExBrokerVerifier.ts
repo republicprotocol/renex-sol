@@ -34,7 +34,7 @@ contract("RenExBalances", function (accounts: string[]) {
         // Deregister first broker
         await renExBrokerVerifier.deregisterBroker(broker1);
         await renExBrokerVerifier.deregisterBroker(broker1)
-            .should.be.rejectedWith(null, /already deregistered/);
+            .should.be.rejectedWith(null, /not registered/);
 
         (await renExBrokerVerifier.brokers(broker1)).should.be.false;
         (await renExBrokerVerifier.brokers(broker2)).should.be.true;

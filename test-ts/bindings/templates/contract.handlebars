@@ -1,0 +1,17 @@
+import { Contract, TransactionObject } from "web3/types";
+import BigNumber from "bignumber.js";
+
+// tslint:disable:max-line-length
+export interface {{contractName}}Contract extends Contract {
+    methods: {
+    {{#each methods}}
+        {{#this.constant}}
+        {{> call contractName=../contractName}}
+        {{/this.constant}}
+        {{^this.constant}}
+        {{> tx contractName=../contractName}}
+        {{/this.constant}}
+    {{/each}}
+    };
+}
+// tslint:enable:max-line-length

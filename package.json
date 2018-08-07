@@ -21,7 +21,7 @@
     },
     "license": "GPL-3.0-only",
     "dependencies": {
-        "openzeppelin-solidity": "1.10.0",
+        "openzeppelin-solidity": "1.11.0",
         "republic-sol": "git://github.com/republicprotocol/republic-sol.git#master"
     },
     "devDependencies": {

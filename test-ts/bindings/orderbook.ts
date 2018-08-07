@@ -1,20 +1,22 @@
-import { TransactionObject, Tx } from "web3/types";
+import { Tx, TransactionReceipt, Log } from "web3/types";
 import { BN } from "bn.js";
+
+export interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
 
 // tslint:disable:max-line-length
 export interface OrderbookContract {
-    renounceOwnership(options?: Tx): TransactionObject<void>;
+    renounceOwnership(options?: Tx): Promise<Transaction>;
     orderOpeningFee(options?: Tx): Promise<number|string|BN>;
     ren(options?: Tx): Promise<string>;
     owner(options?: Tx): Promise<string>;
     darknodeRegistry(options?: Tx): Promise<string>;
-    transferOwnership(_newOwner: string, options?: Tx): TransactionObject<void>;
-    updateFee(_newOrderOpeningFee: number|string|BN, options?: Tx): TransactionObject<void>;
-    updateDarknodeRegistry(_newDarknodeRegistry: string, options?: Tx): TransactionObject<void>;
-    openBuyOrder(_signature: string, _orderID: string, options?: Tx): TransactionObject<void>;
-    openSellOrder(_signature: string, _orderID: string, options?: Tx): TransactionObject<void>;
-    confirmOrder(_orderID: string, _matchedOrderID: string, options?: Tx): TransactionObject<void>;
-    cancelOrder(_signature: string, _orderID: string, options?: Tx): TransactionObject<void>;
+    transferOwnership(_newOwner: string, options?: Tx): Promise<Transaction>;
+    updateFee(_newOrderOpeningFee: number|string|BN, options?: Tx): Promise<Transaction>;
+    updateDarknodeRegistry(_newDarknodeRegistry: string, options?: Tx): Promise<Transaction>;
+    openBuyOrder(_signature: string, _orderID: string, options?: Tx): Promise<Transaction>;
+    openSellOrder(_signature: string, _orderID: string, options?: Tx): Promise<Transaction>;
+    confirmOrder(_orderID: string, _matchedOrderID: string, options?: Tx): Promise<Transaction>;
+    cancelOrder(_signature: string, _orderID: string, options?: Tx): Promise<Transaction>;
     buyOrderAtIndex(_index: number|string|BN, options?: Tx): Promise<string>;
     sellOrderAtIndex(_index: number|string|BN, options?: Tx): Promise<string>;
     orderState(_orderID: string, options?: Tx): Promise<number|string|BN>;

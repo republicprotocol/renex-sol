@@ -1,5 +1,7 @@
-import { TransactionObject, Tx } from "web3/types";
+import { Tx, TransactionReceipt, Log } from "web3/types";
 import { BN } from "bn.js";
+
+export interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
 
 // tslint:disable:max-line-length
 export interface UtilsTestContract {

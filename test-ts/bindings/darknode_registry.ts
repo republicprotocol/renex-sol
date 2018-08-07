@@ -1,5 +1,7 @@
-import { TransactionObject, Tx } from "web3/types";
+import { Tx, TransactionReceipt, Log } from "web3/types";
 import { BN } from "bn.js";
+
+export interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
 
 // tslint:disable:max-line-length
 export interface DarknodeRegistryContract {
@@ -11,7 +13,7 @@ export interface DarknodeRegistryContract {
     previousEpoch(options?: Tx): Promise<[number|string|BN, number|string|BN]>;
     nextMinimumBond(options?: Tx): Promise<number|string|BN>;
     nextMinimumPodSize(options?: Tx): Promise<number|string|BN>;
-    renounceOwnership(options?: Tx): TransactionObject<void>;
+    renounceOwnership(options?: Tx): Promise<Transaction>;
     numDarknodesPreviousEpoch(options?: Tx): Promise<number|string|BN>;
     currentEpoch(options?: Tx): Promise<[number|string|BN, number|string|BN]>;
     ren(options?: Tx): Promise<string>;
@@ -20,17 +22,17 @@ export interface DarknodeRegistryContract {
     minimumBond(options?: Tx): Promise<number|string|BN>;
     slasher(options?: Tx): Promise<string>;
     minimumPodSize(options?: Tx): Promise<number|string|BN>;
-    transferOwnership(_newOwner: string, options?: Tx): TransactionObject<void>;
-    register(_darknodeID: string, _publicKey: string, _bond: number|string|BN, options?: Tx): TransactionObject<void>;
-    deregister(_darknodeID: string, options?: Tx): TransactionObject<void>;
-    epoch(options?: Tx): TransactionObject<void>;
-    transferStoreOwnership(_newOwner: string, options?: Tx): TransactionObject<void>;
-    updateMinimumBond(_nextMinimumBond: number|string|BN, options?: Tx): TransactionObject<void>;
-    updateMinimumPodSize(_nextMinimumPodSize: number|string|BN, options?: Tx): TransactionObject<void>;
-    updateMinimumEpochInterval(_nextMinimumEpochInterval: number|string|BN, options?: Tx): TransactionObject<void>;
-    updateSlasher(_slasher: string, options?: Tx): TransactionObject<void>;
-    slash(_prover: string, _challenger1: string, _challenger2: string, options?: Tx): TransactionObject<void>;
-    refund(_darknodeID: string, options?: Tx): TransactionObject<void>;
+    transferOwnership(_newOwner: string, options?: Tx): Promise<Transaction>;
+    register(_darknodeID: string, _publicKey: string, _bond: number|string|BN, options?: Tx): Promise<Transaction>;
+    deregister(_darknodeID: string, options?: Tx): Promise<Transaction>;
+    epoch(options?: Tx): Promise<Transaction>;
+    transferStoreOwnership(_newOwner: string, options?: Tx): Promise<Transaction>;
+    updateMinimumBond(_nextMinimumBond: number|string|BN, options?: Tx): Promise<Transaction>;
+    updateMinimumPodSize(_nextMinimumPodSize: number|string|BN, options?: Tx): Promise<Transaction>;
+    updateMinimumEpochInterval(_nextMinimumEpochInterval: number|string|BN, options?: Tx): Promise<Transaction>;
+    updateSlasher(_slasher: string, options?: Tx): Promise<Transaction>;
+    slash(_prover: string, _challenger1: string, _challenger2: string, options?: Tx): Promise<Transaction>;
+    refund(_darknodeID: string, options?: Tx): Promise<Transaction>;
     getDarknodeOwner(_darknodeID: string, options?: Tx): Promise<string>;
     getDarknodeBond(_darknodeID: string, options?: Tx): Promise<number|string|BN>;
     getDarknodePublicKey(_darknodeID: string, options?: Tx): Promise<string>;

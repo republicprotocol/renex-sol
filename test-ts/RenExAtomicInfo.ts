@@ -1,15 +1,14 @@
+import { RenExAtomicInfoContract } from "./bindings/ren_ex_atomic_info";
+import { RenExAtomicSwapperContract } from "./bindings/ren_ex_atomic_swapper";
+import { OrderbookContract } from "./bindings/orderbook";
 
 import * as chai from "chai";
 import * as testUtils from "./helper/testUtils";
 
-const RenExAtomicInfo = artifacts.require("RenExAtomicInfo");
-const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const Orderbook = artifacts.require("Orderbook");
-
 contract("RenExAtomicInfo", function (accounts: string[]) {
 
-    let info, swap, addr, orderbook;
+    let info: RenExAtomicInfoContract;
+    let orderbook: OrderbookContract;
     const darknode = accounts[0];
     const trader = accounts[1];
     const box = accounts[2];
@@ -17,9 +16,9 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
     const broker = accounts[4];
 
     before(async function () {
-        const ren = await RepublicToken.deployed();
-        const dnr = await DarknodeRegistry.deployed();
-        orderbook = await Orderbook.deployed();
+        const ren = await artifacts.require("RepublicToken").deployed();
+        const dnr = await artifacts.require("DarknodeRegistry").deployed();
+        orderbook = await artifacts.require("Orderbook").deployed();
 
         // Broker
         await ren.transfer(broker, testUtils.INGRESS_FEE * 10);
@@ -31,13 +30,13 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
         await dnr.register(darknode, testUtils.PUBK("1"), testUtils.MINIMUM_BOND, { from: darknode });
         await testUtils.waitForEpoch(dnr);
 
-        info = await RenExAtomicInfo.deployed();
+        info = await artifacts.require("RenExAtomicInfo").deployed();
     });
 
     it("can submit and retrieve swap details", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
 
-        swap = testUtils.randomID();
+        const swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: trader });
         (await info.swapDetails(orderID)).should.equal(swap);
     });
@@ -45,7 +44,7 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
     it("details can only be submitted once", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
 
-        swap = testUtils.randomID();
+        const swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: trader });
         await info.submitDetails(orderID, swap, { from: trader })
             .should.be.rejectedWith(null, /already submitted/);
@@ -54,15 +53,15 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
     it("can submit and retrieve addresses", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
 
-        addr = testUtils.randomID();
+        const addr = testUtils.randomID();
         await info.setOwnerAddress(orderID, addr, { from: trader });
-        (await info.getOwnerAddress(orderID)).should.equal(addr, { from: trader });
+        (await info.getOwnerAddress(orderID)).should.equal(addr);
     });
 
     it("address can only set once", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
 
-        addr = testUtils.randomID();
+        const addr = testUtils.randomID();
         await info.setOwnerAddress(orderID, addr, { from: trader });
         await info.setOwnerAddress(orderID, trader, { from: trader })
             .should.be.rejectedWith(null, /already set/);
@@ -72,7 +71,7 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
         await info.authoriseSwapper(box, { from: trader });
 
-        swap = testUtils.randomID();
+        const swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: box });
         (await info.swapDetails(orderID)).should.equal(swap);
     });
@@ -82,7 +81,7 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
         await info.authoriseSwapper(box, { from: trader });
         await info.deauthoriseSwapper(box, { from: trader });
 
-        swap = testUtils.randomID();
+        const swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: box })
             .should.be.rejectedWith(null, /not authorised/);
 
@@ -92,7 +91,7 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
     it("non-authorised address can't submit details", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
 
-        swap = testUtils.randomID();
+        const swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: attacker })
             .should.be.rejectedWith(null, /not authorised/);
 

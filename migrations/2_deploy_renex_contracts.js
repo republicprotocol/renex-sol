@@ -1,9 +1,15 @@
-const Orderbook = artifacts.require("Orderbook.sol");
-const RenExBalances = artifacts.require("RenExBalances.sol");
+
+// Dependencies
 const DarknodeRewardVault = artifacts.require("DarknodeRewardVault.sol");
+const Orderbook = artifacts.require("Orderbook.sol");
+
+// Contracts
+const RenExBalances = artifacts.require("RenExBalances.sol");
 const RenExTokens = artifacts.require("RenExTokens.sol");
 const RenExSettlement = artifacts.require("RenExSettlement.sol");
+const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier");
 
+// Tokens
 const RepublicToken = artifacts.require("RepublicToken.sol");
 const DGXMock = artifacts.require("DGXMock.sol");
 const ABCToken = artifacts.require("ABCToken.sol");
@@ -31,22 +37,28 @@ module.exports = async function (deployer, network) {
             await renExTokens.registerToken(0x10002, XYZToken.address, 18);
         })
 
-        .then(() => deployer.deploy(RenExBalances, DarknodeRewardVault.address))
+        .then(() => deployer.deploy(
+            RenExBrokerVerifier
+        ))
 
-        .then(() => {
-            return deployer.deploy(
-                RenExSettlement,
-                Orderbook.address,
-                RenExTokens.address,
-                RenExBalances.address,
-                config.SLASHER_ADDRESS,
-                config.SUBMIT_ORDER_GAS_LIMIT,
-            );
-        })
+        .then(() => deployer.deploy(
+            RenExBalances,
+            DarknodeRewardVault.address,
+            RenExBrokerVerifier.address
+        ))
+
+        .then(() => deployer.deploy(
+            RenExSettlement,
+            Orderbook.address,
+            RenExTokens.address,
+            RenExBalances.address,
+            config.SLASHER_ADDRESS,
+            config.SUBMIT_ORDER_GAS_LIMIT,
+        ))
 
         .then(async () => {
             const renExBalances = await RenExBalances.at(RenExBalances.address);
-            await renExBalances.updateRewardVault(DarknodeRewardVault.address);
+            await renExBalances.updateRewardVaultContract(DarknodeRewardVault.address);
             await renExBalances.updateRenExSettlementContract(RenExSettlement.address);
         })
         ;

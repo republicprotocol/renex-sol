@@ -1,7 +1,5 @@
-const RepublicToken = artifacts.require("RepublicToken");
-const RenExTokens = artifacts.require("RenExTokens");
-
 import * as testUtils from "./helper/testUtils";
+import { RenExTokensContract } from "./bindings/ren_ex_tokens";
 
 contract("RenExTokens", function (accounts: string[]) {
 
@@ -9,15 +7,16 @@ contract("RenExTokens", function (accounts: string[]) {
     const REN = 0x10000;
     const tokens = [ETH, REN];
 
-    let renExTokens, tokenInstances;
+    let renExTokens: RenExTokensContract;
+    let tokenInstances;
 
-    beforeEach(async function () {
+    before(async function () {
         tokenInstances = {
             [ETH]: { address: testUtils.Ox0, decimals: () => Promise.resolve(18) },
-            [REN]: await RepublicToken.new(),
+            [REN]: await artifacts.require("RepublicToken").new(),
         };
 
-        renExTokens = await RenExTokens.new();
+        renExTokens = await artifacts.require("RenExTokens").new();
     });
 
     it("owner can register and deregister tokens", async () => {

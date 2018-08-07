@@ -1,8 +1,9 @@
+const BN = require("bn.js");
 
 const GWEI = 1000000000;
 
 module.exports = {
-    MINIMUM_BOND: 100000 * 1e18,
+    MINIMUM_BOND: new BN(100000).pow(new BN(1).pow(new BN(18))),
     INGRESS_FEE: 10,
     MINIMUM_POD_SIZE: 3, // 24 in production
     MINIMUM_EPOCH_INTERVAL: 2, // 14400 in production

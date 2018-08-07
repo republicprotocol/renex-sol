@@ -1,17 +1,15 @@
-const RenExBalances = artifacts.require("RenExBalances");
-const RenExSettlement = artifacts.require("RenExSettlement");
-const Orderbook = artifacts.require("Orderbook");
-const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const DGXMock = artifacts.require("DGXMock");
-const RenExTokens = artifacts.require("RenExTokens");
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
-
 import * as testUtils from "./helper/testUtils";
 import { TokenCodes, market } from "./helper/testUtils";
 
 import { settleOrders } from "./helper/settleOrders";
-import BigNumber from "bignumber.js";
+import { BN } from "bn.js";
+
+import { RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
+import { RenExTokensContract } from "./bindings/ren_ex_tokens";
+import { OrderbookContract } from "./bindings/orderbook";
+import { DarknodeRegistryContract } from "./bindings/darknode_registry";
 
 contract("Slasher", function (accounts: string[]) {
 
@@ -21,29 +19,33 @@ contract("Slasher", function (accounts: string[]) {
     const darknode = accounts[3];
     const broker = accounts[4];
 
-    let orderbook, renExSettlement, renExBalances, darknodeRewardVault;
-    let eth_address;
+    let dnr: DarknodeRegistryContract;
+    let orderbook: OrderbookContract;
+    let darknodeRewardVault: DarknodeRewardVaultContract;
+    let renExSettlement: RenExSettlementContract;
+    let renExBalances: RenExBalancesContract;
+    let renExTokens: RenExTokensContract;
+    let eth_address: string;
     let details;
 
     before(async function () {
-        const ren = await RepublicToken.deployed();
+        const ren = await artifacts.require("RepublicToken").deployed();
 
         const tokenAddresses = {
             [TokenCodes.BTC]: testUtils.MockBTC,
             [TokenCodes.ETH]: testUtils.MockETH,
             [TokenCodes.LTC]: testUtils.MockBTC,
-            [TokenCodes.DGX]: await DGXMock.deployed(),
+            [TokenCodes.DGX]: await artifacts.require("DGXMock").deployed(),
             [TokenCodes.REN]: ren,
         };
 
-        let dnr = await DarknodeRegistry.deployed();
-        orderbook = await Orderbook.deployed();
-        darknodeRewardVault = await DarknodeRewardVault.deployed();
-        renExSettlement = await RenExSettlement.deployed();
-        renExBalances = await RenExBalances.deployed();
-
+        dnr = await artifacts.require("DarknodeRegistry").deployed();
+        orderbook = await artifacts.require("Orderbook").deployed();
+        darknodeRewardVault = await artifacts.require("DarknodeRewardVault").deployed();
+        renExSettlement = await artifacts.require("RenExSettlement").deployed();
+        renExBalances = await artifacts.require("RenExBalances").deployed();
         // Register extra token
-        const renExTokens = await RenExTokens.deployed();
+        renExTokens = await artifacts.require("RenExTokens").deployed();
         renExTokens.registerToken(
             TokenCodes.LTC,
             tokenAddresses[TokenCodes.LTC].address,
@@ -80,28 +82,29 @@ contract("Slasher", function (accounts: string[]) {
         let guiltyAddress = buyer;
         let innocentAddress = seller;
 
-        let feeNum = new BigNumber(await renExSettlement.DARKNODE_FEES_NUMERATOR());
-        let feeDen = new BigNumber(await renExSettlement.DARKNODE_FEES_DENOMINATOR());
-        let fees = web3.utils.toWei(feeNum.dividedBy(feeDen).toFixed(), "ether");
+        let feeNum = new BN(await renExSettlement.DARKNODE_FEES_NUMERATOR());
+        let feeDen = new BN(await renExSettlement.DARKNODE_FEES_DENOMINATOR());
+        let fees = new BN(web3.utils.toWei(feeNum, "ether")).div(feeDen);
 
         // Store the original balances
-        let beforeBurntBalance = await darknodeRewardVault.darknodeBalances(slasher, eth_address);
-        let beforeGuiltyBalance = await renExBalances.traderBalances(guiltyAddress, eth_address);
-        let beforeInnocentBalance = await renExBalances.traderBalances(innocentAddress, eth_address);
+        let beforeBurntBalance = new BN(await darknodeRewardVault.darknodeBalances(slasher, eth_address));
+        let beforeGuiltyBalance = new BN(await renExBalances.traderBalances(guiltyAddress, eth_address));
+        let beforeInnocentBalance = new BN(await renExBalances.traderBalances(innocentAddress, eth_address));
 
         // Slash the fees
         await renExSettlement.slash(guiltyOrderID, { from: slasher });
 
         // Check the new balances
-        let afterBurntBalance = await darknodeRewardVault.darknodeBalances(slasher, eth_address);
-        let afterGuiltyBalance = await renExBalances.traderBalances(guiltyAddress, eth_address);
-        let afterInnocentBalance = await renExBalances.traderBalances(innocentAddress, eth_address);
+        let afterBurntBalance = new BN(await darknodeRewardVault.darknodeBalances(slasher, eth_address));
+        let afterGuiltyBalance = new BN(await renExBalances.traderBalances(guiltyAddress, eth_address));
+        let afterInnocentBalance = new BN(await renExBalances.traderBalances(innocentAddress, eth_address));
 
         // Make sure fees were reallocated correctly
         let burntBalanceDiff = afterBurntBalance.sub(beforeBurntBalance);
         let innocentBalanceDiff = afterInnocentBalance.sub(beforeInnocentBalance);
         let guiltyBalanceDiff = afterGuiltyBalance.sub(beforeGuiltyBalance);
         // We expect the slasher to have gained fees
+
         burntBalanceDiff.should.bignumber.equal(fees);
         // We expect the innocent trader to have gained fees
         innocentBalanceDiff.should.bignumber.equal(fees);

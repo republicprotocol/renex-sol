@@ -1,15 +1,14 @@
-const RenExBalances = artifacts.require("RenExBalances");
-const RenExSettlement = artifacts.require("RenExSettlement");
-const Orderbook = artifacts.require("Orderbook");
-const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const DGXMock = artifacts.require("DGXMock");
-const RenExTokens = artifacts.require("RenExTokens");
-const PreciseToken = artifacts.require("PreciseToken");
-
 import * as testUtils from "./helper/testUtils";
 import { TokenCodes, market } from "./helper/testUtils";
 import { settleOrders } from "./helper/settleOrders";
+import { DarknodeRegistryContract } from "./bindings/darknode_registry";
+import { OrderbookContract } from "./bindings/orderbook";
+import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExTokensContract } from "./bindings/ren_ex_tokens";
+import { PreciseTokenContract } from "./bindings/precise_token";
+import { RepublicTokenContract } from "./bindings/republic_token";
+import { BN } from "bn.js";
 
 contract("RenEx", function (accounts: string[]) {
 
@@ -23,37 +22,37 @@ contract("RenEx", function (accounts: string[]) {
     const ETHVPT = market(TokenCodes.ETH, VPT);
 
     before(async function () {
-        let dnr = await DarknodeRegistry.deployed();
-        const orderbook = await Orderbook.deployed();
-        // darknodeRewardVault = await DarknodeRewardVault.deployed();
-        const renExSettlement = await RenExSettlement.deployed();
-        const renExBalances = await RenExBalances.deployed();
-        const renExTokens = await RenExTokens.deployed();
+        const dnr: DarknodeRegistryContract = await artifacts.require("DarknodeRegistry").deployed();
+        const orderbook: OrderbookContract = await artifacts.require("Orderbook").deployed();
+        // darknodeRewardVault = await artifacts.require("DarknodeRewardVault").deployed();
+        const renExSettlement: RenExSettlementContract = await artifacts.require("RenExSettlement").deployed();
+        const renExBalances: RenExBalancesContract = await artifacts.require("RenExBalances").deployed();
+        const renExTokens: RenExTokensContract = await artifacts.require("RenExTokens").deployed();
 
         // PriceToken
-        const preciseToken = await PreciseToken.new();
+        const preciseToken: PreciseTokenContract = await artifacts.require("PreciseToken").new();
 
-        const ren = await RepublicToken.deployed();
+        const ren: RepublicTokenContract = await artifacts.require("RepublicToken").deployed();
         const tokenAddresses = {
             [TokenCodes.BTC]: testUtils.MockBTC,
             [TokenCodes.ETH]: testUtils.MockETH,
             [TokenCodes.LTC]: testUtils.MockBTC,
-            [TokenCodes.DGX]: await DGXMock.deployed(),
+            [TokenCodes.DGX]: await artifacts.require("DGXMock").deployed(),
             [TokenCodes.REN]: ren,
             [VPT]: preciseToken,
         };
 
         // Register LTC
-        renExTokens.registerToken(
+        await renExTokens.registerToken(
             TokenCodes.LTC,
             tokenAddresses[TokenCodes.LTC].address,
             await tokenAddresses[TokenCodes.LTC].decimals()
         );
 
         // Register VPT
-        renExTokens.registerToken(
+        await renExTokens.registerToken(
             VPT, tokenAddresses[VPT].address,
-            await tokenAddresses[VPT].decimals()
+            new BN(await tokenAddresses[VPT].decimals())
         );
 
         // Register darknode

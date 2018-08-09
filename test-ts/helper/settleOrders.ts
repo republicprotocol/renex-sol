@@ -47,7 +47,7 @@ export async function settleOrders(
             (web3.utils.sha3 as any)(order.nonce, { encoding: "hex" }) :
             testUtils.randomNonce());
 
-        order.expiry = order.expiry || testUtils.secondsFromNow(1000);
+        order.expiry = 10000000000; // order.expiry || testUtils.secondsFromNow(1000);
         order.tokens = `0x${order.tokens.toString("hex")}`;
 
         const expectedID = await renExSettlement.hashOrder(

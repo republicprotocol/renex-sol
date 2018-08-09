@@ -61,7 +61,7 @@ export const second = 1000;
 export const increaseTime = async (seconds: number) => {
     await new Promise((resolve, reject) => {
         web3.currentProvider.send(
-            {jsonrpc: "2.0", method: "evm_increaseTime", params: [seconds], id: 0},
+            { jsonrpc: "2.0", method: "evm_increaseTime", params: [seconds], id: 0 },
             (err, value) => {
                 if (err) {
                     reject(err);
@@ -96,8 +96,14 @@ export const sellMarket = (high, low) => {
 };
 
 export const randomID = () => {
-    return web3.utils.sha3(Math.random().toString());
+    return web3.utils.sha3(random().toString());
 };
+
+var seed = 1;
+function random() {
+    var x = Math.sin(seed++) * 10000;
+    return x - Math.floor(x);
+}
 
 export const openPrefix = web3.utils.toHex("Republic Protocol: open: ");
 export const closePrefix = web3.utils.toHex("Republic Protocol: cancel: ");
@@ -145,7 +151,7 @@ const PRIME = new BN("17012364981921935471");
 export function randomNonce() {
     let nonce = PRIME;
     while (nonce.gte(PRIME)) {
-        nonce = new BN(Math.floor(Math.random() * 10000000));
+        nonce = new BN(Math.floor(random() * 10000000));
     }
     return nonce.toString("hex");
 }

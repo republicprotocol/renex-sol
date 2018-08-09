@@ -57,7 +57,6 @@ contract RenExSettlement is Ownable {
 
     // Order Storage
     mapping(bytes32 => SettlementUtils.OrderDetails) public orderDetails;
-    mapping(bytes32 => address) public orderTrader;
     mapping(bytes32 => address) public orderSubmitter;
     mapping(bytes32 => OrderStatus) public orderStatus;
 
@@ -162,21 +161,20 @@ contract RenExSettlement is Ownable {
     ) external withGasPriceLimit(submissionGasPriceLimit) {
 
         SettlementUtils.OrderDetails memory order = SettlementUtils.OrderDetails({
-            details: _prefix,
             settlementID: _settlementID,
             tokens: _tokens,
             price: _price,
             volume: _volume,
             minimumVolume: _minimumVolume
         });
-        bytes32 orderID = SettlementUtils.hashOrder(order);
+        bytes32 orderID = SettlementUtils.hashOrder(_prefix, order);
+        // order.details = "";
 
         require(orderStatus[orderID] == OrderStatus.None, "order already submitted");
         require(orderbookContract.orderState(orderID) == Orderbook.OrderState.Confirmed, "unconfirmed order");
 
         orderSubmitter[orderID] = msg.sender;
         orderStatus[orderID] = OrderStatus.Submitted;
-        orderTrader[orderID] = orderbookContract.orderTrader(orderID);
         orderDetails[orderID] = order;
     }
 
@@ -196,7 +194,7 @@ contract RenExSettlement is Ownable {
         require(orderbookContract.orderMatch(_buyID) == _sellID, "unconfirmed orders");
 
         // Verify that the order traders are distinct.
-        require(orderbookContract.orderTrader(_buyID) != orderbookContract.orderTrader(_sellID), "orders from same trader");
+        // require(orderbookContract.orderTrader(_buyID) != orderbookContract.orderTrader(_sellID), "orders from same trader");
 
         // Calculate token codes
         uint32 priorityToken = uint32(orderDetails[_buyID].tokens >> 32);
@@ -293,10 +291,11 @@ contract RenExSettlement is Ownable {
             revert("non-eth tokens");
         }
 
+
         // Transfer the fee amount to the other trader and to the slasher.
         renExBalancesContract.transferBalanceWithFee(
-            orderTrader[_guiltyOrderID],
-            orderTrader[innocentOrderID],
+            orderbookContract.orderTrader(_guiltyOrderID),
+            orderbookContract.orderTrader(innocentOrderID),
             tokenAddress,
             fee,
             fee,
@@ -316,8 +315,7 @@ contract RenExSettlement is Ownable {
         uint256 _volume,
         uint256 _minimumVolume
     ) external pure returns (bytes32) {
-        return SettlementUtils.hashOrder(SettlementUtils.OrderDetails({
-            details: _prefix,
+        return SettlementUtils.hashOrder(_prefix, SettlementUtils.OrderDetails({
             settlementID: _settlementID,
             tokens: _tokens,
             price: _price,
@@ -342,8 +340,8 @@ contract RenExSettlement is Ownable {
 
         // Transfer priority token value
         renExBalancesContract.transferBalanceWithFee(
-            orderTrader[_buyID],
-            orderTrader[_sellID],
+            orderbookContract.orderTrader(_buyID),
+            orderbookContract.orderTrader(_sellID),
             details.priorityTokenAddress,
             priorityTokenFinal,
             priorityTokenFee,
@@ -352,8 +350,8 @@ contract RenExSettlement is Ownable {
 
         // Transfer secondary token value
         renExBalancesContract.transferBalanceWithFee(
-            orderTrader[_sellID],
-            orderTrader[_buyID],
+            orderbookContract.orderTrader(_sellID),
+            orderbookContract.orderTrader(_buyID),
             details.secondaryTokenAddress,
             secondaryTokenFinal,
             secondaryTokenFee,
@@ -387,8 +385,8 @@ contract RenExSettlement is Ownable {
         }
 
         // Transfer fees.
-        renExBalancesContract.transferBalanceWithFee(orderTrader[_buyID], 0x0, tokenAddress, 0, fee, orderSubmitter[_buyID]);
-        renExBalancesContract.transferBalanceWithFee(orderTrader[_sellID], 0x0, tokenAddress, 0, fee, orderSubmitter[_sellID]);
+        renExBalancesContract.transferBalanceWithFee(orderbookContract.orderTrader(_buyID), 0x0, tokenAddress, 0, fee, orderSubmitter[_buyID]);
+        renExBalancesContract.transferBalanceWithFee(orderbookContract.orderTrader(_sellID), 0x0, tokenAddress, 0, fee, orderSubmitter[_sellID]);
     }
 
     /// @notice Settles the order match by updating the balances on the

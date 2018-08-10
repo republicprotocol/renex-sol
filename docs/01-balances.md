@@ -12,7 +12,7 @@ RenEx Balance will increment and decrement the balances stored against the trade
 ## Deposit
 
 ```sol
-function deposit(address _token, uint256 _value) payable public
+function deposit(address _token, uint256 _value) external payable
 ```
 
 The Ethereum account that calls `deposit` will be identified as the trader. The ERC20 token at the `_token` address will be used to transfer `_value` amount of the token to RenEx Balances. The trader's balance for that token will be incremented accordingly. The `_value` is assumed to be the smallest unit supported by the ERC20 token.
@@ -22,9 +22,23 @@ Using the `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` address for `_token` will
 ## Withdraw
 
 ```sol
-function withdraw(address _token, uint256 _value) public
+function withdraw(address _token, uint256 _value) external
 ```
 
 The Ethereum account that calls `withdraw` will be identified as the trader. The ERC20 token at the `_token` address will be used to transfer `_value` amount of the token from RenEx Balances to the trader. The trader's balance for that token will be decremented accordingly. RenEx Balances will not allow a trader to withdraw if the `_value` would cause their balance to drop below zero. The `_value` is assumed to be the smallest unit supported by the ERC20 token.
 
 Using the `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` address for `_token` will signal that the trader is withdrawing ETH. The `_value` is assumed to be the smallest unit of ETH  — wei.
+
+For the withdrawal to succeed, the trader must provide a signature from the official RenEx Broker that approves the withdrawal or the trader must have signalled their intent to withdraw more than 48 hours prior. This prevents traders from withdrawing tokens while there are still open orders for that `_token`.
+
+## Withdraw Signal
+
+```sol
+function signalBackupWithdraw(address _token) external
+```
+
+The Ethereum account that calls `signalBackupWithdraw` will be identified as the trader. The ERC20 token at the `_token` address will be used to transfer `_value` amount of the token from RenEx Balances to the trader. The trader's balance for that token will be decremented accordingly.
+
+Using the `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` address for `_token` will signal that the trader is withdrawing ETH.
+
+This function is available as a backup for when the official RenEx Broker is not trusted to provide the required signature, or when the official RenEx Broker is erroneously unavailable. After 48 hours, the trader can call `withdraw` and the withdrawal will succeed. During this time, the official RenEx Broker will not provide the required signature for a trader trying to open a new order for this `_token`. This prevents traders from withdrawing tokens while there are still open orders for the `_token`.

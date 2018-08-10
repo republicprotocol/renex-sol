@@ -152,54 +152,54 @@ contract("RenExSettlement", function (accounts: string[]) {
             .should.be.rejectedWith(null, /unconfirmed order/);
     });
 
-    it("submitMatch checks the buy order status", async () => {
-        await renExSettlement.submitMatch(
+    it("settle checks the buy order status", async () => {
+        await renExSettlement.settle(
             testUtils.randomID(),
             sellID_1,
         ).should.be.rejectedWith(null, /invalid buy status/);
     });
 
-    it("submitMatch checks the sell order status", async () => {
-        await renExSettlement.submitMatch(
+    it("settle checks the sell order status", async () => {
+        await renExSettlement.settle(
             buyID_1,
             testUtils.randomID(),
         ).should.be.rejectedWith(null, /invalid sell status/);
     });
 
-    it("submitMatch checks that the orders are compatible", async () => {
+    it("settle checks that the orders are compatible", async () => {
         // Two buys
-        await renExSettlement.submitMatch(
+        await renExSettlement.settle(
             buyID_1,
             buyID_1,
         ).should.be.rejectedWith(null, /incompatible orders/);
 
         // Two sells
-        await renExSettlement.submitMatch(
+        await renExSettlement.settle(
             sellID_1,
             sellID_1,
         ).should.be.rejectedWith(null, /incompatible orders/);
 
         // Orders that aren't matched to one another
-        await renExSettlement.submitMatch(
-            sellID_3,
+        await renExSettlement.settle(
             buyID_2,
+            sellID_3,
         ).should.be.rejectedWith(null, /unconfirmed orders/);
     });
 
-    it("submitMatch checks the token registration", async () => {
+    it("settle checks the token registration", async () => {
         // Buy token that is not registered
-        await renExSettlement.submitMatch(
+        await renExSettlement.settle(
             buyID_1,
             sellID_1,
-        ).should.be.rejectedWith(null, /unregistered buy token/);
+        ).should.be.rejectedWith(null, /unregistered priority token/);
 
         // Sell token that is not registered
-        await renExTokens.deregisterToken(TokenCodes.BTC);
-        await renExSettlement.submitMatch(
+        await renExTokens.deregisterToken(TokenCodes.ETH);
+        await renExSettlement.settle(
             buyID_2,
             sellID_2,
-        ).should.be.rejectedWith(null, /unregistered sell token/);
-        await renExTokens.registerToken(TokenCodes.BTC, tokenAddresses[TokenCodes.BTC].address, 8);
+        ).should.be.rejectedWith(null, /unregistered secondary token/);
+        await renExTokens.registerToken(TokenCodes.ETH, tokenAddresses[TokenCodes.ETH].address, 18);
     });
 
     it("should fail for excessive gas price", async () => {

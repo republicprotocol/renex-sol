@@ -67,7 +67,7 @@ contract("RenEx", function (accounts: string[]) {
         details = [buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook];
     });
 
-    it.only("order 1", async () => {
+    it("order 1", async () => {
         const buy = { tokens: DGXREN, price: 1, volume: 2 /* REN */, minimumVolume: 1 /* REN */ };
         const sell = { tokens: DGXREN, price: 0.95, volume: 1 /* REN */ };
 
@@ -75,7 +75,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.deep.equal([0.975 /* DGX */, 1 /* REN */]);
     });
 
-    it.only("order 2", async () => {
+    it("order 2", async () => {
         const buy = { tokens: DGXREN, price: 1, volume: 1.025641025641 /* REN */ };
         const sell = { tokens: DGXREN, price: 0.95, volume: 1.025641025641 /* REN */ };
 
@@ -83,7 +83,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.deep.equal([0.999999999 /* DGX */, 1.025641025641 /* REN */]);
     });
 
-    it.only("order 3", async () => {
+    it("order 3", async () => {
         const buy = { tokens: DGXREN, price: 0.5, volume: 4 /* REN */ };
         const sell = { tokens: DGXREN, price: 0.5, volume: 2 /* REN */ };
 
@@ -91,7 +91,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.deep.equal([1 /* DGX */, 2 /* REN */]);
     });
 
-    it.only("order 4", async () => {
+    it("order 4", async () => {
         const buy = { tokens: DGXREN, price: 1, volume: 1.9999999999 /* REN */ };
         // More precise than the number of decimals DGX has
         const sell = { tokens: DGXREN, price: 0.0000000001, volume: 1.9999999999 /* REN */ };
@@ -100,7 +100,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.deep.equal([1 /* DGX */, 1.9999999999 /* REN */]);
     });
 
-    it.only("order 5", async () => {
+    it("order 5", async () => {
         const buy = { tokens: DGXREN, price: 999.5, volume: 0.002001501126 /* REN */ };
         const sell = { tokens: DGXREN, price: 999, volume: 0.002001501126 /* REN */ };
 
@@ -108,7 +108,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.deep.equal([2 /* DGX */, 0.002001501126 /* REN */]);
     });
 
-    it.only("order 6", async () => {
+    it("order 6", async () => {
         const buy = { tokens: ETHREN, price: 99950000, volume: "2.001e-9" /* REN */ };
         const sell = { tokens: ETHREN, price: 99950000, volume: "2.001e-9" /* REN */ };
 
@@ -116,7 +116,7 @@ contract("RenEx", function (accounts: string[]) {
             .should.deep.equal([0.19999995 /* ETH */, 2.001e-9 /* REN */]);
     });
 
-    it.only("order 7", async () => {
+    it("order 7", async () => {
         // Prices are at lowest precision possible, and midprice is even more
         // precise. If the midprice is rounded, this test will fail.
         const buy = { tokens: ETHREN, price: 0.000000000002, volume: 1 /* REN */ };

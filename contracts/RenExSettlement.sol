@@ -200,7 +200,7 @@ contract RenExSettlement is Ownable {
     ///
     /// @param _buyID The 32 byte ID of the buy order.
     /// @param _sellID The 32 byte ID of the sell order.
-    function submitMatch(bytes32 _buyID, bytes32 _sellID) external {
+    function settle(bytes32 _buyID, bytes32 _sellID) external {
         require(orderStatus[_buyID] == OrderStatus.Submitted, "invalid buy status");
         require(orderStatus[_sellID] == OrderStatus.Submitted, "invalid sell status");
 

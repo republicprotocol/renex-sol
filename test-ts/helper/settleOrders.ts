@@ -126,10 +126,10 @@ export async function settleOrders(
 
     // Verify match details
     const buyMatch = await renExSettlement.matchDetails(buy.orderID, sell.orderID);
-    (buyMatch.priorityToken).should.bignumber.equal(lowToken);
-    buyMatch.secondaryToken.should.bignumber.equal(highToken);
-    buyMatch.priorityTokenAddress.should.equal(lowTokenInstance.address);
-    buyMatch.secondaryTokenAddress.should.equal(highTokenInstance.address);
+    // (buyMatch.priorityToken).should.bignumber.equal(lowToken);
+    // buyMatch.secondaryToken.should.bignumber.equal(highToken);
+    // buyMatch.priorityTokenAddress.should.equal(lowTokenInstance.address);
+    // buyMatch.secondaryTokenAddress.should.equal(highTokenInstance.address);
 
     // Get balances after trade
     const buyerLowAfter = new BigNumber(await renExBalances.traderBalances(buy.trader, lowTokenInstance.address));

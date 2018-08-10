@@ -38,34 +38,25 @@ contract RenExSettlement is Ownable {
 
     enum OrderStatus {None, Submitted, Settled, Slashed}
 
-    struct MatchDetails {
-        uint256 priorityTokenVolume;
-        uint256 secondaryTokenVolume;
-        uint256 timestamp;
-    }
-
-    struct TokenDetails {
-        address addr;
-        uint8 decimals;
-        bool registered;
-    }
-
     struct TokenPair {
-        TokenDetails priorityToken;
-        TokenDetails secondaryToken;
+        RenExTokens.TokenDetails priorityToken;
+        RenExTokens.TokenDetails secondaryToken;
     }
 
+    // A uint256 tuple representing a value and an associated fee
     struct ValueWithFees {
         uint256 value;
         uint256 fees;
     }
 
+    // A uint256 tuple representing a fraction
     struct Fraction {
         uint256 numerator;
         uint256 denominator;
     }
 
-    // We use left and right because the tokens can be the same for atomic swaps
+    // We use left and right because the tokens do not always represent the
+    // priority and secondary tokens.
     struct SettlementDetails {
         uint256 leftVolume;
         uint256 rightVolume;
@@ -248,36 +239,6 @@ contract RenExSettlement is Ownable {
         orderStatus[_sellID] = OrderStatus.Settled;
     }
 
-    function execute(
-        bytes32 _buyID, bytes32 _sellID, address buyer, address seller, TokenPair memory tokens
-    ) private {
-        // Calculate the fees for atomic swaps, and the settlement details
-        // otherwise.
-        SettlementDetails memory settlementDetails = (orderDetails[_buyID].settlementID == RENEX_ATOMIC_SETTLEMENT_ID) ?
-            settlementDetails = calculateAtomicFees(_buyID, _sellID, tokens) :
-            settlementDetails = calculateSettlementDetails(_buyID, _sellID, tokens);
-
-        // Transfer priority token value
-        renExBalancesContract.transferBalanceWithFee(
-            buyer,
-            seller,
-            settlementDetails.leftAddress,
-            settlementDetails.leftVolume,
-            settlementDetails.leftFee,
-            orderSubmitter[_buyID]
-        );
-
-        // Transfer secondary token value
-        renExBalancesContract.transferBalanceWithFee(
-            seller,
-            buyer,
-            settlementDetails.rightAddress,
-            settlementDetails.rightVolume,
-            settlementDetails.rightFee,
-            orderSubmitter[_sellID]
-        );
-    }
-
     /// @notice Slashes the bond of a guilty trader. This is called when an
     /// atomic swap is not executed successfully.
     /// To open an atomic order, a trader must have a balance equivalent to
@@ -318,28 +279,20 @@ contract RenExSettlement is Ownable {
         );
     }
 
-    /// @notice Calculates the hash of the provided order. See `submitOrder`
-    /// paramater desriptions.
+    /// @notice Retrieves the settlement details of an order.
+    /// For atomic swaps, it returns the full volumes, not the settled fees.
     ///
-    /// @return The 32-byte hash of the order.
-    function hashOrder(
-        bytes _prefix,
-        uint64 _settlementID,
-        uint64 _tokens,
-        uint256 _price,
-        uint256 _volume,
-        uint256 _minimumVolume
-    ) external pure returns (bytes32) {
-        return SettlementUtils.hashOrder(_prefix, SettlementUtils.OrderDetails({
-            settlementID: _settlementID,
-            tokens: _tokens,
-            price: _price,
-            volume: _volume,
-            minimumVolume: _minimumVolume
-        }));
-    }
-
-    /// @notice - For atomic swaps, still returns the settlement details
+    /// @param _orderID The order to lookup the details of. Can be the ID of a
+    ///        buy or a sell order.
+    /// @return [
+    ///     a boolean representing whether or not the order has been settled,
+    ///     the volume of the priority token,
+    ///     the volume of the secondary token,
+    ///     the fee paid in the priority token,
+    ///     the fee paid in the secondary token,
+    ///     the address of the priority token,
+    ///     the address of the secondary token
+    /// ]
     function getMatchDetails(bytes32 _orderID)
     external view returns (
         bool settled,
@@ -359,20 +312,85 @@ contract RenExSettlement is Ownable {
 
         SettlementDetails memory settlementDetails = calculateSettlementDetails(buyID, sellID, tokens);
 
-        settled = orderStatus[_orderID] == OrderStatus.Settled || orderStatus[_orderID] == OrderStatus.Slashed;
-        priorityVolume = settlementDetails.leftVolume;
-        secondaryVolume = settlementDetails.rightVolume;
-        priorityFee = settlementDetails.leftFee;
-        secondaryFee = settlementDetails.rightFee;
-        priorityAddress = settlementDetails.leftAddress;
-        secondaryAddress = settlementDetails.rightAddress;
-        return;
+        return (
+            orderStatus[_orderID] == OrderStatus.Settled || orderStatus[_orderID] == OrderStatus.Slashed,
+            settlementDetails.leftVolume,
+            settlementDetails.rightVolume,
+            settlementDetails.leftFee,
+            settlementDetails.rightFee,
+            settlementDetails.leftAddress,
+            settlementDetails.rightAddress
+        );
     }
 
-    /// @notice Settles the order match by updating the balances on the
-    /// RenExBalances contract.
+    /// @notice Exposes the hashOrder function for computing a hash of an
+    /// order's details. An order hash is used as its ID. See `submitOrder`
+    /// for the paramater descriptions.
+    ///
+    /// @return The 32-byte hash of the order.
+    function hashOrder(
+        bytes _prefix,
+        uint64 _settlementID,
+        uint64 _tokens,
+        uint256 _price,
+        uint256 _volume,
+        uint256 _minimumVolume
+    ) external pure returns (bytes32) {
+        return SettlementUtils.hashOrder(_prefix, SettlementUtils.OrderDetails({
+            settlementID: _settlementID,
+            tokens: _tokens,
+            price: _price,
+            volume: _volume,
+            minimumVolume: _minimumVolume
+        }));
+    }
+
+    /// @notice Called by `settle`, executes the settlement for a RenEx order
+    /// or distributes the fees for a RenExAtomic swap.
+    ///
+    /// @param _buyID The 32 byte ID of the buy order.
+    /// @param _sellID The 32 byte ID of the sell order.
+    /// @param _buyer The address of the buy trader.
+    /// @param _seller The address of the sell trader.
+    /// @param _tokens The details of the priority and secondary tokens.
+    function execute(
+        bytes32 _buyID, bytes32 _sellID, address _buyer, address _seller, TokenPair memory _tokens
+    ) private {
+        // Calculate the fees for atomic swaps, and the settlement details
+        // otherwise.
+        SettlementDetails memory settlementDetails = (orderDetails[_buyID].settlementID == RENEX_ATOMIC_SETTLEMENT_ID) ?
+            settlementDetails = calculateAtomicFees(_buyID, _sellID, _tokens) :
+            settlementDetails = calculateSettlementDetails(_buyID, _sellID, _tokens);
+
+        // Transfer priority token value
+        renExBalancesContract.transferBalanceWithFee(
+            _buyer,
+            _seller,
+            settlementDetails.leftAddress,
+            settlementDetails.leftVolume,
+            settlementDetails.leftFee,
+            orderSubmitter[_buyID]
+        );
+
+        // Transfer secondary token value
+        renExBalancesContract.transferBalanceWithFee(
+            _seller,
+            _buyer,
+            settlementDetails.rightAddress,
+            settlementDetails.rightVolume,
+            settlementDetails.rightFee,
+            orderSubmitter[_sellID]
+        );
+    }
+
+    /// @notice Calculates the details required to execute two matched orders.
+    ///
+    /// @param _buyID The 32 byte ID of the buy order.
+    /// @param _sellID The 32 byte ID of the sell order.
+    /// @param _tokens The details of the priority and secondary tokens.
+    /// @return A struct containing the settlement details.
     function calculateSettlementDetails(
-        bytes32 _buyID, bytes32 _sellID, TokenPair memory tokens
+        bytes32 _buyID, bytes32 _sellID, TokenPair memory _tokens
     ) private view returns (SettlementDetails memory) {
 
         // Calculate the midprice (using numerator and denominator to not loose
@@ -385,12 +403,12 @@ contract RenExSettlement is Ownable {
         uint256 priorityTokenVolume = joinFraction(
             commonVolume.mul(midPrice.numerator),
             midPrice.denominator,
-            int16(tokens.priorityToken.decimals) - PRICE_OFFSET - VOLUME_OFFSET
+            int16(_tokens.priorityToken.decimals) - PRICE_OFFSET - VOLUME_OFFSET
         );
         uint256 secondaryTokenVolume = joinFraction(
             commonVolume,
             1,
-            int16(tokens.secondaryToken.decimals) - VOLUME_OFFSET
+            int16(_tokens.secondaryToken.decimals) - VOLUME_OFFSET
         );
 
         // Calculate darknode fees
@@ -402,11 +420,17 @@ contract RenExSettlement is Ownable {
             rightVolume: secondaryVwF.value,
             leftFee: priorityVwF.fees,
             rightFee: secondaryVwF.fees,
-            leftAddress: tokens.priorityToken.addr,
-            rightAddress: tokens.secondaryToken.addr
+            leftAddress: _tokens.priorityToken.addr,
+            rightAddress: _tokens.secondaryToken.addr
         });
     }
 
+    /// @notice Calculates the fees to be transferred for an atomic swap.
+    ///
+    /// @param _buyID The 32 byte ID of the buy order.
+    /// @param _sellID The 32 byte ID of the sell order.
+    /// @param _tokens The details of the priority and secondary tokens.
+    /// @return A struct containing the fee details.
     function calculateAtomicFees(
         bytes32 _buyID, bytes32 _sellID, TokenPair memory tokens
     ) private view returns (SettlementDetails memory) {
@@ -477,6 +501,11 @@ contract RenExSettlement is Ownable {
         return ValueWithFees(newValue, value - newValue);
     }
 
+    /// @notice Gets the order details of the priority and secondary token from
+    /// the RenExTokens contract and returns them as a single struct.
+    ///
+    /// @param tokens The 64-bit combined token identifiers.
+    /// @return A TokenPair struct containing two TokenDedetails structs.
     function getTokenDetails(uint64 tokens) private view returns (TokenPair memory) {
         (
             address priorityAddress,
@@ -491,8 +520,8 @@ contract RenExSettlement is Ownable {
         ) = renExTokensContract.tokens(uint32(tokens));
 
         return TokenPair({
-            priorityToken: TokenDetails(priorityAddress, priorityDecimals, priorityRegistered),
-            secondaryToken: TokenDetails(secondaryAddress, secondaryDecimals, secondaryRegistered)
+            priorityToken: RenExTokens.TokenDetails(priorityAddress, priorityDecimals, priorityRegistered),
+            secondaryToken: RenExTokens.TokenDetails(secondaryAddress, secondaryDecimals, secondaryRegistered)
         });
     }
 

@@ -250,9 +250,7 @@ contract RenExSettlement is Ownable {
     /// Only one order in a match can be slashed.
     ///
     /// @param _guiltyOrderID The 32 byte ID of the order of the guilty trader.
-    function slash(
-        bytes32 _guiltyOrderID
-    ) external onlySlasher {
+    function slash(bytes32 _guiltyOrderID) external onlySlasher {
         require(orderDetails[_guiltyOrderID].settlementID == RENEX_ATOMIC_SETTLEMENT_ID, "slashing non-atomic trade");
 
         bytes32 innocentOrderID = orderbookContract.orderMatch(_guiltyOrderID);
@@ -354,7 +352,11 @@ contract RenExSettlement is Ownable {
     /// @param _seller The address of the sell trader.
     /// @param _tokens The details of the priority and secondary tokens.
     function execute(
-        bytes32 _buyID, bytes32 _sellID, address _buyer, address _seller, TokenPair memory _tokens
+        bytes32 _buyID,
+        bytes32 _sellID,
+        address _buyer,
+        address _seller,
+        TokenPair memory _tokens
     ) private {
         // Calculate the fees for atomic swaps, and the settlement details
         // otherwise.
@@ -390,7 +392,9 @@ contract RenExSettlement is Ownable {
     /// @param _tokens The details of the priority and secondary tokens.
     /// @return A struct containing the settlement details.
     function calculateSettlementDetails(
-        bytes32 _buyID, bytes32 _sellID, TokenPair memory _tokens
+        bytes32 _buyID,
+        bytes32 _sellID,
+        TokenPair memory _tokens
     ) private view returns (SettlementDetails memory) {
 
         // Calculate the midprice (using numerator and denominator to not loose
@@ -432,7 +436,9 @@ contract RenExSettlement is Ownable {
     /// @param _tokens The details of the priority and secondary tokens.
     /// @return A struct containing the fee details.
     function calculateAtomicFees(
-        bytes32 _buyID, bytes32 _sellID, TokenPair memory tokens
+        bytes32 _buyID,
+        bytes32 _sellID,
+        TokenPair memory _tokens
     ) private view returns (SettlementDetails memory) {
 
         // Calculate the midprice (using numerator and denominator to not loose
@@ -442,11 +448,11 @@ contract RenExSettlement is Ownable {
         // Calculate the lower of the two max volumes of each trader
         uint256 commonVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume);
 
-        if (isEthereumBased(tokens.secondaryToken.addr)) {
+        if (isEthereumBased(_tokens.secondaryToken.addr)) {
             uint256 secondaryTokenVolume = joinFraction(
                 commonVolume,
                 1,
-                int16(tokens.secondaryToken.decimals) - VOLUME_OFFSET
+                int16(_tokens.secondaryToken.decimals) - VOLUME_OFFSET
             );
 
             // Calculate darknode fees
@@ -457,14 +463,14 @@ contract RenExSettlement is Ownable {
                 rightVolume: 0,
                 leftFee: secondaryVwF.fees,
                 rightFee: secondaryVwF.fees,
-                leftAddress: tokens.secondaryToken.addr,
-                rightAddress: tokens.secondaryToken.addr
+                leftAddress: _tokens.secondaryToken.addr,
+                rightAddress: _tokens.secondaryToken.addr
             });
-        } else if (isEthereumBased(tokens.priorityToken.addr)) {
+        } else if (isEthereumBased(_tokens.priorityToken.addr)) {
             uint256 priorityTokenVolume = joinFraction(
                 commonVolume.mul(midPrice.numerator),
                 midPrice.denominator,
-                int16(tokens.priorityToken.decimals) - PRICE_OFFSET - VOLUME_OFFSET
+                int16(_tokens.priorityToken.decimals) - PRICE_OFFSET - VOLUME_OFFSET
             );
 
             // Calculate darknode fees
@@ -475,8 +481,8 @@ contract RenExSettlement is Ownable {
                 rightVolume: 0,
                 leftFee: priorityVwF.fees,
                 rightFee: priorityVwF.fees,
-                leftAddress: tokens.priorityToken.addr,
-                rightAddress: tokens.priorityToken.addr
+                leftAddress: _tokens.priorityToken.addr,
+                rightAddress: _tokens.priorityToken.addr
             });
         } else {
             // Currently, at least one token must be Ethereum-based.
@@ -496,28 +502,28 @@ contract RenExSettlement is Ownable {
     }
 
     /// @return (value - fee, fee) where fee is 0.2% of value
-    function subtractDarknodeFee(uint256 value) private pure returns (ValueWithFees memory) {
-        uint256 newValue = (value * (DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
-        return ValueWithFees(newValue, value - newValue);
+    function subtractDarknodeFee(uint256 _value) private pure returns (ValueWithFees memory) {
+        uint256 newValue = (_value * (DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
+        return ValueWithFees(newValue, _value - newValue);
     }
 
     /// @notice Gets the order details of the priority and secondary token from
     /// the RenExTokens contract and returns them as a single struct.
     ///
-    /// @param tokens The 64-bit combined token identifiers.
+    /// @param _tokens The 64-bit combined token identifiers.
     /// @return A TokenPair struct containing two TokenDedetails structs.
-    function getTokenDetails(uint64 tokens) private view returns (TokenPair memory) {
+    function getTokenDetails(uint64 _tokens) private view returns (TokenPair memory) {
         (
             address priorityAddress,
             uint8 priorityDecimals,
             bool priorityRegistered
-        ) = renExTokensContract.tokens(uint32(tokens >> 32));
+        ) = renExTokensContract.tokens(uint32(_tokens >> 32));
 
         (
             address secondaryAddress,
             uint8 secondaryDecimals,
             bool secondaryRegistered
-        ) = renExTokensContract.tokens(uint32(tokens));
+        ) = renExTokensContract.tokens(uint32(_tokens));
 
         return TokenPair({
             priorityToken: RenExTokens.TokenDetails(priorityAddress, priorityDecimals, priorityRegistered),
@@ -531,19 +537,19 @@ contract RenExSettlement is Ownable {
         return (_tokenAddress != address(0x0));
     }
 
-    /// @notice Computes (numerator / denominator) * 10 ** scale
-    function joinFraction(uint256 numerator, uint256 denominator, int16 scale) private pure returns (uint256) {
-        if (scale >= 0) {
-            // Check that (10**scale) doesn't overflow
-            assert(scale <= 77); // log10(2**256) = 77.06
-            return numerator.mul(10 ** uint256(scale)) / denominator;
+    /// @notice Computes (_numerator / _denominator) * 10 ** _scale
+    function joinFraction(uint256 _numerator, uint256 _denominator, int16 _scale) private pure returns (uint256) {
+        if (_scale >= 0) {
+            // Check that (10**_scale) doesn't overflow
+            assert(_scale <= 77); // log10(2**256) = 77.06
+            return _numerator.mul(10 ** uint256(_scale)) / _denominator;
         } else {
-            /// @dev If scale is less than -77, 10**-scale would overflow.
-            // For now, -scale > -24 (when a token has 0 decimals and
+            /// @dev If _scale is less than -77, 10**-_scale would overflow.
+            // For now, -_scale > -24 (when a token has 0 decimals and
             // VOLUME_OFFSET and PRICE_OFFSET are each 12). It is unlikely these
             // will be increased to add to more than 77.
-            // assert((-scale) <= 77); // log10(2**256) = 77.06
-            return (numerator / denominator) / 10 ** uint256(-scale);
+            // assert((-_scale) <= 77); // log10(2**256) = 77.06
+            return (_numerator / _denominator) / 10 ** uint256(-_scale);
         }
     }
 }

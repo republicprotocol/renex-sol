@@ -128,7 +128,7 @@ export async function settleOrders(
     }
 
     // Submit the match
-    await renExSettlement.submitMatch(buy.orderID, sell.orderID)
+    await renExSettlement.settle(buy.orderID, sell.orderID)
         .should.not.be.rejected;
 
     // Verify match details

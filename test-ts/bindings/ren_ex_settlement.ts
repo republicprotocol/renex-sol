@@ -27,7 +27,7 @@ export interface RenExSettlementContract {
     updateSubmissionGasPriceLimit(_newSubmissionGasPriceLimit: number | string | BN, options?: Tx): Promise<Transaction>;
     updateSlasher(_newSlasherAddress: string, options?: Tx): Promise<Transaction>;
     submitOrder(_prefix: string, _settlementID: number | string | BN, _tokens: number | string | BN, _price: number | string | BN, _volume: number | string | BN, _minimumVolume: number | string | BN, options?: Tx): Promise<Transaction>;
-    submitMatch(_buyID: string, _sellID: string, options?: Tx): Promise<Transaction>;
+    settle(_buyID: string, _sellID: string, options?: Tx): Promise<Transaction>;
     slash(_guiltyOrderID: string, options?: Tx): Promise<Transaction>;
     hashOrder(_prefix: string, _settlementID: number | string | BN, _tokens: number | string | BN, _price: number | string | BN, _volume: number | string | BN, _minimumVolume: number | string | BN, options?: Tx): Promise<string>;
     getMatchDetails(_orderID: string, options?: Tx): Promise<[boolean, number | string | BN, number | string | BN, number | string | BN, number | string | BN, string, string]>;

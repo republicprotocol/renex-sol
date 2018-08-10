@@ -260,7 +260,7 @@ contract("RenExBalances", function (accounts: string[]) {
         let i = 0;
         await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
             .should.be.rejectedWith(null, /not signalled/);
-        
+
         await renExBalances.signalBackupWithdraw(TOKEN1.address, { from: accounts[0] });
 
         await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
@@ -272,7 +272,7 @@ contract("RenExBalances", function (accounts: string[]) {
 
         await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
             .should.be.rejectedWith(null, /not signalled/);
-        
+
         // Inscrease time by another hour
         testUtils.increaseTime(1 * hour + 10);
 
@@ -289,7 +289,7 @@ contract("RenExBalances", function (accounts: string[]) {
 
         // Can only withdraw once
         await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
-        .should.be.rejectedWith(null, /not signalled/);
+            .should.be.rejectedWith(null, /not signalled/);
 
         // Can withdraw normally
         let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);

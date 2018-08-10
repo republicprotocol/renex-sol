@@ -5,13 +5,19 @@ import { BN } from "bn.js";
 
 import * as testUtils from "./testUtils";
 import { TokenCodes, market } from "./testUtils";
+import { RenExSettlementContract } from "../bindings/ren_ex_settlement";
+import { RenExBalancesContract } from "../bindings/ren_ex_balances";
+import { OrderbookContract } from "../bindings/orderbook";
 
 /// Submits and matches two orders, going through all the necessary steps first,
 /// and verifying the funds have been transferred.
 export async function settleOrders(
     buy: any, sell: any, buyer: string, seller: string,
     darknode: string, broker: string,
-    renExSettlement: any, renExBalances: any, tokenAddresses: any, orderbook: any,
+    renExSettlement: RenExSettlementContract,
+    renExBalances: RenExBalancesContract,
+    tokenAddresses: any,
+    orderbook: OrderbookContract,
     returnIDs: boolean = false,
 ) {
     // Tokens should be the same
@@ -116,8 +122,9 @@ export async function settleOrders(
             order.minimumVolume.multipliedBy(10 ** 12)
         );
 
-        order.lowBefore = new BigNumber(await renExBalances.traderBalances(order.trader, lowTokenInstance.address));
-        order.highBefore = new BigNumber(await renExBalances.traderBalances(order.trader, highTokenInstance.address));
+        // tslint:disable:max-line-length
+        order.lowBefore = new BigNumber(await renExBalances.traderBalances(order.trader, lowTokenInstance.address) as any);
+        order.highBefore = new BigNumber(await renExBalances.traderBalances(order.trader, highTokenInstance.address) as any);
     }
 
     // Submit the match
@@ -125,55 +132,67 @@ export async function settleOrders(
         .should.not.be.rejected;
 
     // Verify match details
-    const buyMatch = await renExSettlement.matchDetails(buy.orderID, sell.orderID);
+    const buyMatch = await renExSettlement.getMatchDetails(buy.orderID);
+    const settled = buyMatch[0];
+    const priorityTokenFinal = new BigNumber(buyMatch[1] as any);
+    const secondaryTokenFinal = new BigNumber(buyMatch[2] as any);
+    const priorityTokenFee = new BigNumber(buyMatch[3] as any);
+    const secondaryTokenFee = new BigNumber(buyMatch[4] as any);
+    const priorityTokenAddress = buyMatch[5];
+    const secondaryTokenAddress = buyMatch[6];
+    const priorityTokenVolume = priorityTokenFinal.plus(priorityTokenFee);
+    const secondaryTokenVolume = secondaryTokenFinal.plus(secondaryTokenFee);
+
+    settled.should.be.true;
+
     // (buyMatch.priorityToken).should.bignumber.equal(lowToken);
     // buyMatch.secondaryToken.should.bignumber.equal(highToken);
     // buyMatch.priorityTokenAddress.should.equal(lowTokenInstance.address);
     // buyMatch.secondaryTokenAddress.should.equal(highTokenInstance.address);
 
     // Get balances after trade
-    const buyerLowAfter = new BigNumber(await renExBalances.traderBalances(buy.trader, lowTokenInstance.address));
-    const sellerLowAfter = new BigNumber(await renExBalances.traderBalances(sell.trader, lowTokenInstance.address));
-    const buyerHighAfter = new BigNumber(await renExBalances.traderBalances(buy.trader, highTokenInstance.address));
-    const sellerHighAfter = new BigNumber(await renExBalances.traderBalances(sell.trader, highTokenInstance.address));
+    const buyerLowAfter = new BigNumber(await renExBalances.traderBalances(buy.trader, lowTokenInstance.address) as any);
+    const sellerLowAfter = new BigNumber(await renExBalances.traderBalances(sell.trader, lowTokenInstance.address) as any);
+    const buyerHighAfter = new BigNumber(await renExBalances.traderBalances(buy.trader, highTokenInstance.address) as any);
+    const sellerHighAfter = new BigNumber(await renExBalances.traderBalances(sell.trader, highTokenInstance.address) as any);
 
     let feeNum = await renExSettlement.DARKNODE_FEES_NUMERATOR();
     let feeDen = await renExSettlement.DARKNODE_FEES_DENOMINATOR();
 
-    // Calculate fees (0.2%)
-    const priorityFee = new BigNumber(buyMatch.priorityTokenVolume)
-        .multipliedBy(feeNum)
-        .dividedBy(feeDen)
-        .integerValue(BigNumber.ROUND_CEIL);
-    const secondFee = new BigNumber(buyMatch.secondaryTokenVolume)
-        .multipliedBy(feeNum)
-        .dividedBy(feeDen)
-        .integerValue(BigNumber.ROUND_CEIL);
+    // // Calculate fees (0.2%)
+    // const priorityFee = new BigNumber(buyMatch.priorityTokenVolume)
+    //     .multipliedBy(feeNum)
+    //     .dividedBy(feeDen)
+    //     .integerValue(BigNumber.ROUND_CEIL);
+    // const secondFee = new BigNumber(buyMatch.secondaryTokenVolume)
+    //     .multipliedBy(feeNum)
+    //     .dividedBy(feeDen)
+    //     .integerValue(BigNumber.ROUND_CEIL);
 
     // Verify the correct transfer of funds occured
     if (buy.settlement === testUtils.Settlements.RenEx) {
         // Low token
-        buy.lowBefore.minus(buyMatch.priorityTokenVolume).should.bignumber.equal(buyerLowAfter);
-        sell.lowBefore.plus(buyMatch.priorityTokenVolume).minus(priorityFee).should.bignumber.equal(sellerLowAfter);
+        buy.lowBefore.minus(priorityTokenVolume).should.bignumber.equal(buyerLowAfter);
+        sell.lowBefore.plus(priorityTokenVolume).minus(priorityTokenFee).should.bignumber.equal(sellerLowAfter);
         // High token
-        buy.highBefore.plus(buyMatch.secondaryTokenVolume).minus(secondFee).should.bignumber.equal(buyerHighAfter);
-        sell.highBefore.minus(buyMatch.secondaryTokenVolume).should.bignumber.equal(sellerHighAfter);
+        buy.highBefore.plus(secondaryTokenVolume).minus(secondaryTokenFee).should.bignumber.equal(buyerHighAfter);
+        sell.highBefore.minus(secondaryTokenVolume).should.bignumber.equal(sellerHighAfter);
     } else {
         if (highTokenInstance.address !== testUtils.NULL) {
             buy.lowBefore.should.bignumber.equal(buyerLowAfter);
             sell.lowBefore.should.bignumber.equal(sellerLowAfter);
-            buy.highBefore.minus(secondFee).should.bignumber.equal(buyerHighAfter);
-            sell.highBefore.minus(secondFee).should.bignumber.equal(sellerHighAfter);
+            buy.highBefore.minus(secondaryTokenFee).should.bignumber.equal(buyerHighAfter);
+            sell.highBefore.minus(secondaryTokenFee).should.bignumber.equal(sellerHighAfter);
         } else if (lowTokenInstance.address !== testUtils.NULL) {
-            buy.lowBefore.minus(priorityFee).should.bignumber.equal(buyerLowAfter);
-            sell.lowBefore.minus(priorityFee).should.bignumber.equal(sellerLowAfter);
+            buy.lowBefore.minus(priorityTokenFee).should.bignumber.equal(buyerLowAfter);
+            sell.lowBefore.minus(priorityTokenFee).should.bignumber.equal(sellerLowAfter);
             buy.highBefore.should.bignumber.equal(buyerHighAfter);
             sell.highBefore.should.bignumber.equal(sellerHighAfter);
         }
     }
 
-    const priorityRet = new BigNumber(buyMatch.priorityTokenVolume).dividedBy(10 ** lowDecimals).toNumber();
-    const secondRet = new BigNumber(buyMatch.secondaryTokenVolume).dividedBy(10 ** highDecimals).toNumber();
+    const priorityRet = new BigNumber(priorityTokenVolume).dividedBy(10 ** lowDecimals).toNumber();
+    const secondRet = new BigNumber(secondaryTokenVolume).dividedBy(10 ** highDecimals).toNumber();
 
     if (returnIDs) {
         return [

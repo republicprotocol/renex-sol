@@ -181,8 +181,8 @@ contract("RenExSettlement", function (accounts: string[]) {
 
         // Orders that aren't matched to one another
         await renExSettlement.submitMatch(
-            sellID_3,
             buyID_2,
+            sellID_3,
         ).should.be.rejectedWith(null, /unconfirmed orders/);
     });
 
@@ -191,15 +191,15 @@ contract("RenExSettlement", function (accounts: string[]) {
         await renExSettlement.submitMatch(
             buyID_1,
             sellID_1,
-        ).should.be.rejectedWith(null, /unregistered buy token/);
+        ).should.be.rejectedWith(null, /unregistered priority token/);
 
         // Sell token that is not registered
-        await renExTokens.deregisterToken(TokenCodes.BTC);
+        await renExTokens.deregisterToken(TokenCodes.ETH);
         await renExSettlement.submitMatch(
             buyID_2,
             sellID_2,
-        ).should.be.rejectedWith(null, /unregistered sell token/);
-        await renExTokens.registerToken(TokenCodes.BTC, tokenAddresses[TokenCodes.BTC].address, 8);
+        ).should.be.rejectedWith(null, /unregistered secondary token/);
+        await renExTokens.registerToken(TokenCodes.ETH, tokenAddresses[TokenCodes.ETH].address, 18);
     });
 
     it("should fail for excessive gas price", async () => {

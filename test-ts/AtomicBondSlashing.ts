@@ -141,18 +141,6 @@ contract("Slasher", function (accounts: string[]) {
             .should.not.be.rejected;
     });
 
-    it("should not slash non-ETH atomic swaps", async () => {
-        const tokens = market(TokenCodes.BTC, TokenCodes.LTC);
-        const buy = { settlement: 2, tokens, price: 1, volume: 1 /* BTC */ };
-        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
-
-        let [, , buyOrderID, _] = await settleOrders.apply(this, [buy, sell, ...details]);
-
-        // Slash the fees
-        await renExSettlement.slash(buyOrderID, { from: slasher })
-            .should.be.rejectedWith(null, /non-eth tokens/);
-    });
-
     it("should not slash non-atomic swap orders", async () => {
         const tokens = market(TokenCodes.ETH, TokenCodes.REN);
         // Highest possible price, lowest possible volume

@@ -142,13 +142,6 @@ contract("RenEx", function (accounts: string[]) {
 
         (await settleOrders.apply(this, [buy, sell, ...details]))
             .should.deep.equal([0.975 /* ETH */, 1 /* LTC */]);
-
-        tokens = market(TokenCodes.BTC, TokenCodes.LTC);
-        buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* LTC */ };
-        sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
-
-        (await settleOrders.apply(this, [buy, sell, ...details]))
-            .should.deep.equal([0.975 /* BTC */, 1 /* LTC */]);
     });
 
     it("invalid orders should revert", async () => {
@@ -172,18 +165,18 @@ contract("RenEx", function (accounts: string[]) {
         await settleOrders.apply(this, [buy, sell, ...details])
             .should.be.rejectedWith(null, /incompatible orders/);
 
+        // Invalid tokens (should be DGX/REN, not REN/DGX)
+        const RENDGX = market(TokenCodes.REN, TokenCodes.DGX);
+        buy = { tokens: RENDGX, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+        sell = { tokens: RENDGX, price: 0.95, volume: 1 /* REN */ };
+        await settleOrders.apply(this, [buy, sell, ...details])
+            .should.be.rejectedWith(null, /incompatible orders/);
+
         // Orders opened by the same trader
         buy = { tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
         sell = { tokens, price: 0.95, volume: 1 /* REN */, trader: buyer };
         await settleOrders.apply(this, [buy, sell, ...details])
             .should.be.rejectedWith(null, /orders from same trader/);
-
-        // Invalid tokens
-        const RENDGX = market(TokenCodes.REN, TokenCodes.DGX);
-        buy = { tokens: RENDGX, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
-        sell = { tokens: RENDGX, price: 0.95, volume: 1 /* REN */ };
-        await settleOrders.apply(this, [buy, sell, ...details])
-            .should.be.rejectedWith(null, /first order is not a buy/);
 
         // Unsupported settlement
         buy = { settlement: 3, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
@@ -198,6 +191,13 @@ contract("RenEx", function (accounts: string[]) {
 
         await settleOrders.apply(this, [buy, sell, ...details])
             .should.be.rejectedWith(null, /invalid opcode/);
+
+        const BTCLTC = market(TokenCodes.BTC, TokenCodes.LTC);
+        buy = { settlement: 2, tokens: BTCLTC, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* LTC */ };
+        sell = { settlement: 2, tokens: BTCLTC, price: 0.95, volume: 1 /* LTC */ };
+
+        await settleOrders.apply(this, [buy, sell, ...details])
+            .should.be.rejectedWith(null, /non-eth atomic swaps are not supported/);
 
     });
 });

@@ -1,5 +1,3 @@
-const BigNumber = require("bignumber.js");
-
 const RepublicToken = artifacts.require("RepublicToken");
 const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
 const DarknodeRegistry = artifacts.require("DarknodeRegistry");

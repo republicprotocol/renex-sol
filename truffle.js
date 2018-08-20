@@ -32,5 +32,6 @@ module.exports = {
         // },
         useColors: true,
         bail: true,
+        forbidOnly: (process.env.CI == true)
     },
 };

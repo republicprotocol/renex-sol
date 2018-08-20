@@ -6,7 +6,6 @@ import { BN } from "bn.js";
 
 import { RenExBalancesContract } from "./bindings/ren_ex_balances";
 import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
-import { DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
 import { RenExTokensContract } from "./bindings/ren_ex_tokens";
 import { OrderbookContract } from "./bindings/orderbook";
 import { DarknodeRegistryContract } from "./bindings/darknode_registry";
@@ -21,7 +20,6 @@ contract("Slasher", function (accounts: string[]) {
 
     let dnr: DarknodeRegistryContract;
     let orderbook: OrderbookContract;
-    let darknodeRewardVault: DarknodeRewardVaultContract;
     let renExSettlement: RenExSettlementContract;
     let renExBalances: RenExBalancesContract;
     let renExTokens: RenExTokensContract;
@@ -41,7 +39,6 @@ contract("Slasher", function (accounts: string[]) {
 
         dnr = await artifacts.require("DarknodeRegistry").deployed();
         orderbook = await artifacts.require("Orderbook").deployed();
-        darknodeRewardVault = await artifacts.require("DarknodeRewardVault").deployed();
         renExSettlement = await artifacts.require("RenExSettlement").deployed();
         renExBalances = await artifacts.require("RenExBalances").deployed();
         // Register extra token
@@ -87,7 +84,7 @@ contract("Slasher", function (accounts: string[]) {
         let fees = new BN(web3.utils.toWei(feeNum, "ether")).div(feeDen);
 
         // Store the original balances
-        let beforeBurntBalance = new BN(await darknodeRewardVault.darknodeBalances(slasher, eth_address));
+        let beforeBurntBalance = new BN(await renExBalances.traderBalances(slasher, eth_address));
         let beforeGuiltyBalance = new BN(await renExBalances.traderBalances(guiltyAddress, eth_address));
         let beforeInnocentBalance = new BN(await renExBalances.traderBalances(innocentAddress, eth_address));
 
@@ -95,7 +92,7 @@ contract("Slasher", function (accounts: string[]) {
         await renExSettlement.slash(guiltyOrderID, { from: slasher });
 
         // Check the new balances
-        let afterBurntBalance = new BN(await darknodeRewardVault.darknodeBalances(slasher, eth_address));
+        let afterBurntBalance = new BN(await renExBalances.traderBalances(slasher, eth_address));
         let afterGuiltyBalance = new BN(await renExBalances.traderBalances(guiltyAddress, eth_address));
         let afterInnocentBalance = new BN(await renExBalances.traderBalances(innocentAddress, eth_address));
 

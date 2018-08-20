@@ -60,10 +60,10 @@ contract RenExSettlement is Ownable {
     struct SettlementDetails {
         uint256 leftVolume;
         uint256 rightVolume;
-        uint256 leftFee;
-        uint256 rightFee;
-        address leftAddress;
-        address rightAddress;
+        uint256 leftTokenFee;
+        uint256 rightTokenFee;
+        address leftTokenAddress;
+        address rightTokenAddress;
     }
 
     // Events
@@ -266,14 +266,24 @@ contract RenExSettlement is Ownable {
 
         SettlementDetails memory settlementDetails = calculateAtomicFees(buyID, sellID, tokens);
 
-        // Transfer the fee amount to the other trader and to the slasher.
+        // Transfer the fee amount to the other trader
         renExBalancesContract.transferBalanceWithFee(
             orderbookContract.orderTrader(_guiltyOrderID),
             orderbookContract.orderTrader(innocentOrderID),
-            settlementDetails.leftAddress,
-            settlementDetails.leftFee,
-            settlementDetails.leftFee,
-            slasherAddress
+            settlementDetails.leftTokenAddress,
+            settlementDetails.leftTokenFee,
+            0,
+            0x0
+        );
+
+        // Transfer the fee amount to the slasher
+        renExBalancesContract.transferBalanceWithFee(
+            orderbookContract.orderTrader(_guiltyOrderID),
+            slasherAddress,
+            settlementDetails.leftTokenAddress,
+            settlementDetails.leftTokenFee,
+            0,
+            0x0
         );
     }
 
@@ -314,10 +324,10 @@ contract RenExSettlement is Ownable {
             orderStatus[_orderID] == OrderStatus.Settled || orderStatus[_orderID] == OrderStatus.Slashed,
             settlementDetails.leftVolume,
             settlementDetails.rightVolume,
-            settlementDetails.leftFee,
-            settlementDetails.rightFee,
-            settlementDetails.leftAddress,
-            settlementDetails.rightAddress
+            settlementDetails.leftTokenFee,
+            settlementDetails.rightTokenFee,
+            settlementDetails.leftTokenAddress,
+            settlementDetails.rightTokenAddress
         );
     }
 
@@ -368,9 +378,9 @@ contract RenExSettlement is Ownable {
         renExBalancesContract.transferBalanceWithFee(
             _buyer,
             _seller,
-            settlementDetails.leftAddress,
+            settlementDetails.leftTokenAddress,
             settlementDetails.leftVolume,
-            settlementDetails.leftFee,
+            settlementDetails.leftTokenFee,
             orderSubmitter[_buyID]
         );
 
@@ -378,9 +388,9 @@ contract RenExSettlement is Ownable {
         renExBalancesContract.transferBalanceWithFee(
             _seller,
             _buyer,
-            settlementDetails.rightAddress,
+            settlementDetails.rightTokenAddress,
             settlementDetails.rightVolume,
-            settlementDetails.rightFee,
+            settlementDetails.rightTokenFee,
             orderSubmitter[_sellID]
         );
     }
@@ -422,10 +432,10 @@ contract RenExSettlement is Ownable {
         return SettlementDetails({
             leftVolume: priorityVwF.value,
             rightVolume: secondaryVwF.value,
-            leftFee: priorityVwF.fees,
-            rightFee: secondaryVwF.fees,
-            leftAddress: _tokens.priorityToken.addr,
-            rightAddress: _tokens.secondaryToken.addr
+            leftTokenFee: priorityVwF.fees,
+            rightTokenFee: secondaryVwF.fees,
+            leftTokenAddress: _tokens.priorityToken.addr,
+            rightTokenAddress: _tokens.secondaryToken.addr
         });
     }
 
@@ -461,10 +471,10 @@ contract RenExSettlement is Ownable {
             return SettlementDetails({
                 leftVolume: 0,
                 rightVolume: 0,
-                leftFee: secondaryVwF.fees,
-                rightFee: secondaryVwF.fees,
-                leftAddress: _tokens.secondaryToken.addr,
-                rightAddress: _tokens.secondaryToken.addr
+                leftTokenFee: secondaryVwF.fees,
+                rightTokenFee: secondaryVwF.fees,
+                leftTokenAddress: _tokens.secondaryToken.addr,
+                rightTokenAddress: _tokens.secondaryToken.addr
             });
         } else if (isEthereumBased(_tokens.priorityToken.addr)) {
             uint256 priorityTokenVolume = joinFraction(
@@ -479,10 +489,10 @@ contract RenExSettlement is Ownable {
             return SettlementDetails({
                 leftVolume: 0,
                 rightVolume: 0,
-                leftFee: priorityVwF.fees,
-                rightFee: priorityVwF.fees,
-                leftAddress: _tokens.priorityToken.addr,
-                rightAddress: _tokens.priorityToken.addr
+                leftTokenFee: priorityVwF.fees,
+                rightTokenFee: priorityVwF.fees,
+                leftTokenAddress: _tokens.priorityToken.addr,
+                rightTokenAddress: _tokens.priorityToken.addr
             });
         } else {
             // Currently, at least one token must be Ethereum-based.

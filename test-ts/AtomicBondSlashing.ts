@@ -9,6 +9,7 @@ import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
 import { RenExTokensContract } from "./bindings/ren_ex_tokens";
 import { OrderbookContract } from "./bindings/orderbook";
 import { DarknodeRegistryContract } from "./bindings/darknode_registry";
+import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
 
 contract("Slasher", function (accounts: string[]) {
 
@@ -23,6 +24,7 @@ contract("Slasher", function (accounts: string[]) {
     let renExSettlement: RenExSettlementContract;
     let renExBalances: RenExBalancesContract;
     let renExTokens: RenExTokensContract;
+    let renExBrokerVerifier: RenExBrokerVerifierContract;
     let eth_address: string;
     let details;
 
@@ -58,6 +60,10 @@ contract("Slasher", function (accounts: string[]) {
         await ren.approve(dnr.address, testUtils.MINIMUM_BOND, { from: darknode });
         await dnr.register(darknode, testUtils.PUBK("1"), testUtils.MINIMUM_BOND, { from: darknode });
         await testUtils.waitForEpoch(dnr);
+
+        // Register broker
+        renExBrokerVerifier = await artifacts.require("RenExBrokerVerifier").deployed();
+        await renExBrokerVerifier.registerBroker(broker);
 
         await renExSettlement.updateSlasher(slasher);
 
@@ -107,6 +113,13 @@ contract("Slasher", function (accounts: string[]) {
         innocentBalanceDiff.should.bignumber.equal(fees);
         // We expect the guilty trader to have lost fees twice
         guiltyBalanceDiff.should.bignumber.equal(-fees * 2);
+
+        // Withdraw fees and check new ETH balance
+        const beforeEthBalance = new BN(await web3.eth.getBalance(slasher));
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        const gasFee = await testUtils.getFee(renExBalances.withdraw(eth_address, afterBurntBalance, sig));
+        const afterEthBalance = new BN(await web3.eth.getBalance(slasher));
+        afterEthBalance.should.bignumber.equal(beforeEthBalance.sub(gasFee).add(fees));
     });
 
     it("should not slash bonds more than once", async () => {

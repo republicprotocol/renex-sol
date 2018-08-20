@@ -78,6 +78,10 @@ contract("RenExBalances", function (accounts: string[]) {
         // Check that the tokens have been returned
         (await TOKEN1.balanceOf(accounts[0])).should.bignumber.equal(previous1);
         (await TOKEN2.balanceOf(accounts[0])).should.bignumber.equal(previous2);
+
+        // Check that balance in renExBalances is zeroed
+        (await renExBalances.traderBalances(accounts[0], TOKEN1.address)).should.bignumber.equal(0);
+        (await renExBalances.traderBalances(accounts[0], TOKEN2.address)).should.bignumber.equal(0);
     });
 
     it("can hold tokens for multiple traders", async () => {

@@ -22,7 +22,7 @@ module.exports = async function (deployer, network) {
             DarknodeRegistry,
             RepublicToken.address,
             DarknodeRegistryStore.address,
-            new BigNumber(config.MINIMUM_BOND),
+            config.MINIMUM_BOND,
             config.MINIMUM_POD_SIZE,
             config.MINIMUM_EPOCH_INTERVAL
         ))

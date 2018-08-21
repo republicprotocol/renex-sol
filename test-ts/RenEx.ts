@@ -17,9 +17,9 @@ contract("RenEx", function (accounts: string[]) {
     let details;
     const VPT = 0x3;
 
-    const DGXREN = market(TokenCodes.DGX, TokenCodes.REN);
-    const ETHREN = market(TokenCodes.ETH, TokenCodes.REN);
-    const ETHVPT = market(TokenCodes.ETH, VPT);
+    const DGX_REN = market(TokenCodes.DGX, TokenCodes.REN);
+    const ETH_REN = market(TokenCodes.ETH, TokenCodes.REN);
+    const ETH_VPT = market(TokenCodes.ETH, VPT);
 
     before(async function () {
         const dnr: DarknodeRegistryContract = await artifacts.require("DarknodeRegistry").deployed();
@@ -68,59 +68,59 @@ contract("RenEx", function (accounts: string[]) {
     });
 
     it("order 1", async () => {
-        const buy = { tokens: DGXREN, price: 1, volume: 2 /* REN */, minimumVolume: 1 /* REN */ };
-        const sell = { tokens: DGXREN, price: 0.95, volume: 1 /* REN */ };
+        const buy = { tokens: DGX_REN, price: 1, volume: 2 /* REN */, minimumVolume: 1 /* REN */ };
+        const sell = { tokens: DGX_REN, price: 0.95, volume: 1 /* REN */ };
 
         (await settleOrders.apply(this, [buy, sell, ...details]))
             .should.deep.equal([0.975 /* DGX */, 1 /* REN */]);
     });
 
     it("order 2", async () => {
-        const buy = { tokens: DGXREN, price: 1, volume: 1.025641025641 /* REN */ };
-        const sell = { tokens: DGXREN, price: 0.95, volume: 1.025641025641 /* REN */ };
+        const buy = { tokens: DGX_REN, price: 1, volume: 1.025641025641 /* REN */ };
+        const sell = { tokens: DGX_REN, price: 0.95, volume: 1.025641025641 /* REN */ };
 
         (await settleOrders.apply(this, [buy, sell, ...details]))
             .should.deep.equal([0.999999999 /* DGX */, 1.025641025641 /* REN */]);
     });
 
     it("order 3", async () => {
-        const buy = { tokens: DGXREN, price: 0.5, volume: 4 /* REN */ };
-        const sell = { tokens: DGXREN, price: 0.5, volume: 2 /* REN */ };
+        const buy = { tokens: DGX_REN, price: 0.5, volume: 4 /* REN */ };
+        const sell = { tokens: DGX_REN, price: 0.5, volume: 2 /* REN */ };
 
         (await settleOrders.apply(this, [buy, sell, ...details]))
             .should.deep.equal([1 /* DGX */, 2 /* REN */]);
     });
 
     it("order 4", async () => {
-        const buy = { tokens: DGXREN, price: 1, volume: 1.9999999999 /* REN */ };
+        const buy = { tokens: DGX_REN, price: 1, volume: 1.9999999999 /* REN */ };
         // More precise than the number of decimals DGX has
-        const sell = { tokens: DGXREN, price: 0.0000000001, volume: 1.9999999999 /* REN */ };
+        const sell = { tokens: DGX_REN, price: 0.0000000001, volume: 1.9999999999 /* REN */ };
 
         (await settleOrders.apply(this, [buy, sell, ...details]))
             .should.deep.equal([1 /* DGX */, 1.9999999999 /* REN */]);
     });
 
     it("order 5", async () => {
-        const buy = { tokens: DGXREN, price: 999.5, volume: 0.002001501126 /* REN */ };
-        const sell = { tokens: DGXREN, price: 999, volume: 0.002001501126 /* REN */ };
+        const buy = { tokens: DGX_REN, price: 999.5, volume: 0.002001501126 /* REN */ };
+        const sell = { tokens: DGX_REN, price: 999, volume: 0.002001501126 /* REN */ };
 
         (await settleOrders.apply(this, [buy, sell, ...details]))
             .should.deep.equal([2 /* DGX */, 0.002001501126 /* REN */]);
     });
 
     it("order 6", async () => {
-        const buy = { tokens: ETHREN, price: 99950000, volume: "2.001e-9" /* REN */ };
-        const sell = { tokens: ETHREN, price: 99950000, volume: "2.001e-9" /* REN */ };
+        const buy = { tokens: ETH_REN, price: 99950000, volume: "2.001e-9" /* REN */ };
+        const sell = { tokens: ETH_REN, price: 99950000, volume: "2.001e-9" /* REN */ };
 
         (await settleOrders.apply(this, [buy, sell, ...details]))
             .should.deep.equal([0.19999995 /* ETH */, 2.001e-9 /* REN */]);
     });
 
     it("order 7", async () => {
-        // Prices are at lowest precision possible, and midprice is even more
-        // precise. If the midprice is rounded, this test will fail.
-        const buy = { tokens: ETHREN, price: 0.000000000002, volume: 1 /* REN */ };
-        const sell = { tokens: ETHREN, price: 0.000000000001, volume: 1 /* REN */ };
+        // Prices are at lowest precision possible, and mid-price is even more
+        // precise. If the mid-price is rounded, this test will fail.
+        const buy = { tokens: ETH_REN, price: 0.000000000002, volume: 1 /* REN */ };
+        const sell = { tokens: ETH_REN, price: 0.000000000001, volume: 1 /* REN */ };
 
         (await settleOrders.apply(this, [buy, sell, ...details]))
             .should.deep.equal([1.5e-12 /* ETH */, 1 /* REN */]);
@@ -145,7 +145,7 @@ contract("RenEx", function (accounts: string[]) {
     });
 
     it("invalid orders should revert", async () => {
-        const tokens = DGXREN;
+        const tokens = DGX_REN;
 
         // Seller volume too low
         let buy: any = { tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 2 /* REN */ };
@@ -166,9 +166,9 @@ contract("RenEx", function (accounts: string[]) {
             .should.be.rejectedWith(null, /incompatible orders/);
 
         // Invalid tokens (should be DGX/REN, not REN/DGX)
-        const RENDGX = market(TokenCodes.REN, TokenCodes.DGX);
-        buy = { tokens: RENDGX, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
-        sell = { tokens: RENDGX, price: 0.95, volume: 1 /* REN */ };
+        const REN_DGX = market(TokenCodes.REN, TokenCodes.DGX);
+        buy = { tokens: REN_DGX, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+        sell = { tokens: REN_DGX, price: 0.95, volume: 1 /* REN */ };
         await settleOrders.apply(this, [buy, sell, ...details])
             .should.be.rejectedWith(null, /incompatible orders/);
 
@@ -186,15 +186,15 @@ contract("RenEx", function (accounts: string[]) {
             .should.be.rejectedWith(null, /invalid settlement id/);
 
         // Token with too many decimals
-        buy = { tokens: ETHVPT, price: 1e-12, volume: 1e-12 /* VPT */ };
-        sell = { tokens: ETHVPT, price: 1e-12, volume: 1e-12 /* VPT */ };
+        buy = { tokens: ETH_VPT, price: 1e-12, volume: 1e-12 /* VPT */ };
+        sell = { tokens: ETH_VPT, price: 1e-12, volume: 1e-12 /* VPT */ };
 
         await settleOrders.apply(this, [buy, sell, ...details])
             .should.be.rejectedWith(null, /invalid opcode/);
 
-        const BTCLTC = market(TokenCodes.BTC, TokenCodes.LTC);
-        buy = { settlement: 2, tokens: BTCLTC, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* LTC */ };
-        sell = { settlement: 2, tokens: BTCLTC, price: 0.95, volume: 1 /* LTC */ };
+        const BTC_LTC = market(TokenCodes.BTC, TokenCodes.LTC);
+        buy = { settlement: 2, tokens: BTC_LTC, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* LTC */ };
+        sell = { settlement: 2, tokens: BTC_LTC, price: 0.95, volume: 1 /* LTC */ };
 
         await settleOrders.apply(this, [buy, sell, ...details])
             .should.be.rejectedWith(null, /non-eth atomic swaps are not supported/);

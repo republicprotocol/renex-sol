@@ -6,8 +6,8 @@ import "republic-sol/contracts/Orderbook.sol";
 
 /// @notice RenExAtomicInfo is a way for two traders performing an atomic swap
 /// to transmit data to one another.
-/// Traders are able to authorise other addresses to transmit data for their
-/// trades, allowing traders to open orders with one wallet (e.g. Metamask) and
+/// Traders are able to authorize other addresses to transmit data for their
+/// trades, allowing traders to open orders with one wallet (e.g. MetaMask) and
 /// perform the trade with another (e.g. the keystore used by Swapper)
 contract RenExAtomicInfo is Ownable {
 
@@ -17,21 +17,21 @@ contract RenExAtomicInfo is Ownable {
     event LogOrderbookUpdated(Orderbook previousOrderbook, Orderbook nextOrderbook);
 
     // Storage
-    mapping (address => mapping (address => bool)) public authorisedSwapper;
+    mapping (address => mapping (address => bool)) public authorizedSwapper;
     mapping (bytes32 => bytes) public getOwnerAddress;
     mapping (bytes32 => uint256) public ownerAddressTimestamp;
     mapping (bytes32 => bytes) public swapDetails;
     mapping (bytes32 => uint256) public swapDetailsTimestamp;
 
     /// @notice Restricts a function to only be called by an address that has
-    /// been authorised by the trader who submitted the order, or by the trader
+    /// been authorized by the trader who submitted the order, or by the trader
     /// themselves.
     ///
     /// @param _orderID The id of the order
     /// @param _swapper The address of the swapper
-    modifier onlyAuthorisedSwapper(bytes32 _orderID, address _swapper) {
+    modifier onlyAuthorizedSwapper(bytes32 _orderID, address _swapper) {
         address trader = orderbookContract.orderTrader(_orderID);
-        require(_swapper == trader || authorisedSwapper[trader][_swapper], "not authorised");
+        require(_swapper == trader || authorizedSwapper[trader][_swapper], "not authorized");
         _;
     }
 
@@ -54,15 +54,15 @@ contract RenExAtomicInfo is Ownable {
     /// behalf of the msg.sender.
     ///
     /// @param _swapper The address of the swapper.
-    function authoriseSwapper(address _swapper) external {
-        authorisedSwapper[msg.sender][_swapper] = true;
+    function authorizeSwapper(address _swapper) external {
+        authorizedSwapper[msg.sender][_swapper] = true;
     }
 
-    /// @notice Revokes the permissions allowed by `authoriseSwapper`.
+    /// @notice Revokes the permissions allowed by `authorizeSwapper`.
     ///
     /// @param _swapper The address of the swapper.
-    function deauthoriseSwapper(address _swapper) external {
-        authorisedSwapper[msg.sender][_swapper] = false;
+    function deauthorizeSwapper(address _swapper) external {
+        authorizedSwapper[msg.sender][_swapper] = false;
     }
 
     /// @notice Provides the encoded swap details about an order. Can only be
@@ -70,7 +70,7 @@ contract RenExAtomicInfo is Ownable {
     ///
     /// @param _orderID The id of the order the details are for.
     /// @param _swapDetails The details required for the atomic swap.
-    function submitDetails(bytes32 _orderID, bytes _swapDetails) external onlyAuthorisedSwapper(_orderID, msg.sender) {
+    function submitDetails(bytes32 _orderID, bytes _swapDetails) external onlyAuthorizedSwapper(_orderID, msg.sender) {
         require(swapDetailsTimestamp[_orderID] == 0, "already submitted");
         swapDetails[_orderID] = _swapDetails;
         swapDetailsTimestamp[_orderID] = now;
@@ -81,7 +81,7 @@ contract RenExAtomicInfo is Ownable {
     ///
     /// @param _orderID The id of the order the details are for.
     /// @param _owner The address of the order ID's owner.
-    function setOwnerAddress(bytes32 _orderID, bytes _owner) external onlyAuthorisedSwapper(_orderID, msg.sender) {
+    function setOwnerAddress(bytes32 _orderID, bytes _owner) external onlyAuthorizedSwapper(_orderID, msg.sender) {
         require(ownerAddressTimestamp[_orderID] == 0, "already set");
         getOwnerAddress[_orderID] = _owner;
         ownerAddressTimestamp[_orderID] = now;

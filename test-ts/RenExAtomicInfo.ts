@@ -67,33 +67,33 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
             .should.be.rejectedWith(null, /already set/);
     });
 
-    it("can authorise another address to submit details", async () => {
+    it("can authorize another address to submit details", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
-        await info.authoriseSwapper(box, { from: trader });
+        await info.authorizeSwapper(box, { from: trader });
 
         const swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: box });
         (await info.swapDetails(orderID)).should.equal(swap);
     });
 
-    it("can deauthorise another address to submit details", async () => {
+    it("can deauthorize another address to submit details", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
-        await info.authoriseSwapper(box, { from: trader });
-        await info.deauthoriseSwapper(box, { from: trader });
+        await info.authorizeSwapper(box, { from: trader });
+        await info.deauthorizeSwapper(box, { from: trader });
 
         const swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: box })
-            .should.be.rejectedWith(null, /not authorised/);
+            .should.be.rejectedWith(null, /not authorized/);
 
         chai.expect(await info.swapDetails(orderID)).to.be.null;
     });
 
-    it("non-authorised address can't submit details", async () => {
+    it("non-authorized address can't submit details", async () => {
         const orderID = await testUtils.openBuyOrder(orderbook, broker, trader);
 
         const swap = testUtils.randomID();
         await info.submitDetails(orderID, swap, { from: attacker })
-            .should.be.rejectedWith(null, /not authorised/);
+            .should.be.rejectedWith(null, /not authorized/);
 
         chai.expect(await info.swapDetails(orderID)).to.be.null;
     });

@@ -66,7 +66,12 @@ contract RenExAtomicSwapper {
     /// @param _withdrawTrader The address of the withdrawing trader.
     /// @param _secretLock The hash of the secret (Hash Lock).
     /// @param _timelock The unix timestamp when the swap expires.
-    function initiate(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock, uint256 _timelock) external onlyInvalidSwaps(_swapID) payable {
+    function initiate(
+        bytes32 _swapID,
+        address _withdrawTrader,
+        bytes32 _secretLock,
+        uint256 _timelock
+    ) external onlyInvalidSwaps(_swapID) payable {
         // Store the details of the swap.
         Swap memory swap = Swap({
             timelock: _timelock,

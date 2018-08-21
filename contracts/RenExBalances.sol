@@ -44,7 +44,7 @@ contract RenExBalances is Ownable {
     /// @notice Restricts a function to only being called by the RenExSettlement
     /// contract.
     modifier onlyRenExSettlementContract() {
-        require(msg.sender == address(settlementContract), "not authorised");
+        require(msg.sender == address(settlementContract), "not authorized");
         _;
     }
 
@@ -131,7 +131,7 @@ contract RenExBalances is Ownable {
             require(msg.value == _value, "mismatched value parameter and tx value");
         } else {
             require(msg.value == 0, "unexpected ether transfer");
-            require(_token.transferFrom(trader, this, _value), "token trasfer failed");
+            require(_token.transferFrom(trader, this, _value), "token transfer failed");
         }
         privateIncrementBalance(trader, _token, _value);
     }

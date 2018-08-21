@@ -108,13 +108,13 @@ contract("RenExTokens", function (accounts: string[]) {
         // Deregister
         await renExTokens.deregisterToken(token1);
 
-        // Attempt to reregister with different details
+        // Attempt to re-register with different details
         await renExTokens.registerToken(token1, tokenInstances[tokens[1]].address, decimals1)
             .should.be.rejectedWith(null, /different address/);
         await renExTokens.registerToken(token1, address1, 1)
             .should.be.rejectedWith(null, /different decimals/);
 
-        // Can reregister with the same details
+        // Can re-register with the same details
         await renExTokens.registerToken(token1, address1, decimals1);
 
         const tokenDetails = await renExTokens.tokens(token1);

@@ -31,7 +31,7 @@ The fee paid by each trader is 0.2% of the volume used during settlement. The fe
 - Both Alice and Bob open their orders using a Settlement Identifier of `1`.
 - Using the Secure Order Matcher, the Darknodes find that these two orders match.
 - Darknodes call `submitOrder` for both orders, and then call `settle`.
-- The call to `settle` immediately executes the settlement between Alice and Bob. The price point is 2REN for 1ETH (the midpoint between the two orders). Alice receives 3.992REN in exchange for 2ETH, and Bob receives 1.996ETH in exchange for 4REN (the maximum volumes after accounting for the fees). The [balances](./01-balances.md) of Alice and Bob are updated to reflect the settlement, and the difference between the paid amount and the received amount (0.00RREN and 0.004ETH) is used to pay the fee.
+- The call to `settle` immediately executes the settlement between Alice and Bob. The price point is 2REN for 1ETH (the midpoint between the two orders). Alice receives 3.992REN in exchange for 2ETH, and Bob receives 1.996ETH in exchange for 4REN (the maximum volumes after accounting for the fees). The [balances](./01-balances.md) of Alice and Bob are updated to reflect the settlement, and the difference between the paid amount and the received amount (0.00REN and 0.004ETH) is used to pay the fee.
 
 ## ETH and BTC
 
@@ -49,7 +49,7 @@ The fee paid by each trader is 0.2% of the volume used during settlement. The fe
 - 40% is paid to the Darknode that calls `submitOrder` for the sell order, and
 - 20% is paid to RenEx — to be used for the Liquidity Incentive Program.
 
-The nature of an [atomic swap](./03-atomic-swapping.md) is highly interactive. Therefore, it is possible that a malicious trader might abort the atomic swap. This leaves the honest trader having paid a fee of 0.2% for a trade that never happened. To protect honest traders from this behaviour, traders must have *at least* 0.6% of their order (in ETH) in their [balance](./01-balances.md):
+The nature of an [atomic swap](./03-atomic-swapping.md) is highly interactive. Therefore, it is possible that a malicious trader might abort the atomic swap. This leaves the honest trader having paid a fee of 0.2% for a trade that never happened. To protect honest traders from this behavior, traders must have *at least* 0.6% of their order (in ETH) in their [balance](./01-balances.md):
 
 - 0.2% is used to pay fees,
 - 0.2% is taken from a malicious trader that has aborted the swap, and is used to repay the opposing trader, and

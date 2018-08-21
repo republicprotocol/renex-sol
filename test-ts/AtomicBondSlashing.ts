@@ -163,7 +163,7 @@ contract("Slasher", function (accounts: string[]) {
             .should.be.rejectedWith(null, /slashing non-atomic trade/);
     });
 
-    it("should not slash if unauthorised to do so", async () => {
+    it("should not slash if unauthorized to do so", async () => {
         const tokens = market(TokenCodes.BTC, TokenCodes.ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
@@ -174,10 +174,10 @@ contract("Slasher", function (accounts: string[]) {
 
         // The guilty trader might try to dog the innocent trader
         await renExSettlement.slash(sellOrderID, { from: guiltyTrader })
-            .should.be.rejectedWith(null, /unauthorised/);
+            .should.be.rejectedWith(null, /unauthorized/);
 
         // The innocent trader might try to dog the guilty trader
         await renExSettlement.slash(buyOrderID, { from: innocentTrader })
-            .should.be.rejectedWith(null, /unauthorised/);
+            .should.be.rejectedWith(null, /unauthorized/);
     });
 });

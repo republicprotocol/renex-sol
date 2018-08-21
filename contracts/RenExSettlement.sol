@@ -93,7 +93,7 @@ contract RenExSettlement is Ownable {
     /// @notice Restricts a function to only being called by the slasher
     /// address.
     modifier onlySlasher() {
-        require(msg.sender == slasherAddress, "unauthorised");
+        require(msg.sender == slasherAddress, "unauthorized");
         _;
     }
 
@@ -164,9 +164,9 @@ contract RenExSettlement is Ownable {
     /// @param _price The price of the order. Interpreted as the cost for 1
     ///        standard unit of the non-priority token, in 1e12 (i.e.
     ///        PRICE_OFFSET) units of the priority token).
-    /// @param _volume The volume of the order. Intepreted as the maximum number
-    ///        of 1e-12 (i.e. VOLUME_OFFSET) units of the non-priority token
-    ///        that can be traded by this order.
+    /// @param _volume The volume of the order. Interpreted as the maximum
+    ///        number of 1e-12 (i.e. VOLUME_OFFSET) units of the non-priority
+    ///        token that can be traded by this order.
     /// @param _minimumVolume The minimum volume the trader is willing to
     ///        accept. Encoded the same as the volume.
     function submitOrder(
@@ -333,7 +333,7 @@ contract RenExSettlement is Ownable {
 
     /// @notice Exposes the hashOrder function for computing a hash of an
     /// order's details. An order hash is used as its ID. See `submitOrder`
-    /// for the paramater descriptions.
+    /// for the parameter descriptions.
     ///
     /// @return The 32-byte hash of the order.
     function hashOrder(
@@ -407,7 +407,7 @@ contract RenExSettlement is Ownable {
         TokenPair memory _tokens
     ) private view returns (SettlementDetails memory) {
 
-        // Calculate the midprice (using numerator and denominator to not loose
+        // Calculate the mid-price (using numerator and denominator to not loose
         // precision).
         Fraction memory midPrice = Fraction(orderDetails[_buyID].price + orderDetails[_sellID].price, 2);
 
@@ -451,7 +451,7 @@ contract RenExSettlement is Ownable {
         TokenPair memory _tokens
     ) private view returns (SettlementDetails memory) {
 
-        // Calculate the midprice (using numerator and denominator to not loose
+        // Calculate the mid-price (using numerator and denominator to not loose
         // precision).
         Fraction memory midPrice = Fraction(orderDetails[_buyID].price + orderDetails[_sellID].price, 2);
 
@@ -521,7 +521,7 @@ contract RenExSettlement is Ownable {
     /// the RenExTokens contract and returns them as a single struct.
     ///
     /// @param _tokens The 64-bit combined token identifiers.
-    /// @return A TokenPair struct containing two TokenDedetails structs.
+    /// @return A TokenPair struct containing two TokenDetails structs.
     function getTokenDetails(uint64 _tokens) private view returns (TokenPair memory) {
         (
             address priorityAddress,

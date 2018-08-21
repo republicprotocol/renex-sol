@@ -201,7 +201,7 @@ contract("RenExBalances", function (accounts: string[]) {
             0,
             testUtils.NULL,
             { from: accounts[1] }
-        ).should.be.rejectedWith(null, /not authorised/);
+        ).should.be.rejectedWith(null, /not authorized/);
     });
 
     it("deposits validates the transfer", async () => {
@@ -277,7 +277,7 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
             .should.be.rejectedWith(null, /not signalled/);
 
-        // Inscrease time by another hour
+        // Increase time by another hour
         testUtils.increaseTime(1 * hour + 10);
 
         // Still can't withdraw other tokens

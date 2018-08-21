@@ -76,7 +76,7 @@ export async function settleOrders(
     // Approve and deposit
     sell.deposit = sell.volume.multipliedBy(10 ** highDecimals);
     buy.deposit = buy.volume.multipliedBy(buy.price).multipliedBy(10 ** lowDecimals).integerValue(BigNumber.ROUND_CEIL);
-    sell.opposit = buy.deposit; buy.opposit = sell.deposit;
+    sell.opposite = buy.deposit; buy.opposite = sell.deposit;
 
     for (const order of [buy, sell]) {
         if (order.fromToken !== TokenCodes.ETH &&
@@ -86,7 +86,7 @@ export async function settleOrders(
             await tokenAddresses[order.fromToken].approve(renExBalances.address, order.deposit, { from: order.trader });
             await renExBalances.deposit(tokenAddresses[order.fromToken].address, order.deposit, { from: order.trader });
         } else {
-            const deposit = order.fromToken === TokenCodes.ETH ? order.deposit : order.opposit;
+            const deposit = order.fromToken === TokenCodes.ETH ? order.deposit : order.opposite;
             await renExBalances.deposit(
                 tokenAddresses[TokenCodes.ETH].address,
                 deposit,
@@ -108,7 +108,7 @@ export async function settleOrders(
         (await orderbook.orderTrader(order.orderID)).should.equal(order.trader);
     }
 
-    // Submit oredr confirmation
+    // Submit order confirmation
     await orderbook.confirmOrder(buy.orderID, sell.orderID, { from: darknode }).should.not.be.rejected;
 
     // Submit details for each order, store the current balances
@@ -169,7 +169,7 @@ export async function settleOrders(
     //     .dividedBy(feeDen)
     //     .integerValue(BigNumber.ROUND_CEIL);
 
-    // Verify the correct transfer of funds occured
+    // Verify the correct transfer of funds occurred
     if (buy.settlement === testUtils.Settlements.RenEx) {
         // Low token
         buy.lowBefore.minus(priorityTokenVolume).should.bignumber.equal(buyerLowAfter);

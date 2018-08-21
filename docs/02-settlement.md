@@ -31,7 +31,7 @@ The fee paid by each trader is 0.2% of the volume used during settlement. The fe
 - Both Alice and Bob open their orders using a Settlement Identifier of `1`.
 - Using the Secure Order Matcher, the Darknodes find that these two orders match.
 - Darknodes call `submitOrder` for both orders, and then call `settle`.
-- The call to `settle` immediately executes the settlement between Alice and Bob. The price point is 2REN for 1ETH (the midpoint between the two orders). Alice receives 3.992REN in exchange for 2ETH, and Bob receives 1.996ETH in exchange for 4REN (the maximum volumes after accounting for the fees). The [balances](./01-balances.md) of Alice and Bob are updated to reflect the settlement, and the difference between the paid amount and the received amount (0.00REN and 0.004ETH) is used to pay the fee.
+- The call to `settle` immediately executes the settlement between Alice and Bob. The price point is 2REN for 1ETH (the midpoint between the two orders). Alice receives 3.992REN in exchange for 2ETH, and Bob receives 1.996ETH in exchange for 4REN (the maximum volumes after accounting for the fees). The [balances](./01-balances.md) of Alice and Bob are updated to reflect the settlement, and the difference between the paid amount and the received amount (0.008REN and 0.004ETH) is used to pay the fee.
 
 ## ETH and BTC
 

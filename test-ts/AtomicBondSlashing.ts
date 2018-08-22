@@ -11,7 +11,7 @@ import { OrderbookContract } from "./bindings/orderbook";
 import { DarknodeRegistryContract } from "./bindings/darknode_registry";
 import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
 
-contract("Slasher", function (accounts: string[]) {
+contract("Atomic Bond Slashing", function (accounts: string[]) {
 
     const slasher = accounts[0];
     const buyer = accounts[1];
@@ -26,18 +26,17 @@ contract("Slasher", function (accounts: string[]) {
     let renExTokens: RenExTokensContract;
     let renExBrokerVerifier: RenExBrokerVerifierContract;
     let eth_address: string;
-    let details;
+    let details: any[];
 
     before(async function () {
         const ren = await artifacts.require("RepublicToken").deployed();
 
-        const tokenAddresses = {
-            [TokenCodes.BTC]: testUtils.MockBTC,
-            [TokenCodes.ETH]: testUtils.MockETH,
-            [TokenCodes.LTC]: testUtils.MockBTC,
-            [TokenCodes.DGX]: await artifacts.require("DGXMock").deployed(),
-            [TokenCodes.REN]: ren,
-        };
+        const tokenInstances = new Map<TokenCodes, testUtils.BasicERC20>()
+            .set(TokenCodes.BTC, testUtils.MockBTC)
+            .set(TokenCodes.ETH, testUtils.MockETH)
+            .set(TokenCodes.LTC, testUtils.MockBTC)
+            .set(TokenCodes.DGX, await artifacts.require("DGXMock").deployed())
+            .set(TokenCodes.REN, ren);
 
         dnr = await artifacts.require("DarknodeRegistry").deployed();
         orderbook = await artifacts.require("Orderbook").deployed();
@@ -47,13 +46,9 @@ contract("Slasher", function (accounts: string[]) {
         renExTokens = await artifacts.require("RenExTokens").deployed();
         renExTokens.registerToken(
             TokenCodes.LTC,
-            tokenAddresses[TokenCodes.LTC].address,
-            await tokenAddresses[TokenCodes.LTC].decimals()
+            tokenInstances.get(TokenCodes.LTC).address,
+            new BN(await tokenInstances.get(TokenCodes.LTC).decimals())
         );
-
-        // Broker
-        await ren.transfer(broker, testUtils.INGRESS_FEE * 100);
-        await ren.approve(orderbook.address, testUtils.INGRESS_FEE * 100, { from: broker });
 
         // Register darknode
         await ren.transfer(darknode, testUtils.MINIMUM_BOND);
@@ -67,9 +62,9 @@ contract("Slasher", function (accounts: string[]) {
 
         await renExSettlement.updateSlasher(slasher);
 
-        eth_address = tokenAddresses[TokenCodes.ETH].address;
+        eth_address = tokenInstances.get(TokenCodes.ETH).address;
 
-        details = [buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true];
+        details = [buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenInstances, orderbook, true];
     });
 
     it("should correctly relocate fees", async () => {

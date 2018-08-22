@@ -1,9 +1,10 @@
-const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const Orderbook = artifacts.require("Orderbook");
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
-const DarknodeSlasher = artifacts.require("DarknodeSlasher");
+const RepublicToken = artifacts.require("RepublicToken.sol");
+const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore.sol");
+const DarknodeRegistry = artifacts.require("DarknodeRegistry.sol");
+const DarknodeSlasher = artifacts.require("DarknodeSlasher.sol");
+const Orderbook = artifacts.require("Orderbook.sol");
+const DarknodeRewardVault = artifacts.require("DarknodeRewardVault.sol");
+const SettlementRegistry = artifacts.require("SettlementRegistry.sol");
 
 const config = require("./config.js");
 
@@ -25,10 +26,13 @@ module.exports = async function (deployer, network) {
             config.MINIMUM_EPOCH_INTERVAL
         ))
         .then(() => deployer.deploy(
+            SettlementRegistry,
+        ))
+        .then(() => deployer.deploy(
             Orderbook,
-            config.INGRESS_FEE,
             RepublicToken.address,
             DarknodeRegistry.address,
+            SettlementRegistry.address,
         ))
         .then(() => deployer.deploy(
             DarknodeRewardVault, DarknodeRegistry.address

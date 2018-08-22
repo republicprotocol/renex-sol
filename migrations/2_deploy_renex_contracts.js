@@ -8,6 +8,7 @@ const RenExBalances = artifacts.require("RenExBalances.sol");
 const RenExTokens = artifacts.require("RenExTokens.sol");
 const RenExSettlement = artifacts.require("RenExSettlement.sol");
 const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier");
+const SettlementRegistry = artifacts.require("SettlementRegistry");
 
 // Tokens
 const RepublicToken = artifacts.require("RepublicToken.sol");
@@ -47,6 +48,11 @@ module.exports = async function (deployer, network) {
             RenExBrokerVerifier.address
         ))
 
+        .then(async () => {
+            const renExBrokerVerifier = await RenExBrokerVerifier.at(RenExBrokerVerifier.address);
+            renExBrokerVerifier.updateBalancesContract(RenExBalances.address);
+        })
+
         .then(() => deployer.deploy(
             RenExSettlement,
             Orderbook.address,
@@ -60,6 +66,14 @@ module.exports = async function (deployer, network) {
             const renExBalances = await RenExBalances.at(RenExBalances.address);
             await renExBalances.updateRewardVaultContract(DarknodeRewardVault.address);
             await renExBalances.updateRenExSettlementContract(RenExSettlement.address);
+        })
+
+        .then(async () => {
+            const settlementRegistry = await SettlementRegistry.at(SettlementRegistry.address);
+            // Register RenEx
+            await settlementRegistry.registerSettlement(1, RenExSettlement.address, RenExBrokerVerifier.address);
+            // Register RenExAtomic
+            await settlementRegistry.registerSettlement(2, RenExSettlement.address, RenExBrokerVerifier.address);
         })
         ;
 };

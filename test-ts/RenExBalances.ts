@@ -5,6 +5,7 @@ import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
 
 import * as testUtils from "./helper/testUtils";
 import { BN } from "bn.js";
+import { PausableTokenContract } from "./bindings/pausable_token";
 
 contract("RenExBalances", function (accounts: string[]) {
 
@@ -12,7 +13,10 @@ contract("RenExBalances", function (accounts: string[]) {
     let renExSettlement: RenExSettlementContract;
     let rewardVault: DarknodeRewardVaultContract;
     let renExBrokerVerifier: RenExBrokerVerifierContract;
-    let ETH, REN, TOKEN1, TOKEN2;
+    let ETH: testUtils.BasicERC20;
+    let REN: testUtils.BasicERC20;
+    let TOKEN1: PausableTokenContract;
+    let TOKEN2: PausableTokenContract;
     const broker = accounts[9];
 
     before(async function () {

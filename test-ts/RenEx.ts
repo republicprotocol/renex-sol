@@ -9,17 +9,19 @@ import { RenExTokensContract } from "./bindings/ren_ex_tokens";
 import { PreciseTokenContract } from "./bindings/precise_token";
 import { RepublicTokenContract } from "./bindings/republic_token";
 import { BN } from "bn.js";
+import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { SettlementRegistryContract } from "./bindings/settlement_registry";
+import { BrokerVerifierContract } from "./bindings/broker_verifier";
 
 contract("RenEx", function (accounts: string[]) {
 
     const buyer = accounts[0];
     const seller = accounts[1];
-    let details;
+    let details: any[];
     const VPT = 0x3;
 
     const DGX_REN = market(TokenCodes.DGX, TokenCodes.REN);
     const ETH_REN = market(TokenCodes.ETH, TokenCodes.REN);
-    const ETH_VPT = market(TokenCodes.ETH, VPT);
 
     before(async function () {
         const dnr: DarknodeRegistryContract = await artifacts.require("DarknodeRegistry").deployed();
@@ -33,26 +35,25 @@ contract("RenEx", function (accounts: string[]) {
         const preciseToken: PreciseTokenContract = await artifacts.require("PreciseToken").new();
 
         const ren: RepublicTokenContract = await artifacts.require("RepublicToken").deployed();
-        const tokenAddresses = {
-            [TokenCodes.BTC]: testUtils.MockBTC,
-            [TokenCodes.ETH]: testUtils.MockETH,
-            [TokenCodes.LTC]: testUtils.MockBTC,
-            [TokenCodes.DGX]: await artifacts.require("DGXMock").deployed(),
-            [TokenCodes.REN]: ren,
-            [VPT]: preciseToken,
-        };
+        const tokenAddresses = new Map<TokenCodes, testUtils.BasicERC20>()
+            .set(TokenCodes.BTC, testUtils.MockBTC)
+            .set(TokenCodes.ETH, testUtils.MockETH)
+            .set(TokenCodes.LTC, testUtils.MockBTC)
+            .set(TokenCodes.DGX, await artifacts.require("DGXMock").deployed())
+            .set(TokenCodes.REN, ren)
+            .set(VPT, preciseToken);
 
         // Register LTC
         await renExTokens.registerToken(
             TokenCodes.LTC,
-            tokenAddresses[TokenCodes.LTC].address,
-            await tokenAddresses[TokenCodes.LTC].decimals()
+            tokenAddresses.get(TokenCodes.LTC).address,
+            new BN(await tokenAddresses.get(TokenCodes.LTC).decimals())
         );
 
         // Register VPT
         await renExTokens.registerToken(
-            VPT, tokenAddresses[VPT].address,
-            new BN(await tokenAddresses[VPT].decimals())
+            VPT, tokenAddresses.get(VPT).address,
+            new BN(await tokenAddresses.get(VPT).decimals())
         );
 
         // Register darknode
@@ -63,6 +64,11 @@ contract("RenEx", function (accounts: string[]) {
         await testUtils.waitForEpoch(dnr);
 
         const broker = accounts[3];
+
+        // Register broker
+        const renExBrokerVerifier: RenExBrokerVerifierContract =
+            await artifacts.require("RenExBrokerVerifier").deployed();
+        await renExBrokerVerifier.registerBroker(broker);
 
         details = [buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook];
     });
@@ -144,60 +150,77 @@ contract("RenEx", function (accounts: string[]) {
             .should.deep.equal([0.975 /* ETH */, 1 /* LTC */]);
     });
 
-    it("invalid orders should revert", async () => {
+    context("(negative tests)", async () => {
         const tokens = DGX_REN;
 
-        // Seller volume too low
-        let buy: any = { tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 2 /* REN */ };
-        let sell: any = { tokens, price: 1, volume: 1 /* REN */ };
-        await settleOrders.apply(this, [buy, sell, ...details])
-            .should.be.rejectedWith(null, /incompatible orders/);
+        it("seller volume too low", async () => {
+            // Seller volume too low
+            let buy: any = { tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 2 /* REN */ };
+            let sell: any = { tokens, price: 1, volume: 1 /* REN */ };
+            await settleOrders.apply(this, [buy, sell, ...details])
+                .should.be.rejectedWith(null, /incompatible orders/);
+        });
 
-        // Buyer volume too low
-        buy = { tokens, price: 1, volume: 1 /* DGX */ };
-        sell = { tokens, price: 1, volume: 2 /* REN */, minimumVolume: 2 /* REN */ };
-        await settleOrders.apply(this, [buy, sell, ...details])
-            .should.be.rejectedWith(null, /incompatible orders/);
+        it("Buyer volume too low", async () => {
+            const buy = { tokens, price: 1, volume: 1 /* DGX */ };
+            const sell = { tokens, price: 1, volume: 2 /* REN */, minimumVolume: 2 /* REN */ };
+            await settleOrders.apply(this, [buy, sell, ...details])
+                .should.be.rejectedWith(null, /incompatible orders/);
+        });
 
-        // Prices don't match
-        buy = { tokens, price: 1, volume: 1 /* DGX */ };
-        sell = { tokens, price: 1.05, volume: 1 /* REN */, minimumVolume: 1 /* DGX */ };
-        await settleOrders.apply(this, [buy, sell, ...details])
-            .should.be.rejectedWith(null, /incompatible orders/);
+        it("Prices don't match", async () => {
+            const buy = { tokens, price: 1, volume: 1 /* DGX */ };
+            const sell = { tokens, price: 1.05, volume: 1 /* REN */, minimumVolume: 1 /* DGX */ };
+            await settleOrders.apply(this, [buy, sell, ...details])
+                .should.be.rejectedWith(null, /incompatible orders/);
+        });
 
-        // Invalid tokens (should be DGX/REN, not REN/DGX)
-        const REN_DGX = market(TokenCodes.REN, TokenCodes.DGX);
-        buy = { tokens: REN_DGX, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
-        sell = { tokens: REN_DGX, price: 0.95, volume: 1 /* REN */ };
-        await settleOrders.apply(this, [buy, sell, ...details])
-            .should.be.rejectedWith(null, /incompatible orders/);
+        it("Invalid tokens (should be DGX/REN, not REN/DGX)", async () => {
+            const REN_DGX = market(TokenCodes.REN, TokenCodes.DGX);
+            const buy = { tokens: REN_DGX, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+            const sell = { tokens: REN_DGX, price: 0.95, volume: 1 /* REN */ };
+            await settleOrders.apply(this, [buy, sell, ...details])
+                .should.be.rejectedWith(null, /incompatible orders/);
+        });
 
-        // Orders opened by the same trader
-        buy = { tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
-        sell = { tokens, price: 0.95, volume: 1 /* REN */, trader: buyer };
-        await settleOrders.apply(this, [buy, sell, ...details])
-            .should.be.rejectedWith(null, /orders from same trader/);
+        it("Orders opened by the same trader", async () => {
+            const buy = { tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+            const sell = { tokens, price: 0.95, volume: 1 /* REN */, trader: buyer };
+            await settleOrders.apply(this, [buy, sell, ...details])
+                .should.be.rejectedWith(null, /orders from same trader/);
+        });
 
-        // Unsupported settlement
-        buy = { settlement: 3, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
-        sell = { settlement: 3, tokens, price: 0.95, volume: 1 /* REN */ };
+        it("Unsupported settlement", async () => {
+            // Register unrelated settlement layer
+            const settlementRegistry: SettlementRegistryContract =
+                await artifacts.require("SettlementRegistry").deployed();
+            const approvingBroker: BrokerVerifierContract = await artifacts.require("ApprovingBroker").new();
+            await settlementRegistry.registerSettlement(3, approvingBroker.address, approvingBroker.address);
 
-        await settleOrders.apply(this, [buy, sell, ...details])
-            .should.be.rejectedWith(null, /invalid settlement id/);
+            const buy = { settlement: 3, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
+            const sell = { settlement: 3, tokens, price: 0.95, volume: 1 /* REN */ };
 
-        // Token with too many decimals
-        buy = { tokens: ETH_VPT, price: 1e-12, volume: 1e-12 /* VPT */ };
-        sell = { tokens: ETH_VPT, price: 1e-12, volume: 1e-12 /* VPT */ };
+            await settleOrders.apply(this, [buy, sell, ...details])
+                .should.be.rejectedWith(null, /invalid settlement id/);
+        });
 
-        await settleOrders.apply(this, [buy, sell, ...details])
-            .should.be.rejectedWith(null, /invalid opcode/);
+        it("Token with too many decimals", async () => {
+            const ETH_VPT = market(TokenCodes.ETH, VPT);
 
-        const BTC_LTC = market(TokenCodes.BTC, TokenCodes.LTC);
-        buy = { settlement: 2, tokens: BTC_LTC, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* LTC */ };
-        sell = { settlement: 2, tokens: BTC_LTC, price: 0.95, volume: 1 /* LTC */ };
+            const buy = { tokens: ETH_VPT, price: 1e-12, volume: 1e-12 /* VPT */ };
+            const sell = { tokens: ETH_VPT, price: 1e-12, volume: 1e-12 /* VPT */ };
 
-        await settleOrders.apply(this, [buy, sell, ...details])
-            .should.be.rejectedWith(null, /non-eth atomic swaps are not supported/);
+            await settleOrders.apply(this, [buy, sell, ...details])
+                .should.be.rejectedWith(null, /invalid opcode/);
+        });
 
+        it("Atomic swap not involving Ether", async () => {
+            const BTC_LTC = market(TokenCodes.BTC, TokenCodes.LTC);
+            const buy = { settlement: 2, tokens: BTC_LTC, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* LTC */ };
+            const sell = { settlement: 2, tokens: BTC_LTC, price: 0.95, volume: 1 /* LTC */ };
+
+            await settleOrders.apply(this, [buy, sell, ...details])
+                .should.be.rejectedWith(null, /non-eth atomic swaps are not supported/);
+        });
     });
 });

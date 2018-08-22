@@ -1,6 +1,7 @@
 import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
 
 import * as testUtils from "./helper/testUtils";
+import { Transaction } from "./bindings/a_b_c_token";
 
 contract("RenExBalances", function (accounts: string[]) {
 
@@ -47,16 +48,22 @@ contract("RenExBalances", function (accounts: string[]) {
     });
 
     // Gets return value of transaction by doing a .call first
-    const callAndSend = async (fn, params) => {
-        const ret = fn.call(...params);
+    const callAndSend = async (
+        fn: { (...params: any[]): Promise<Transaction>, call: (...params: any[]) => any },
+        params: any[]
+    ): Promise<any> => {
+        const ret = (fn as any).call(...params);
         await fn(...params);
         return ret;
     };
 
-    it("can register and deregister brokers", async () => {
+    it("can verify withdraw signatures", async () => {
         const trader = accounts[0];
         const broker = accounts[8];
         const notBroker = accounts[9];
+
+        const previousBalancesContract = await renExBrokerVerifier.balancesContract();
+        await renExBrokerVerifier.updateBalancesContract(accounts[0]);
 
         await renExBrokerVerifier.registerBroker(broker);
 
@@ -92,6 +99,7 @@ contract("RenExBalances", function (accounts: string[]) {
         (await renExBrokerVerifier.traderNonces(trader)).should.bignumber.equal(2);
 
         await renExBrokerVerifier.deregisterBroker(broker);
+        await renExBrokerVerifier.updateBalancesContract(previousBalancesContract);
     });
 
 });

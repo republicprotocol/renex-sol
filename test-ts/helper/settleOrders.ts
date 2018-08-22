@@ -1,5 +1,5 @@
-// Two big number libraries are used - BigNumber decimal support
-// while BN has better bitwise operations
+// Two big number libraries are used - BigNumber has decimal support
+// while BN has better bitwise operations and is used by web3 1.0
 import BigNumber from "bignumber.js";
 import { BN } from "bn.js";
 
@@ -16,7 +16,7 @@ export async function settleOrders(
     darknode: string, broker: string,
     renExSettlement: RenExSettlementContract,
     renExBalances: RenExBalancesContract,
-    tokenAddresses: any,
+    tokenInstances: Map<TokenCodes, testUtils.BasicERC20>,
     orderbook: OrderbookContract,
     returnIDs: boolean = false,
 ) {
@@ -36,11 +36,11 @@ export async function settleOrders(
     buy.fromToken = lowToken;
     sell.fromToken = highToken;
 
-    const lowTokenInstance = tokenAddresses[lowToken];
-    const highTokenInstance = tokenAddresses[highToken];
+    const lowTokenInstance = tokenInstances.get(lowToken);
+    const highTokenInstance = tokenInstances.get(highToken);
 
-    const highDecimals = new BigNumber(await highTokenInstance.decimals()).toNumber();
-    const lowDecimals = new BigNumber(await lowTokenInstance.decimals()).toNumber();
+    const highDecimals = new BN(await highTokenInstance.decimals()).toNumber();
+    const lowDecimals = new BN(await lowTokenInstance.decimals()).toNumber();
 
     for (const order of [buy, sell]) {
         order.settlement = order.settlement !== undefined ? order.settlement : testUtils.Settlements.RenEx;
@@ -69,8 +69,6 @@ export async function settleOrders(
         } else {
             order.orderID = expectedID;
         }
-        let orderHash = testUtils.openPrefix + order.orderID.slice(2);
-        order.signature = await web3.eth.sign(orderHash, order.trader);
     }
 
     // Approve and deposit
@@ -82,26 +80,26 @@ export async function settleOrders(
         if (order.fromToken !== TokenCodes.ETH &&
             order.fromToken !== TokenCodes.BTC &&
             order.fromToken !== TokenCodes.LTC) {
-            await tokenAddresses[order.fromToken].transfer(order.trader, order.deposit);
-            await tokenAddresses[order.fromToken].approve(renExBalances.address, order.deposit, { from: order.trader });
-            await renExBalances.deposit(tokenAddresses[order.fromToken].address, order.deposit, { from: order.trader });
+            await tokenInstances.get(order.fromToken).transfer(order.trader, order.deposit);
+            await tokenInstances.get(order.fromToken).approve(
+                renExBalances.address, order.deposit, { from: order.trader }
+            );
+            await renExBalances.deposit(
+                tokenInstances.get(order.fromToken).address, order.deposit, { from: order.trader }
+            );
         } else {
             const deposit = order.fromToken === TokenCodes.ETH ? order.deposit : order.opposite;
             await renExBalances.deposit(
-                tokenAddresses[TokenCodes.ETH].address,
+                tokenInstances.get(TokenCodes.ETH).address,
                 deposit,
                 { from: order.trader, value: deposit }
             );
         }
     }
 
-    // Approve broker fees
-    await tokenAddresses[TokenCodes.REN].transfer(broker, testUtils.INGRESS_FEE * 2);
-    await tokenAddresses[TokenCodes.REN].approve(orderbook.address, testUtils.INGRESS_FEE * 2, { from: broker });
-
     // Open orders
-    await orderbook.openBuyOrder(buy.signature, buy.orderID, { from: broker }).should.not.be.rejected;
-    await orderbook.openSellOrder(sell.signature, sell.orderID, { from: broker }).should.not.be.rejected;
+    await testUtils.openOrder(orderbook, buy.settlement, broker, buy.trader, buy.orderID).should.not.be.rejected;
+    await testUtils.openOrder(orderbook, sell.settlement, broker, sell.trader, sell.orderID).should.not.be.rejected;
 
     // Confirm the order traders are
     for (const order of [buy, sell]) {

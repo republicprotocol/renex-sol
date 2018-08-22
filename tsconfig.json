@@ -12,7 +12,7 @@
             "mocha"
         ],
         "module": "commonjs",
-        "noImplicitAny": false,
+        "noImplicitAny": true,
         "noImplicitReturns": true,
         "removeComments": true,
         "preserveConstEnums": true,

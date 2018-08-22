@@ -4,19 +4,20 @@ import { OrderbookContract } from "./bindings/orderbook";
 import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
 import { RenExBalancesContract } from "./bindings/ren_ex_balances";
 import { RenExTokensContract } from "./bindings/ren_ex_tokens";
+import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
 
 contract("RenExSettlement", function (accounts: string[]) {
 
     const darknode = accounts[2];
     const broker = accounts[3];
-    let tokenAddresses;
+    let tokenAddresses: Map<TokenCodes, testUtils.BasicERC20>;
     let orderbook: OrderbookContract;
     let renExSettlement: RenExSettlementContract;
     let renExBalances: RenExBalancesContract;
     let renExTokens: RenExTokensContract;
-    let buyID_1, sellID_1;
-    let buyID_2, sellID_2;
-    let buyID_3, sellID_3;
+    let buyID_1: string, sellID_1: string;
+    let buyID_2: string, sellID_2: string;
+    let buyID_3, sellID_3: string;
     let buyID_4;
 
     const BUY1 = [web3.utils.sha3("0"), 1, buyMarket("0x3", "0x7"), 10, 10000, 0];
@@ -29,15 +30,16 @@ contract("RenExSettlement", function (accounts: string[]) {
     const SELL4 = [web3.utils.sha3("7"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 1000, 0];
     const SELL5 = [web3.utils.sha3("8"), 2, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 10, 1000, 0];
 
+    const renexID = testUtils.Settlements.RenEx;
+
     before(async function () {
         const ren = await artifacts.require("RepublicToken").deployed();
 
-        tokenAddresses = {
-            [TokenCodes.BTC]: testUtils.MockBTC,
-            [TokenCodes.ETH]: testUtils.MockETH,
-            [TokenCodes.DGX]: await artifacts.require("DGXMock").deployed(),
-            [TokenCodes.REN]: ren,
-        };
+        tokenAddresses = new Map()
+            .set(TokenCodes.BTC, testUtils.MockBTC)
+            .set(TokenCodes.ETH, testUtils.MockETH)
+            .set(TokenCodes.DGX, await artifacts.require("DGXMock").deployed())
+            .set(TokenCodes.REN, ren);
 
         let dnr = await artifacts.require("DarknodeRegistry").deployed();
         orderbook = await artifacts.require("Orderbook").deployed();
@@ -45,17 +47,16 @@ contract("RenExSettlement", function (accounts: string[]) {
         renExSettlement = await artifacts.require("RenExSettlement").deployed();
         renExBalances = await artifacts.require("RenExBalances").deployed();
 
-        // Broker
-        await ren.transfer(broker, testUtils.INGRESS_FEE * 100);
-        await ren.approve(orderbook.address, testUtils.INGRESS_FEE * 100, { from: broker });
-
         // Register darknode
         await ren.transfer(darknode, testUtils.MINIMUM_BOND);
         await ren.approve(dnr.address, testUtils.MINIMUM_BOND, { from: darknode });
         await dnr.register(darknode, testUtils.PUBK("1"), testUtils.MINIMUM_BOND, { from: darknode });
         await testUtils.waitForEpoch(dnr);
 
-        await tokenAddresses[TokenCodes.REN].approve(orderbook.address, 100 * 1e18, { from: broker });
+        // Register broker
+        const renExBrokerVerifier: RenExBrokerVerifierContract =
+            await artifacts.require("RenExBrokerVerifier").deployed();
+        await renExBrokerVerifier.registerBroker(broker);
 
         buyID_1 = await renExSettlement.hashOrder.apply(this, [...BUY1]);
         sellID_1 = await renExSettlement.hashOrder.apply(this, [...SELL1]);
@@ -68,14 +69,16 @@ contract("RenExSettlement", function (accounts: string[]) {
 
         buyID_4 = await renExSettlement.hashOrder.apply(this, [...BUY4]);
 
-        await testUtils.openBuyOrder(orderbook, broker, accounts[5], buyID_1);
-        await testUtils.openBuyOrder(orderbook, broker, accounts[6], buyID_2);
-        await testUtils.openBuyOrder(orderbook, broker, accounts[7], buyID_3);
-        await testUtils.openBuyOrder(orderbook, broker, accounts[8], buyID_4);
+        // Buys
+        await testUtils.openOrder(orderbook, renexID, broker, accounts[5], buyID_1);
+        await testUtils.openOrder(orderbook, renexID, broker, accounts[6], buyID_2);
+        await testUtils.openOrder(orderbook, renexID, broker, accounts[7], buyID_3);
+        await testUtils.openOrder(orderbook, renexID, broker, accounts[8], buyID_4);
 
-        await testUtils.openSellOrder(orderbook, broker, accounts[6], sellID_1);
-        await testUtils.openSellOrder(orderbook, broker, accounts[5], sellID_2);
-        await testUtils.openSellOrder(orderbook, broker, accounts[8], sellID_3);
+        // Sells
+        await testUtils.openOrder(orderbook, renexID, broker, accounts[6], sellID_1);
+        await testUtils.openOrder(orderbook, renexID, broker, accounts[5], sellID_2);
+        await testUtils.openOrder(orderbook, renexID, broker, accounts[8], sellID_3);
 
         await orderbook.confirmOrder(buyID_1, sellID_1, { from: darknode });
         await orderbook.confirmOrder(buyID_2, sellID_2, { from: darknode });
@@ -199,7 +202,7 @@ contract("RenExSettlement", function (accounts: string[]) {
             buyID_2,
             sellID_2,
         ).should.be.rejectedWith(null, /unregistered secondary token/);
-        await renExTokens.registerToken(TokenCodes.ETH, tokenAddresses[TokenCodes.ETH].address, 18);
+        await renExTokens.registerToken(TokenCodes.ETH, tokenAddresses.get(TokenCodes.ETH).address, 18);
     });
 
     it("should fail for excessive gas price", async () => {

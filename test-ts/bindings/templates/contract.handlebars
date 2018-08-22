@@ -3,6 +3,8 @@ import { BN } from "bn.js";
 
 export interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
 
+type BigNumber = string | number | BN;
+
 // tslint:disable:max-line-length
 export interface {{contractName}}Contract {
 {{#each methods}}

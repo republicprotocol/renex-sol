@@ -7,13 +7,14 @@
         "coverage": "if [ -d \"test\" ]; then npm run warn; else npm run coverage-ts; fi;",
         "merge": "sol-merger \"./contracts/**/*.sol\"",
         "warn": "echo \"Refusing to overwrite 'test' directory. Run '\\033[1;33mnpm run clean\\033[0m'.\n\"",
-        "test-ts": "trap \"npm run clean\" INT TERM; (tsc && truffle test); npm run clean",
+        "test-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && tsc && truffle test); npm run clean",
         "coverage-setup": "rm -r node_modules/ethereumjs-testrpc-sc 2> /dev/null; cp -r .travis/ethereumjs-testrpc-sc node_modules/ethereumjs-testrpc-sc",
-        "coverage-ts": "trap \"npm run clean\" INT TERM; (npm run coverage-setup && tsc && solidity-coverage); npm run clean",
+        "coverage-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && npm run coverage-setup && tsc && solidity-coverage); npm run clean",
         "development": "truffle migrate --network development --reset",
         "nightly": "npm run merge ./.merged/nightly && truffle migrate --network nightly --reset",
         "falcon": "npm run merge ./.merged/falcon && truffle migrate --network falcon --reset",
-        "f0": "npm run merge ./.merged/f0 && truffle migrate --network f0 --reset"
+        "f0": "npm run merge ./.merged/f0 && truffle migrate --network f0 --reset",
+        "bindings": "truffle compile && ./node_modules/.bin/abi-gen --abis 'build/contracts/*.json' --output ./test-ts/bindings --template './test-ts/bindings/templates/contract.handlebars' --partials './test-ts/bindings/templates/partials/*.handlebars' 1> /dev/null"
     },
     "repository": {
         "type": "git",
@@ -22,7 +23,7 @@
     "license": "GPL-3.0-only",
     "dependencies": {
         "openzeppelin-solidity": "1.11.0",
-        "republic-sol": "git://github.com/republicprotocol/republic-sol.git#master"
+        "republic-sol": "git://github.com/republicprotocol/republic-sol.git#nightly"
     },
     "devDependencies": {
         "@0xproject/abi-gen": "^1.0.4",
@@ -31,6 +32,7 @@
         "@types/crypto-js": "^3.1.42",
         "@types/mocha": "^5.2.5",
         "@types/node": "^10.5.2",
+        "@types/underscore": "^1.8.9",
         "bignumber.js": "^7.2.1",
         "bn.js": "^4.11.8",
         "chai": "^4.1.2",

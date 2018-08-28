@@ -12,6 +12,13 @@ const KOVAN = (MNEMONIC) => ({
 });
 
 module.exports = {
+    solc: {
+        version: "native",
+        optimizer: {
+            enabled: true,
+            runs: 200
+        }
+    },
     networks: {
         development: {
             host: "localhost",

@@ -1,4 +1,3 @@
-
 // Dependencies
 const DarknodeRewardVault = artifacts.require("DarknodeRewardVault.sol");
 const Orderbook = artifacts.require("Orderbook.sol");
@@ -21,12 +20,17 @@ const config = require("./config.js");
 module.exports = async function (deployer, network) {
     // Network is "development", "nightly", "falcon" or "f0"
 
+    const VERSION_STRING = `${network}-${config.VERSION}`;
+
     await deployer
         .then(() => deployer.deploy(DGXMock))
         .then(() => deployer.deploy(ABCToken))
         .then(() => deployer.deploy(XYZToken))
 
-        .then(() => deployer.deploy(RenExTokens))
+        .then(() => deployer.deploy(
+            RenExTokens,
+            VERSION_STRING,
+        ))
 
         .then(async () => {
             const renExTokens = await RenExTokens.at(RenExTokens.address);
@@ -40,12 +44,12 @@ module.exports = async function (deployer, network) {
 
         .then(() => deployer.deploy(
             RenExBrokerVerifier,
-            config.VERSION,
+            VERSION_STRING,
         ))
 
         .then(() => deployer.deploy(
             RenExBalances,
-            config.VERSION,
+            VERSION_STRING,
             DarknodeRewardVault.address,
             RenExBrokerVerifier.address,
         ))
@@ -57,7 +61,7 @@ module.exports = async function (deployer, network) {
 
         .then(() => deployer.deploy(
             RenExSettlement,
-            config.VERSION,
+            VERSION_STRING,
             Orderbook.address,
             RenExTokens.address,
             RenExBalances.address,
@@ -77,6 +81,5 @@ module.exports = async function (deployer, network) {
             await settlementRegistry.registerSettlement(1, RenExSettlement.address, RenExBrokerVerifier.address);
             // Register RenExAtomic
             await settlementRegistry.registerSettlement(2, RenExSettlement.address, RenExBrokerVerifier.address);
-        })
-        ;
+        });
 };

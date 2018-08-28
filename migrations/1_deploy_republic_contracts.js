@@ -10,18 +10,22 @@ const config = require("./config.js");
 
 module.exports = async function (deployer, network) {
 
+    const VERSION_STRING = `${network}-${config.VERSION}`;
+
     await deployer
         .deploy(
-            RepublicToken, { overwrite: network !== "f0" }
+            RepublicToken, {
+                overwrite: network !== "f0"
+            }
         )
         .then(() => deployer.deploy(
             DarknodeRegistryStore,
-            config.VERSION,
+            VERSION_STRING,
             RepublicToken.address,
         ))
         .then(() => deployer.deploy(
             DarknodeRegistry,
-            config.VERSION,
+            VERSION_STRING,
             RepublicToken.address,
             DarknodeRegistryStore.address,
             config.MINIMUM_BOND,
@@ -30,18 +34,18 @@ module.exports = async function (deployer, network) {
         ))
         .then(() => deployer.deploy(
             SettlementRegistry,
-            config.VERSION,
+            VERSION_STRING,
         ))
         .then(() => deployer.deploy(
             Orderbook,
-            config.VERSION,
+            VERSION_STRING,
             RepublicToken.address,
             DarknodeRegistry.address,
             SettlementRegistry.address,
         ))
         .then(() => deployer.deploy(
             DarknodeRewardVault,
-            config.VERSION,
+            VERSION_STRING,
             DarknodeRegistry.address
         ))
         .then(async () => {
@@ -50,13 +54,12 @@ module.exports = async function (deployer, network) {
         })
         .then(() => deployer.deploy(
             DarknodeSlasher,
-            config.VERSION,
+            VERSION_STRING,
             DarknodeRegistry.address,
             Orderbook.address,
         ))
         .then(async () => {
             const darknodeRegistry = await DarknodeRegistry.at(DarknodeRegistry.address);
             darknodeRegistry.updateSlasher(DarknodeSlasher.address);
-        })
-        ;
+        });
 }

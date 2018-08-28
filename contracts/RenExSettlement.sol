@@ -16,6 +16,8 @@ import "./RenExTokens.sol";
 contract RenExSettlement is Ownable {
     using SafeMath for uint256;
 
+    string public VERSION; // Passed in as a constructor parameter.
+
     // This contract handles the settlements with ID 1 and 2.
     uint32 constant public RENEX_SETTLEMENT_ID = 1;
     uint32 constant public RENEX_ATOMIC_SETTLEMENT_ID = 2;
@@ -97,17 +99,22 @@ contract RenExSettlement is Ownable {
         _;
     }
 
+    /// @notice The contract constructor.
+    ///
+    /// @param _VERSION A string defining the contract version.
     /// @param _orderbookContract The address of the Orderbook contract.
     /// @param _renExBalancesContract The address of the RenExBalances
     ///        contract.
     /// @param _renExTokensContract The address of the RenExTokens contract.
     constructor(
+        string _VERSION,
         Orderbook _orderbookContract,
         RenExTokens _renExTokensContract,
         RenExBalances _renExBalancesContract,
         address _slasherAddress,
         uint256 _submissionGasPriceLimit
     ) public {
+        VERSION = _VERSION;
         orderbookContract = _orderbookContract;
         renExTokensContract = _renExTokensContract;
         renExBalancesContract = _renExBalancesContract;
@@ -232,6 +239,7 @@ contract RenExSettlement is Ownable {
 
         execute(_buyID, _sellID, buyer, seller, tokens);
 
+        /* solium-disable-next-line security/no-block-members */
         matchTimestamp[_buyID][_sellID] = now;
 
         // Store that the orders have been settled.

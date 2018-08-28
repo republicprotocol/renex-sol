@@ -3,6 +3,7 @@ pragma solidity 0.4.24;
 /// @notice RenExAtomicSwapper implements the RenEx atomic swapping interface
 /// for Ether values. Does not support ERC20 tokens.
 contract RenExAtomicSwapper {
+    string public VERSION; // Passed in as a constructor parameter.
 
     struct Swap {
         uint256 timelock;
@@ -50,6 +51,7 @@ contract RenExAtomicSwapper {
 
     /// @notice Throws if the swap is not expirable.
     modifier onlyExpirableSwaps(bytes32 _swapID) {
+        /* solium-disable-next-line security/no-block-members */
         require(now >= swaps[_swapID].timelock, "swap not expirable");
         _;
     }
@@ -58,6 +60,13 @@ contract RenExAtomicSwapper {
     modifier onlyWithSecretKey(bytes32 _swapID, bytes32 _secretKey) {
         require(swaps[_swapID].secretLock == sha256(abi.encodePacked(_secretKey)), "invalid secret");
         _;
+    }
+
+    /// @notice The contract constructor.
+    ///
+    /// @param _VERSION A string defining the contract version.
+    constructor(string _VERSION) public {
+        VERSION = _VERSION;
     }
 
     /// @notice Initiates the atomic swap.
@@ -97,6 +106,7 @@ contract RenExAtomicSwapper {
         Swap memory swap = swaps[_swapID];
         swaps[_swapID].secretKey = _secretKey;
         swapStates[_swapID] = States.CLOSED;
+        /* solium-disable-next-line security/no-block-members */
         redeemedAt[_swapID] = now;
 
         // Transfer the ETH funds from this contract to the withdrawing trader.
@@ -141,6 +151,7 @@ contract RenExAtomicSwapper {
     ///
     /// @param _swapID The unique atomic swap id.
     function refundable(bytes32 _swapID) external view returns (bool) {
+        /* solium-disable-next-line security/no-block-members */
         return (now >= swaps[_swapID].timelock && swapStates[_swapID] == States.OPEN);
     }
 

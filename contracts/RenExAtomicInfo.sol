@@ -10,6 +10,7 @@ import "republic-sol/contracts/Orderbook.sol";
 /// trades, allowing traders to open orders with one wallet (e.g. MetaMask) and
 /// perform the trade with another (e.g. the keystore used by Swapper)
 contract RenExAtomicInfo is Ownable {
+    string public VERSION; // Passed in as a constructor parameter.
 
     Orderbook public orderbookContract;
 
@@ -35,10 +36,15 @@ contract RenExAtomicInfo is Ownable {
         _;
     }
 
+    /// @notice The contract constructor.
+    ///
+    /// @param _VERSION A string defining the contract version.
     /// @param _orderbookContract The address of the Orderbook contract.
     constructor(
+        string _VERSION,
         Orderbook _orderbookContract
     ) public {
+        VERSION = _VERSION;
         orderbookContract = _orderbookContract;
     }
 
@@ -73,6 +79,7 @@ contract RenExAtomicInfo is Ownable {
     function submitDetails(bytes32 _orderID, bytes _swapDetails) external onlyAuthorizedSwapper(_orderID, msg.sender) {
         require(swapDetailsTimestamp[_orderID] == 0, "already submitted");
         swapDetails[_orderID] = _swapDetails;
+        /* solium-disable-next-line security/no-block-members */
         swapDetailsTimestamp[_orderID] = now;
     }
 
@@ -84,6 +91,7 @@ contract RenExAtomicInfo is Ownable {
     function setOwnerAddress(bytes32 _orderID, bytes _owner) external onlyAuthorizedSwapper(_orderID, msg.sender) {
         require(ownerAddressTimestamp[_orderID] == 0, "already set");
         getOwnerAddress[_orderID] = _owner;
+        /* solium-disable-next-line security/no-block-members */
         ownerAddressTimestamp[_orderID] = now;
     }
 }

@@ -7,6 +7,7 @@ import "republic-sol/contracts/libraries/Utils.sol";
 /// @notice RenExBrokerVerifier implements the BrokerVerifier contract,
 /// verifying broker signatures for order opening and fund withdrawal.
 contract RenExBrokerVerifier is Ownable {
+    string public VERSION; // Passed in as a constructor parameter.
 
     // Events
     event LogBalancesContractUpdated(address previousBalancesContract, address nextBalancesContract);
@@ -22,6 +23,13 @@ contract RenExBrokerVerifier is Ownable {
     modifier onlyBalancesContract() {
         require(msg.sender == balancesContract, "not authorized");
         _;
+    }
+
+    /// @notice The contract constructor.
+    ///
+    /// @param _VERSION A string defining the contract version.
+    constructor(string _VERSION) public {
+        VERSION = _VERSION;
     }
 
     /// @notice Allows the owner of the contract to update the address of the

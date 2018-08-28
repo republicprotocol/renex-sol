@@ -4,6 +4,7 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 /// @notice RenExTokens is a registry of tokens that can be traded on RenEx.
 contract RenExTokens is Ownable {
+    string public VERSION; // Passed in as a constructor parameter.
 
     struct TokenDetails {
         address addr;
@@ -18,6 +19,13 @@ contract RenExTokens is Ownable {
     // Events
     event LogTokenRegistered(uint32 tokenCode, address tokenAddress, uint8 tokenDecimals);
     event LogTokenDeregistered(uint32 tokenCode);
+
+    /// @notice The contract constructor.
+    ///
+    /// @param _VERSION A string defining the contract version.
+    constructor(string _VERSION) public {
+        VERSION = _VERSION;
+    }
 
     /// @notice Allows the owner to register and the details for a token.
     /// Once details have been submitted, they cannot be overwritten.

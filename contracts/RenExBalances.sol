@@ -13,6 +13,8 @@ import "./RenExBrokerVerifier.sol";
 contract RenExBalances is Ownable {
     using SafeMath for uint256;
 
+    string public VERSION; // Passed in as a constructor parameter.
+
     RenExSettlement public settlementContract;
     RenExBrokerVerifier public brokerVerifierContract;
     DarknodeRewardVault public rewardVaultContract;
@@ -35,8 +37,16 @@ contract RenExBalances is Ownable {
     mapping(address => mapping(address => uint256)) public traderBalances;
     mapping(address => mapping(address => uint256)) public traderWithdrawalSignals;
 
+    /// @notice The contract constructor.
+    ///
+    /// @param _VERSION A string defining the contract version.
     /// @param _rewardVaultContract The address of the RewardVault contract.
-    constructor(DarknodeRewardVault _rewardVaultContract, RenExBrokerVerifier _brokerVerifierContract) public {
+    constructor(
+        string _VERSION,
+        DarknodeRewardVault _rewardVaultContract,
+        RenExBrokerVerifier _brokerVerifierContract
+    ) public {
+        VERSION = _VERSION;
         rewardVaultContract = _rewardVaultContract;
         brokerVerifierContract = _brokerVerifierContract;
     }
@@ -59,6 +69,7 @@ contract RenExBalances is Ownable {
             _;
         } else {
             bool hasSignalled = traderWithdrawalSignals[trader][_token] != 0;
+            /* solium-disable-next-line security/no-block-members */
             bool hasWaitedDelay = (now - traderWithdrawalSignals[trader][_token]) > SIGNAL_DELAY;
             require(hasSignalled && hasWaitedDelay, "not signalled");
             traderWithdrawalSignals[trader][_token] = 0;
@@ -164,6 +175,7 @@ contract RenExBalances is Ownable {
     /// trader until the trader has withdrawn, guaranteeing that they won't have
     /// orders open for the particular token.
     function signalBackupWithdraw(address _token) external {
+        /* solium-disable-next-line security/no-block-members */
         traderWithdrawalSignals[msg.sender][_token] = now;
     }
 

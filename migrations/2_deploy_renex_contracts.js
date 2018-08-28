@@ -39,13 +39,15 @@ module.exports = async function (deployer, network) {
         })
 
         .then(() => deployer.deploy(
-            RenExBrokerVerifier
+            RenExBrokerVerifier,
+            config.VERSION,
         ))
 
         .then(() => deployer.deploy(
             RenExBalances,
+            config.VERSION,
             DarknodeRewardVault.address,
-            RenExBrokerVerifier.address
+            RenExBrokerVerifier.address,
         ))
 
         .then(async () => {
@@ -55,6 +57,7 @@ module.exports = async function (deployer, network) {
 
         .then(() => deployer.deploy(
             RenExSettlement,
+            config.VERSION,
             Orderbook.address,
             RenExTokens.address,
             RenExBalances.address,

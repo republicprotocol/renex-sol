@@ -1,6 +1,12 @@
-import * as testUtils from "./helper/testUtils";
-import { RenExTokensContract } from "./bindings/ren_ex_tokens";
 import { BN } from "bn.js";
+
+import * as testUtils from "./helper/testUtils";
+
+import { RenExTokensArtifact, RenExTokensContract } from "./bindings/ren_ex_tokens";
+import { RepublicTokenArtifact } from "./bindings/republic_token";
+
+const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
+const RenExTokens = artifacts.require("RenExTokens") as RenExTokensArtifact;
 
 contract("RenExTokens", function (accounts: string[]) {
 
@@ -14,23 +20,14 @@ contract("RenExTokens", function (accounts: string[]) {
     before(async function () {
         tokenInstances = new Map()
             .set(ETH, { address: testUtils.Ox0, decimals: () => Promise.resolve(18) })
-            .set(REN, await artifacts.require("RepublicToken").new());
+            .set(REN, await RepublicToken.new());
 
-        renExTokens = await artifacts.require("RenExTokens").new();
+        renExTokens = await RenExTokens.new("VERSION");
     });
-
-    // Work-around for abi-gen not using struct fields
-    const deconstructDetails = (details: [string, number | string | BN, boolean]) => {
-        return {
-            addr: details[0],
-            decimals: details[1],
-            registered: details[2],
-        };
-    };
 
     it("owner can register and deregister tokens", async () => {
         for (const token of tokens) {
-            const tokenDetails = deconstructDetails(await renExTokens.tokens(token));
+            const tokenDetails = await renExTokens.tokens(token);
             (tokenDetails.registered).should.be.false;
         }
 
@@ -45,7 +42,7 @@ contract("RenExTokens", function (accounts: string[]) {
                 decimals
             );
 
-            const tokenDetails = deconstructDetails(await renExTokens.tokens(token));
+            const tokenDetails = await renExTokens.tokens(token);
             (tokenDetails.addr).should.equal(address);
             (tokenDetails.decimals.toString()).should.equal(decimals.toString());
             (tokenDetails.registered).should.be.true;
@@ -57,7 +54,7 @@ contract("RenExTokens", function (accounts: string[]) {
             // Deregister
             await renExTokens.deregisterToken(token);
 
-            const tokenDetails = deconstructDetails(await renExTokens.tokens(token));
+            const tokenDetails = await renExTokens.tokens(token);
             (tokenDetails.addr).should.equal(address);
             (tokenDetails.decimals.toString()).should.equal(decimals.toString());
             (tokenDetails.registered).should.be.false;
@@ -126,7 +123,7 @@ contract("RenExTokens", function (accounts: string[]) {
         // Can re-register with the same details
         await renExTokens.registerToken(token1, address1, decimals1);
 
-        const tokenDetails = deconstructDetails(await renExTokens.tokens(token1));
+        const tokenDetails = await renExTokens.tokens(token1);
         (tokenDetails.addr).should.equal(address1);
         (tokenDetails.decimals.toString()).should.equal(decimals1.toString());
         (tokenDetails.registered).should.be.true;

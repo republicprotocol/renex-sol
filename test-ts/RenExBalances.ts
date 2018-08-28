@@ -1,11 +1,22 @@
-import { RenExBalancesContract } from "./bindings/ren_ex_balances";
-import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
-import { DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
-import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { BN } from "bn.js";
 
 import * as testUtils from "./helper/testUtils";
-import { BN } from "bn.js";
+
+import { ABCTokenArtifact } from "./bindings/a_b_c_token";
+import { DarknodeRewardVaultArtifact, DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
 import { PausableTokenContract } from "./bindings/pausable_token";
+import { RenExBalancesArtifact, RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { RenExSettlementArtifact, RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { RepublicTokenArtifact } from "./bindings/republic_token";
+import { StandardTokenContract } from "./bindings/standard_token";
+
+const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
+const ABCToken = artifacts.require("ABCToken") as ABCTokenArtifact;
+const DarknodeRewardVault = artifacts.require("DarknodeRewardVault") as DarknodeRewardVaultArtifact;
+const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
+const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
+const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
 
 contract("RenExBalances", function (accounts: string[]) {
 
@@ -16,20 +27,20 @@ contract("RenExBalances", function (accounts: string[]) {
     let ETH: testUtils.BasicERC20;
     let REN: testUtils.BasicERC20;
     let TOKEN1: PausableTokenContract;
-    let TOKEN2: PausableTokenContract;
+    let TOKEN2: StandardTokenContract;
     const broker = accounts[9];
 
     before(async function () {
         ETH = testUtils.MockETH;
-        REN = await artifacts.require("RepublicToken").deployed();
-        TOKEN1 = await artifacts.require("RepublicToken").new();
-        TOKEN2 = await artifacts.require("ABCToken").deployed();
-        rewardVault = await artifacts.require("DarknodeRewardVault").deployed();
-        renExBalances = await artifacts.require("RenExBalances").deployed();
-        renExSettlement = await artifacts.require("RenExSettlement").deployed();
+        REN = await RepublicToken.deployed();
+        TOKEN1 = await RepublicToken.new();
+        TOKEN2 = await ABCToken.deployed();
+        rewardVault = await DarknodeRewardVault.deployed();
+        renExBalances = await RenExBalances.deployed();
+        renExSettlement = await RenExSettlement.deployed();
 
         // Register broker
-        renExBrokerVerifier = await artifacts.require("RenExBrokerVerifier").deployed();
+        renExBrokerVerifier = await RenExBrokerVerifier.deployed();
         await renExBrokerVerifier.registerBroker(broker);
     });
 

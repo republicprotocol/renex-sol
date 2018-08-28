@@ -1,10 +1,24 @@
 import * as testUtils from "./helper/testUtils";
-import { TokenCodes, buyMarket, sellMarket } from "./helper/testUtils";
-import { OrderbookContract } from "./bindings/orderbook";
-import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
-import { RenExBalancesContract } from "./bindings/ren_ex_balances";
-import { RenExTokensContract } from "./bindings/ren_ex_tokens";
-import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+
+import { buyMarket, sellMarket, TokenCodes } from "./helper/testUtils";
+
+import { DGXMockArtifact } from "./bindings/d_g_x_mock";
+import { DarknodeRegistryArtifact } from "./bindings/darknode_registry";
+import { OrderbookArtifact, OrderbookContract } from "./bindings/orderbook";
+import { RenExBalancesArtifact, RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { RenExSettlementArtifact, RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { RenExTokensArtifact, RenExTokensContract } from "./bindings/ren_ex_tokens";
+import { RepublicTokenArtifact } from "./bindings/republic_token";
+
+const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
+const DGXMock = artifacts.require("DGXMock") as DGXMockArtifact;
+const DarknodeRegistry = artifacts.require("DarknodeRegistry") as DarknodeRegistryArtifact;
+const Orderbook = artifacts.require("Orderbook") as OrderbookArtifact;
+const RenExTokens = artifacts.require("RenExTokens") as RenExTokensArtifact;
+const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
+const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
+const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
 
 contract("RenExSettlement", function (accounts: string[]) {
 
@@ -33,19 +47,19 @@ contract("RenExSettlement", function (accounts: string[]) {
     const renexID = testUtils.Settlements.RenEx;
 
     before(async function () {
-        const ren = await artifacts.require("RepublicToken").deployed();
+        const ren = await RepublicToken.deployed();
 
         tokenAddresses = new Map()
             .set(TokenCodes.BTC, testUtils.MockBTC)
             .set(TokenCodes.ETH, testUtils.MockETH)
-            .set(TokenCodes.DGX, await artifacts.require("DGXMock").deployed())
+            .set(TokenCodes.DGX, await DGXMock.deployed())
             .set(TokenCodes.REN, ren);
 
-        let dnr = await artifacts.require("DarknodeRegistry").deployed();
-        orderbook = await artifacts.require("Orderbook").deployed();
-        renExTokens = await artifacts.require("RenExTokens").deployed();
-        renExSettlement = await artifacts.require("RenExSettlement").deployed();
-        renExBalances = await artifacts.require("RenExBalances").deployed();
+        let dnr = await DarknodeRegistry.deployed();
+        orderbook = await Orderbook.deployed();
+        renExTokens = await RenExTokens.deployed();
+        renExSettlement = await RenExSettlement.deployed();
+        renExBalances = await RenExBalances.deployed();
 
         // Register darknode
         await ren.transfer(darknode, testUtils.MINIMUM_BOND);
@@ -55,7 +69,7 @@ contract("RenExSettlement", function (accounts: string[]) {
 
         // Register broker
         const renExBrokerVerifier: RenExBrokerVerifierContract =
-            await artifacts.require("RenExBrokerVerifier").deployed();
+            await RenExBrokerVerifier.deployed();
         await renExBrokerVerifier.registerBroker(broker);
 
         buyID_1 = await renExSettlement.hashOrder.apply(this, [...BUY1]);

@@ -1,14 +1,15 @@
-import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
-
 import * as testUtils from "./helper/testUtils";
-import { Transaction } from "./bindings/a_b_c_token";
+
+import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+
+const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
 
 contract("RenExBalances", function (accounts: string[]) {
 
     let renExBrokerVerifier: RenExBrokerVerifierContract;
 
     before(async function () {
-        renExBrokerVerifier = await artifacts.require("RenExBrokerVerifier").deployed();
+        renExBrokerVerifier = await RenExBrokerVerifier.deployed();
     });
 
     it("can register and deregister brokers", async () => {
@@ -49,7 +50,7 @@ contract("RenExBalances", function (accounts: string[]) {
 
     // Gets return value of transaction by doing a .call first
     const callAndSend = async (
-        fn: { (...params: any[]): Promise<Transaction>, call: (...params: any[]) => any },
+        fn: { (...params: any[]): Promise<testUtils.Transaction>, call: (...params: any[]) => any },
         params: any[]
     ): Promise<any> => {
         const ret = (fn as any).call(...params);

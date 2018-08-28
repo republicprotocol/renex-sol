@@ -1,17 +1,34 @@
-import * as testUtils from "./helper/testUtils";
-import { TokenCodes, market } from "./helper/testUtils";
-import { settleOrders } from "./helper/settleOrders";
-import { DarknodeRegistryContract } from "./bindings/darknode_registry";
-import { OrderbookContract } from "./bindings/orderbook";
-import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
-import { RenExBalancesContract } from "./bindings/ren_ex_balances";
-import { RenExTokensContract } from "./bindings/ren_ex_tokens";
-import { PreciseTokenContract } from "./bindings/precise_token";
-import { RepublicTokenContract } from "./bindings/republic_token";
 import { BN } from "bn.js";
-import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
-import { SettlementRegistryContract } from "./bindings/settlement_registry";
+
+import * as testUtils from "./helper/testUtils";
+
+import { settleOrders } from "./helper/settleOrders";
+import { market, TokenCodes } from "./helper/testUtils";
+
+import { ApprovingBrokerArtifact } from "./bindings/approving_broker";
 import { BrokerVerifierContract } from "./bindings/broker_verifier";
+import { DGXMockArtifact } from "./bindings/d_g_x_mock";
+import { DarknodeRegistryArtifact, DarknodeRegistryContract } from "./bindings/darknode_registry";
+import { OrderbookArtifact, OrderbookContract } from "./bindings/orderbook";
+import { PreciseTokenArtifact, PreciseTokenContract } from "./bindings/precise_token";
+import { RenExBalancesArtifact, RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { RenExSettlementArtifact, RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { RenExTokensArtifact, RenExTokensContract } from "./bindings/ren_ex_tokens";
+import { RepublicTokenArtifact, RepublicTokenContract } from "./bindings/republic_token";
+import { SettlementRegistryArtifact, SettlementRegistryContract } from "./bindings/settlement_registry";
+
+const DarknodeRegistry = artifacts.require("DarknodeRegistry") as DarknodeRegistryArtifact;
+const Orderbook = artifacts.require("Orderbook") as OrderbookArtifact;
+const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
+const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
+const RenExTokens = artifacts.require("RenExTokens") as RenExTokensArtifact;
+const PreciseToken = artifacts.require("PreciseToken") as PreciseTokenArtifact;
+const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
+const DGXMock = artifacts.require("DGXMock") as DGXMockArtifact;
+const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
+const SettlementRegistry = artifacts.require("SettlementRegistry") as SettlementRegistryArtifact;
+const ApprovingBroker = artifacts.require("ApprovingBroker") as ApprovingBrokerArtifact;
 
 contract("RenEx", function (accounts: string[]) {
 
@@ -24,22 +41,21 @@ contract("RenEx", function (accounts: string[]) {
     const ETH_REN = market(TokenCodes.ETH, TokenCodes.REN);
 
     before(async function () {
-        const dnr: DarknodeRegistryContract = await artifacts.require("DarknodeRegistry").deployed();
-        const orderbook: OrderbookContract = await artifacts.require("Orderbook").deployed();
-        // darknodeRewardVault = await artifacts.require("DarknodeRewardVault").deployed();
-        const renExSettlement: RenExSettlementContract = await artifacts.require("RenExSettlement").deployed();
-        const renExBalances: RenExBalancesContract = await artifacts.require("RenExBalances").deployed();
-        const renExTokens: RenExTokensContract = await artifacts.require("RenExTokens").deployed();
+        const dnr: DarknodeRegistryContract = await DarknodeRegistry.deployed();
+        const orderbook: OrderbookContract = await Orderbook.deployed();
+        const renExSettlement: RenExSettlementContract = await RenExSettlement.deployed();
+        const renExBalances: RenExBalancesContract = await RenExBalances.deployed();
+        const renExTokens: RenExTokensContract = await RenExTokens.deployed();
 
         // PriceToken
-        const preciseToken: PreciseTokenContract = await artifacts.require("PreciseToken").new();
+        const preciseToken: PreciseTokenContract = await PreciseToken.new();
 
-        const ren: RepublicTokenContract = await artifacts.require("RepublicToken").deployed();
+        const ren: RepublicTokenContract = await RepublicToken.deployed();
         const tokenAddresses = new Map<TokenCodes, testUtils.BasicERC20>()
             .set(TokenCodes.BTC, testUtils.MockBTC)
             .set(TokenCodes.ETH, testUtils.MockETH)
             .set(TokenCodes.LTC, testUtils.MockBTC)
-            .set(TokenCodes.DGX, await artifacts.require("DGXMock").deployed())
+            .set(TokenCodes.DGX, await DGXMock.deployed())
             .set(TokenCodes.REN, ren)
             .set(VPT, preciseToken);
 
@@ -67,7 +83,7 @@ contract("RenEx", function (accounts: string[]) {
 
         // Register broker
         const renExBrokerVerifier: RenExBrokerVerifierContract =
-            await artifacts.require("RenExBrokerVerifier").deployed();
+            await RenExBrokerVerifier.deployed();
         await renExBrokerVerifier.registerBroker(broker);
 
         details = [buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook];
@@ -193,8 +209,8 @@ contract("RenEx", function (accounts: string[]) {
         it("Unsupported settlement", async () => {
             // Register unrelated settlement layer
             const settlementRegistry: SettlementRegistryContract =
-                await artifacts.require("SettlementRegistry").deployed();
-            const approvingBroker: BrokerVerifierContract = await artifacts.require("ApprovingBroker").new();
+                await SettlementRegistry.deployed();
+            const approvingBroker: BrokerVerifierContract = await ApprovingBroker.new();
             await settlementRegistry.registerSettlement(3, approvingBroker.address, approvingBroker.address);
 
             const buy = { settlement: 3, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };

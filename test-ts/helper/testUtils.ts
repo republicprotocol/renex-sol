@@ -1,11 +1,12 @@
-
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import * as chaiBigNumber from "chai-bignumber";
 
 import BigNumber from "bignumber.js";
-import { TransactionReceipt, Log, Tx } from "web3/types";
+
 import { BN } from "bn.js";
+import { Log, TransactionReceipt, Tx } from "web3/types";
+
 import { OrderbookContract } from "../bindings/orderbook";
 
 chai.use(chaiAsPromised);
@@ -35,7 +36,7 @@ export enum TokenCodes {
     REN = 0x10000,
 }
 
-interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
+export interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
 
 export interface BasicERC20 {
     address: string;

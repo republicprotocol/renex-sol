@@ -1,10 +1,18 @@
-import { RenExAtomicInfoContract } from "./bindings/ren_ex_atomic_info";
-import { RenExAtomicSwapperContract } from "./bindings/ren_ex_atomic_swapper";
-import { OrderbookContract } from "./bindings/orderbook";
-
 import * as chai from "chai";
+
 import * as testUtils from "./helper/testUtils";
-import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+
+import { DarknodeRegistryArtifact } from "./bindings/darknode_registry";
+import { OrderbookArtifact, OrderbookContract } from "./bindings/orderbook";
+import { RenExAtomicInfoArtifact, RenExAtomicInfoContract } from "./bindings/ren_ex_atomic_info";
+import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { RepublicTokenArtifact } from "./bindings/republic_token";
+
+const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
+const DarknodeRegistry = artifacts.require("DarknodeRegistry") as DarknodeRegistryArtifact;
+const Orderbook = artifacts.require("Orderbook") as OrderbookArtifact;
+const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
+const RenExAtomicInfo = artifacts.require("RenExAtomicInfo") as RenExAtomicInfoArtifact;
 
 contract("RenExAtomicInfo", function (accounts: string[]) {
 
@@ -18,9 +26,9 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
     const RenExID = testUtils.Settlements.RenEx;
 
     before(async function () {
-        const ren = await artifacts.require("RepublicToken").deployed();
-        const dnr = await artifacts.require("DarknodeRegistry").deployed();
-        orderbook = await artifacts.require("Orderbook").deployed();
+        const ren = await RepublicToken.deployed();
+        const dnr = await DarknodeRegistry.deployed();
+        orderbook = await Orderbook.deployed();
 
         // Register darknode
         await ren.transfer(darknode, testUtils.MINIMUM_BOND);
@@ -30,10 +38,10 @@ contract("RenExAtomicInfo", function (accounts: string[]) {
 
         // Register broker
         const renExBrokerVerifier: RenExBrokerVerifierContract =
-            await artifacts.require("RenExBrokerVerifier").deployed();
+            await RenExBrokerVerifier.deployed();
         await renExBrokerVerifier.registerBroker(broker);
 
-        info = await artifacts.require("RenExAtomicInfo").deployed();
+        info = await RenExAtomicInfo.deployed();
     });
 
     it("can submit and retrieve swap details", async () => {

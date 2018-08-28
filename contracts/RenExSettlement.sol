@@ -312,30 +312,38 @@ contract RenExSettlement is Ownable {
     function getMatchDetails(bytes32 _orderID)
     external view returns (
         bool settled,
+        bool orderIsBuy,
+        bytes32 matchedID,
         uint256 priorityVolume,
         uint256 secondaryVolume,
         uint256 priorityFee,
         uint256 secondaryFee,
-        address priorityAddress,
-        address secondaryAddress
+        uint32 priorityToken,
+        uint32 secondaryToken
     ) {
-        bytes32 matchedID = orderbookContract.orderMatch(_orderID);
+        matchedID = orderbookContract.orderMatch(_orderID);
 
-        (bytes32 buyID, bytes32 sellID) = isBuyOrder(_orderID) ?
+        orderIsBuy = isBuyOrder(_orderID);
+
+        (bytes32 buyID, bytes32 sellID) = orderIsBuy ?
             (_orderID, matchedID) : (matchedID, _orderID);
 
-        TokenPair memory tokens = getTokenDetails(orderDetails[buyID].tokens);
-
-        SettlementDetails memory settlementDetails = calculateSettlementDetails(buyID, sellID, tokens);
+        SettlementDetails memory settlementDetails = calculateSettlementDetails(
+            buyID,
+            sellID,
+            getTokenDetails(orderDetails[buyID].tokens)
+        );
 
         return (
             orderStatus[_orderID] == OrderStatus.Settled || orderStatus[_orderID] == OrderStatus.Slashed,
+            orderIsBuy,
+            matchedID,
             settlementDetails.leftVolume,
             settlementDetails.rightVolume,
             settlementDetails.leftTokenFee,
             settlementDetails.rightTokenFee,
-            settlementDetails.leftTokenAddress,
-            settlementDetails.rightTokenAddress
+            uint32(orderDetails[buyID].tokens >> 32),
+            uint32(orderDetails[buyID].tokens)
         );
     }
 

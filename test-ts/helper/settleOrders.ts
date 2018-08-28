@@ -4,10 +4,11 @@ import BigNumber from "bignumber.js";
 import { BN } from "bn.js";
 
 import * as testUtils from "./testUtils";
-import { TokenCodes, market } from "./testUtils";
-import { RenExSettlementContract } from "../bindings/ren_ex_settlement";
-import { RenExBalancesContract } from "../bindings/ren_ex_balances";
+import { market, TokenCodes } from "./testUtils";
+
 import { OrderbookContract } from "../bindings/orderbook";
+import { RenExBalancesContract } from "../bindings/ren_ex_balances";
+import { RenExSettlementContract } from "../bindings/ren_ex_settlement";
 
 /// Submits and matches two orders, going through all the necessary steps first,
 /// and verifying the funds have been transferred.
@@ -131,13 +132,13 @@ export async function settleOrders(
 
     // Verify match details
     const buyMatch = await renExSettlement.getMatchDetails(buy.orderID);
-    const settled = buyMatch[0];
-    const priorityTokenFinal = new BigNumber(buyMatch[1] as any);
-    const secondaryTokenFinal = new BigNumber(buyMatch[2] as any);
-    const priorityTokenFee = new BigNumber(buyMatch[3] as any);
-    const secondaryTokenFee = new BigNumber(buyMatch[4] as any);
-    const priorityTokenAddress = buyMatch[5];
-    const secondaryTokenAddress = buyMatch[6];
+    const settled: boolean = buyMatch.settled;
+    const priorityTokenFinal = new BigNumber(buyMatch.priorityVolume as any);
+    const secondaryTokenFinal = new BigNumber(buyMatch.secondaryVolume as any);
+    const priorityTokenFee = new BigNumber(buyMatch.priorityFee as any);
+    const secondaryTokenFee = new BigNumber(buyMatch.secondaryFee as any);
+    const priorityTokenAddress = buyMatch.priorityToken;
+    const secondaryTokenAddress = buyMatch.secondaryToken;
     const priorityTokenVolume = priorityTokenFinal.plus(priorityTokenFee);
     const secondaryTokenVolume = secondaryTokenFinal.plus(secondaryTokenFee);
 

@@ -6,9 +6,9 @@ module.exports = {
     VERSION: "0.1.0",
     MINIMUM_BOND: new BN(100000).mul(new BN(10).pow(new BN(18))),
     MINIMUM_POD_SIZE: 3, // 24 in production
-    MINIMUM_EPOCH_INTERVAL: 2, // 14400 in production
+    MINIMUM_EPOCH_INTERVAL: 1, // 14400 in production
     SUBMIT_ORDER_GAS_LIMIT: 100 * GWEI,
-    SLASHER_ADDRESS: 0x0,
+    SLASHER_ADDRESS: "0x565839E16bAC459884b0F0D7377Ac04e04Be150d",
 }
 
 /*

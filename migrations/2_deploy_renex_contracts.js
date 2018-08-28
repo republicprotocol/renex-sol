@@ -56,7 +56,7 @@ module.exports = async function (deployer, network) {
 
         .then(async () => {
             const renExBrokerVerifier = await RenExBrokerVerifier.at(RenExBrokerVerifier.address);
-            renExBrokerVerifier.updateBalancesContract(RenExBalances.address);
+            await renExBrokerVerifier.updateBalancesContract(RenExBalances.address);
         })
 
         .then(() => deployer.deploy(
@@ -81,5 +81,6 @@ module.exports = async function (deployer, network) {
             await settlementRegistry.registerSettlement(1, RenExSettlement.address, RenExBrokerVerifier.address);
             // Register RenExAtomic
             await settlementRegistry.registerSettlement(2, RenExSettlement.address, RenExBrokerVerifier.address);
-        });
-};
+        })
+        ;
+}

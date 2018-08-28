@@ -19,5 +19,6 @@ module.exports = async function (deployer, network) {
         .then(() => deployer.deploy(
             RenExAtomicSwapper,
             VERSION_STRING,
-        ));
-};
+        ))
+        ;
+}

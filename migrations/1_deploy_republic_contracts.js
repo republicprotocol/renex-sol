@@ -60,6 +60,7 @@ module.exports = async function (deployer, network) {
         ))
         .then(async () => {
             const darknodeRegistry = await DarknodeRegistry.at(DarknodeRegistry.address);
-            darknodeRegistry.updateSlasher(DarknodeSlasher.address);
-        });
+            await darknodeRegistry.updateSlasher(DarknodeSlasher.address);
+        })
+        ;
 }

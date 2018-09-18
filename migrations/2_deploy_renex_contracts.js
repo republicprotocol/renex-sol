@@ -1,19 +1,19 @@
 // Dependencies
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault.sol");
-const Orderbook = artifacts.require("Orderbook.sol");
+const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
+const Orderbook = artifacts.require("Orderbook");
 
 // Contracts
-const RenExBalances = artifacts.require("RenExBalances.sol");
-const RenExTokens = artifacts.require("RenExTokens.sol");
-const RenExSettlement = artifacts.require("RenExSettlement.sol");
+const RenExBalances = artifacts.require("RenExBalances");
+const RenExTokens = artifacts.require("RenExTokens");
+const RenExSettlement = artifacts.require("RenExSettlement");
 const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier");
 const SettlementRegistry = artifacts.require("SettlementRegistry");
 
 // Tokens
-const RepublicToken = artifacts.require("RepublicToken.sol");
-const DGXMock = artifacts.require("DGXMock.sol");
-const ABCToken = artifacts.require("ABCToken.sol");
-const XYZToken = artifacts.require("XYZToken.sol");
+const RepublicToken = artifacts.require("RepublicToken");
+const DGXMock = artifacts.require("DGXMock");
+const ABCToken = artifacts.require("ABCToken");
+const XYZToken = artifacts.require("XYZToken");
 
 const config = require("./config.js");
 
@@ -81,6 +81,5 @@ module.exports = async function (deployer, network) {
             await settlementRegistry.registerSettlement(1, RenExSettlement.address, RenExBrokerVerifier.address);
             // Register RenExAtomic
             await settlementRegistry.registerSettlement(2, RenExSettlement.address, RenExBrokerVerifier.address);
-        })
-        ;
+        });
 }

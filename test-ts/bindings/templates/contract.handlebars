@@ -1,11 +1,20 @@
+// tslint:disable
+
 import { BN } from "bn.js";
-import { Log, TransactionReceipt, Tx } from "web3/types";
+import { Log, Provider, TransactionReceipt, Tx } from "web3/types";
 
 export interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
 
 type BigNumber = string | number | BN;
 
-// tslint:disable:max-line-length
+{{#if events}}
+export const {{contractName}}Events = {
+    {{#each events}}
+    {{> event}}
+    {{/each}}
+};
+{{/if}}
+
 export interface {{contractName}}Contract {
 {{#each methods}}
     {{#this.constant}}
@@ -23,6 +32,5 @@ export interface {{contractName}}Artifact {
     "new"({{> typed_params inputs=ctor.inputs}}): Promise<{{contractName}}Contract>;
     at(address: string): Promise<{{contractName}}Contract>;
     deployed(): Promise<{{contractName}}Contract>;
+    setProvider(provider: Provider): void;
 }
-
-// tslint:enable:max-line-length

@@ -47,7 +47,7 @@ contract("RenEx", function (accounts: string[]) {
         const renExBalances: RenExBalancesContract = await RenExBalances.deployed();
         const renExTokens: RenExTokensContract = await RenExTokens.deployed();
 
-        // PriceToken
+        // PreciseToken
         const preciseToken: PreciseTokenContract = await PreciseToken.new();
 
         const ren: RepublicTokenContract = await RepublicToken.deployed();

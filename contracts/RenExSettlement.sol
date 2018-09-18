@@ -302,12 +302,14 @@ contract RenExSettlement is Ownable {
     ///        buy or a sell order.
     /// @return [
     ///     a boolean representing whether or not the order has been settled,
+    ///     a boolean representing whether or not the order is a buy
+    ///     the 32-byte order ID of the matched order
     ///     the volume of the priority token,
     ///     the volume of the secondary token,
     ///     the fee paid in the priority token,
     ///     the fee paid in the secondary token,
-    ///     the address of the priority token,
-    ///     the address of the secondary token
+    ///     the token code of the priority token,
+    ///     the token code of the secondary token
     /// ]
     function getMatchDetails(bytes32 _orderID)
     external view returns (

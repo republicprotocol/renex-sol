@@ -81,7 +81,9 @@ export async function settleOrders(
         if (order.fromToken !== TokenCodes.ETH &&
             order.fromToken !== TokenCodes.BTC &&
             order.fromToken !== TokenCodes.LTC) {
-            await tokenInstances.get(order.fromToken).transfer(order.trader, order.deposit);
+            // Transfer slightly (1%) more for tokens with transfer fees
+            const transfer = order.deposit.multipliedBy(1.01).integerValue();
+            await tokenInstances.get(order.fromToken).transfer(order.trader, transfer);
             await tokenInstances.get(order.fromToken).approve(
                 renExBalances.address, order.deposit, { from: order.trader }
             );

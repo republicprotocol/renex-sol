@@ -1,10 +1,10 @@
-const RepublicToken = artifacts.require("RepublicToken.sol");
-const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore.sol");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry.sol");
-const DarknodeSlasher = artifacts.require("DarknodeSlasher.sol");
-const Orderbook = artifacts.require("Orderbook.sol");
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault.sol");
-const SettlementRegistry = artifacts.require("SettlementRegistry.sol");
+const RepublicToken = artifacts.require("RepublicToken");
+const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
+const DarknodeRegistry = artifacts.require("DarknodeRegistry");
+const DarknodeSlasher = artifacts.require("DarknodeSlasher");
+const Orderbook = artifacts.require("Orderbook");
+const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
+const SettlementRegistry = artifacts.require("SettlementRegistry");
 
 const config = require("./config.js");
 

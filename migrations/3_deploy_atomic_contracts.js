@@ -1,7 +1,7 @@
-const Orderbook = artifacts.require("Orderbook.sol");
+const Orderbook = artifacts.require("Orderbook");
 
-const RenExAtomicInfo = artifacts.require("RenExAtomicInfo.sol");
-const RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper.sol");
+const RenExAtomicInfo = artifacts.require("RenExAtomicInfo");
+const RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper");
 
 const config = require("./config.js");
 
@@ -19,6 +19,5 @@ module.exports = async function (deployer, network) {
         .then(() => deployer.deploy(
             RenExAtomicSwapper,
             VERSION_STRING,
-        ))
-        ;
+        ));
 }

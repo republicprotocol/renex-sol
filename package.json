@@ -48,7 +48,7 @@
         "solc": "^0.4.24",
         "solc-js": "^0.4.20-browser.1",
         "solidity-coverage": "^0.5.5",
-        "truffle": "^5.0.0-next.7",
+        "truffle": "^5.0.0-next.11",
         "truffle-hdwallet-provider": "0.0.6",
         "tslint": "^5.11.0",
         "tslint-react": "^3.6.0",

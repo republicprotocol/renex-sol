@@ -25,6 +25,7 @@ module.exports = {
             port: 8545,
             network_id: "*",
             gas: 6721975,
+            gasPrice: 5000000000,
         },
         f0: KOVAN(process.env.MNEMONIC_F0),
         falcon: KOVAN(process.env.MNEMONIC_FALCON),

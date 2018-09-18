@@ -5,6 +5,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "republic-sol/contracts/DarknodeRewardVault.sol";
+import "republic-sol/contracts/CompatibleERC20.sol";
 
 import "./RenExSettlement.sol";
 import "./RenExBrokerVerifier.sol";
@@ -12,6 +13,7 @@ import "./RenExBrokerVerifier.sol";
 /// @notice RenExBalances is responsible for holding RenEx trader funds.
 contract RenExBalances is Ownable {
     using SafeMath for uint256;
+    using CompatibleERC20Functions for CompatibleERC20;
 
     string public VERSION; // Passed in as a constructor parameter.
 
@@ -122,7 +124,10 @@ contract RenExBalances is Ownable {
         if (address(_token) == ETHEREUM) {
             rewardVaultContract.deposit.value(_fee)(_feePayee, ERC20(_token), _fee);
         } else {
-            ERC20(_token).approve(rewardVaultContract, _fee);
+            require(
+                CompatibleERC20(_token).compliantApprove(rewardVaultContract, _fee),
+                "fee approve failed"
+            );
             rewardVaultContract.deposit(_feePayee, ERC20(_token), _fee);
         }
         privateDecrementBalance(_traderFrom, ERC20(_token), _value + _fee);
@@ -142,7 +147,10 @@ contract RenExBalances is Ownable {
             require(msg.value == _value, "mismatched value parameter and tx value");
         } else {
             require(msg.value == 0, "unexpected ether transfer");
-            require(_token.transferFrom(trader, this, _value), "token transfer failed");
+            require(
+                CompatibleERC20(_token).compliantTransferFrom(trader, this, _value),
+                "token transfer failed"
+            );
         }
         privateIncrementBalance(trader, _token, _value);
     }

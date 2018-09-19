@@ -4,6 +4,7 @@ import * as testUtils from "./helper/testUtils";
 
 import { ABCTokenArtifact } from "./bindings/a_b_c_token";
 import { DarknodeRewardVaultArtifact, DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
+import { DisapprovingTokenArtifact } from "./bindings/disapproving_token";
 import { PausableTokenContract } from "./bindings/pausable_token";
 import { RenExBalancesArtifact, RenExBalancesContract } from "./bindings/ren_ex_balances";
 import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
@@ -17,6 +18,7 @@ const DarknodeRewardVault = artifacts.require("DarknodeRewardVault") as Darknode
 const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
 const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
 const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
+const DisapprovingToken = artifacts.require("DisapprovingToken") as DisapprovingTokenArtifact;
 
 contract("RenExBalances", function (accounts: string[]) {
 
@@ -228,6 +230,26 @@ contract("RenExBalances", function (accounts: string[]) {
         // ETH
         await renExBalances.deposit(ETH.address, 2, { from: accounts[1], value: 1 })
             .should.be.rejectedWith(null, /mismatched value parameter and tx value/);
+    });
+
+    it("transfer validates the fee approval", async () => {
+        const auth = accounts[8];
+        await renExBalances.updateRenExSettlementContract(auth);
+
+        const token = await DisapprovingToken.new();
+
+        await renExBalances.transferBalanceWithFee(
+            accounts[1],
+            accounts[2],
+            token.address,
+            0,
+            0,
+            testUtils.NULL, // fails to approve to 0x0
+            { from: auth }
+        ).should.be.rejectedWith(null, /fee approve failed/);
+
+        // Revert change
+        await renExBalances.updateRenExSettlementContract(renExSettlement.address);
     });
 
     it("decrementBalance reverts for invalid withdrawals", async () => {

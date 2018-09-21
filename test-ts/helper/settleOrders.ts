@@ -8,6 +8,7 @@ import { market, TokenCodes } from "./testUtils";
 
 import { OrderbookContract } from "../bindings/orderbook";
 import { RenExBalancesContract } from "../bindings/ren_ex_balances";
+import { RenExBrokerVerifierContract } from "../bindings/ren_ex_broker_verifier";
 import { RenExSettlementContract } from "../bindings/ren_ex_settlement";
 
 /// Submits and matches two orders, going through all the necessary steps first,
@@ -19,6 +20,7 @@ export async function settleOrders(
     renExBalances: RenExBalancesContract,
     tokenInstances: Map<TokenCodes, testUtils.BasicERC20>,
     orderbook: OrderbookContract,
+    renExBrokerVerifier: RenExBrokerVerifierContract,
     returnIDs: boolean = false,
 ) {
     // Tokens should be the same
@@ -81,14 +83,17 @@ export async function settleOrders(
         if (order.fromToken !== TokenCodes.ETH &&
             order.fromToken !== TokenCodes.BTC &&
             order.fromToken !== TokenCodes.LTC) {
-            // Transfer slightly (1%) more for tokens with transfer fees
-            const transfer = order.deposit.multipliedBy(1.01).integerValue();
-            await tokenInstances.get(order.fromToken).transfer(order.trader, transfer);
+            // TODO: Remove hard-coded value
+            const fee = order.fromToken === 0x101 ? new BN(3) : new BN(0);
+
+            const deposit = new BN(order.deposit.multipliedBy(1.01).toFixed());
+            await tokenInstances.get(order.fromToken).transfer(order.trader, deposit);
+            const newDeposit = deposit.sub(deposit.mul(fee).div(new BN(1000)));
             await tokenInstances.get(order.fromToken).approve(
-                renExBalances.address, order.deposit, { from: order.trader }
+                renExBalances.address, newDeposit, { from: order.trader }
             );
             await renExBalances.deposit(
-                tokenInstances.get(order.fromToken).address, order.deposit, { from: order.trader }
+                tokenInstances.get(order.fromToken).address, newDeposit, { from: order.trader }
             );
         } else {
             const deposit = order.fromToken === TokenCodes.ETH ? order.deposit : order.opposite;
@@ -156,6 +161,21 @@ export async function settleOrders(
     const sellerLowAfter = new BigNumber(await renExBalances.traderBalances(sell.trader, lowTokenInstance.address) as any);
     const buyerHighAfter = new BigNumber(await renExBalances.traderBalances(buy.trader, highTokenInstance.address) as any);
     const sellerHighAfter = new BigNumber(await renExBalances.traderBalances(sell.trader, highTokenInstance.address) as any);
+
+    // Withdraw balances (except for Atomic swaps)
+    if (buy.settlement === testUtils.Settlements.RenEx) {
+        // TODO: Remove hard-coded checks
+        if (buy.fromToken !== 0x101 && sell.fromToken !== 0x101) {
+            let sig1 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, buy.trader);
+            await renExBalances.withdraw(lowTokenInstance.address, buyerLowAfter.toFixed(), sig1, { from: buy.trader });
+            let sig2 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, sell.trader);
+            await renExBalances.withdraw(lowTokenInstance.address, sellerLowAfter.toFixed(), sig2, { from: sell.trader });
+            let sig3 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, buy.trader);
+            await renExBalances.withdraw(highTokenInstance.address, buyerHighAfter.toFixed(), sig3, { from: buy.trader });
+            let sig4 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, sell.trader);
+            await renExBalances.withdraw(highTokenInstance.address, sellerHighAfter.toFixed(), sig4, { from: sell.trader });
+        }
+    }
 
     let feeNum = await renExSettlement.DARKNODE_FEES_NUMERATOR();
     let feeDen = await renExSettlement.DARKNODE_FEES_DENOMINATOR();

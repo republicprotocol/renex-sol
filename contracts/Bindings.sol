@@ -7,10 +7,7 @@ import "republic-sol/contracts/DarknodeRewardVault.sol";
 import "republic-sol/contracts/Settlement.sol";
 import "republic-sol/contracts/SettlementRegistry.sol";
 import "republic-sol/contracts/DarknodeSlasher.sol";
-import "republic-sol/contracts/tests/ABCToken.sol";
-import "republic-sol/contracts/tests/XYZToken.sol";
 
-import "./RenExAtomicInfo.sol";
 import "./RenExAtomicSwapper.sol";
 import "./RenExBalances.sol";
 import "./RenExSettlement.sol";

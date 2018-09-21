@@ -124,10 +124,7 @@ contract RenExBalances is Ownable {
         if (address(_token) == ETHEREUM) {
             rewardVaultContract.deposit.value(_fee)(_feePayee, ERC20(_token), _fee);
         } else {
-            require(
-                CompatibleERC20(_token).compliantApprove(rewardVaultContract, _fee),
-                "fee approve failed"
-            );
+            CompatibleERC20(_token).safeApprove(rewardVaultContract, _fee);
             rewardVaultContract.deposit(_feePayee, ERC20(_token), _fee);
         }
         privateDecrementBalance(_traderFrom, ERC20(_token), _value + _fee);
@@ -147,10 +144,7 @@ contract RenExBalances is Ownable {
             require(msg.value == _value, "mismatched value parameter and tx value");
         } else {
             require(msg.value == 0, "unexpected ether transfer");
-            require(
-                CompatibleERC20(_token).compliantTransferFrom(trader, this, _value),
-                "token transfer failed"
-            );
+            CompatibleERC20(_token).safeTransferFromWithFees(trader, this, _value);
         }
         privateIncrementBalance(trader, _token, _value);
     }
@@ -170,7 +164,7 @@ contract RenExBalances is Ownable {
         if (address(_token) == ETHEREUM) {
             trader.transfer(_value);
         } else {
-            require(_token.transfer(trader, _value), "token transfer failed");
+            CompatibleERC20(_token).safeTransfer(trader, _value);
         }
     }
 

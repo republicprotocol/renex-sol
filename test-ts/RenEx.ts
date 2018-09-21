@@ -7,7 +7,7 @@ import { market, TokenCodes } from "./helper/testUtils";
 
 import { ApprovingBrokerArtifact } from "./bindings/approving_broker";
 import { BrokerVerifierContract } from "./bindings/broker_verifier";
-import { DGXMockArtifact } from "./bindings/d_g_x_mock";
+import { DGXTokenArtifact } from "./bindings/d_g_x_token";
 import { DarknodeRegistryArtifact, DarknodeRegistryContract } from "./bindings/darknode_registry";
 import { OrderbookArtifact, OrderbookContract } from "./bindings/orderbook";
 import { PreciseTokenArtifact, PreciseTokenContract } from "./bindings/precise_token";
@@ -25,7 +25,7 @@ const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifac
 const RenExTokens = artifacts.require("RenExTokens") as RenExTokensArtifact;
 const PreciseToken = artifacts.require("PreciseToken") as PreciseTokenArtifact;
 const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
-const DGXMock = artifacts.require("DGXMock") as DGXMockArtifact;
+const DGXToken = artifacts.require("DGXToken") as DGXTokenArtifact;
 const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
 const SettlementRegistry = artifacts.require("SettlementRegistry") as SettlementRegistryArtifact;
 const ApprovingBroker = artifacts.require("ApprovingBroker") as ApprovingBrokerArtifact;
@@ -55,7 +55,7 @@ contract("RenEx", function (accounts: string[]) {
             .set(TokenCodes.BTC, testUtils.MockBTC)
             .set(TokenCodes.ETH, testUtils.MockETH)
             .set(TokenCodes.LTC, testUtils.MockBTC)
-            .set(TokenCodes.DGX, await DGXMock.deployed())
+            .set(TokenCodes.DGX, await DGXToken.deployed())
             .set(TokenCodes.REN, ren)
             .set(VPT, preciseToken);
 
@@ -86,7 +86,10 @@ contract("RenEx", function (accounts: string[]) {
             await RenExBrokerVerifier.deployed();
         await renExBrokerVerifier.registerBroker(broker);
 
-        details = [buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook];
+        details = [
+            buyer, seller, darknode, broker, renExSettlement, renExBalances,
+            tokenAddresses, orderbook, renExBrokerVerifier,
+        ];
     });
 
     it("order 1", async () => {

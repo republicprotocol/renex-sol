@@ -2,7 +2,8 @@ import { BN } from "bn.js";
 
 import * as testUtils from "./helper/testUtils";
 
-import { ABCTokenArtifact } from "./bindings/a_b_c_token";
+import { DGXTokenArtifact } from "./bindings/d_g_x_token";
+import { DarknodeRegistryContract } from "./bindings/darknode_registry";
 import { DarknodeRewardVaultArtifact, DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
 import { DisapprovingTokenArtifact } from "./bindings/disapproving_token";
 import { PausableTokenContract } from "./bindings/pausable_token";
@@ -13,7 +14,7 @@ import { RepublicTokenArtifact } from "./bindings/republic_token";
 import { StandardTokenContract } from "./bindings/standard_token";
 
 const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
-const ABCToken = artifacts.require("ABCToken") as ABCTokenArtifact;
+const DGXToken = artifacts.require("DGXToken") as DGXTokenArtifact;
 const DarknodeRewardVault = artifacts.require("DarknodeRewardVault") as DarknodeRewardVaultArtifact;
 const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
 const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
@@ -36,7 +37,7 @@ contract("RenExBalances", function (accounts: string[]) {
         ETH = testUtils.MockETH;
         REN = await RepublicToken.deployed();
         TOKEN1 = await RepublicToken.new();
-        TOKEN2 = await ABCToken.deployed();
+        TOKEN2 = await DGXToken.new();
         rewardVault = await DarknodeRewardVault.deployed();
         renExBalances = await RenExBalances.deployed();
         renExSettlement = await RenExSettlement.deployed();
@@ -246,7 +247,7 @@ contract("RenExBalances", function (accounts: string[]) {
             0,
             testUtils.NULL, // fails to approve to 0x0
             { from: auth }
-        ).should.be.rejectedWith(null, /fee approve failed/);
+        ).should.be.rejectedWith(null, /approve failed/);
 
         // Revert change
         await renExBalances.updateRenExSettlementContract(renExSettlement.address);

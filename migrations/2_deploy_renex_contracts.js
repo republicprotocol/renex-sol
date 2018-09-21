@@ -11,9 +11,6 @@ const SettlementRegistry = artifacts.require("SettlementRegistry");
 
 // Tokens
 const RepublicToken = artifacts.require("RepublicToken");
-const DGXMock = artifacts.require("DGXMock");
-const ABCToken = artifacts.require("ABCToken");
-const XYZToken = artifacts.require("XYZToken");
 
 const config = require("./config.js");
 
@@ -23,9 +20,6 @@ module.exports = async function (deployer, network) {
     const VERSION_STRING = `${network}-${config.VERSION}`;
 
     await deployer
-        .then(() => deployer.deploy(DGXMock))
-        .then(() => deployer.deploy(ABCToken))
-        .then(() => deployer.deploy(XYZToken))
 
         .then(() => deployer.deploy(
             RenExTokens,
@@ -36,10 +30,6 @@ module.exports = async function (deployer, network) {
             const renExTokens = await RenExTokens.at(RenExTokens.address);
             await renExTokens.registerToken(0, "0x0000000000000000000000000000000000000000", 8);
             await renExTokens.registerToken(1, "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", 18);
-            await renExTokens.registerToken(0x100, DGXMock.address, 9);
-            await renExTokens.registerToken(0x10000, RepublicToken.address, 18);
-            await renExTokens.registerToken(0x10001, ABCToken.address, 12);
-            await renExTokens.registerToken(0x10002, XYZToken.address, 18);
         })
 
         .then(() => deployer.deploy(

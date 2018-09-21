@@ -5,7 +5,7 @@ import * as testUtils from "./helper/testUtils";
 import { settleOrders } from "./helper/settleOrders";
 import { market, TokenCodes } from "./helper/testUtils";
 
-import { DGXMockArtifact } from "./bindings/d_g_x_mock";
+import { DGXTokenArtifact } from "./bindings/d_g_x_token";
 import { DarknodeRegistryArtifact, DarknodeRegistryContract } from "./bindings/darknode_registry";
 import { OrderbookArtifact, OrderbookContract } from "./bindings/orderbook";
 import { RenExBalancesArtifact, RenExBalancesContract } from "./bindings/ren_ex_balances";
@@ -15,7 +15,7 @@ import { RenExTokensArtifact, RenExTokensContract } from "./bindings/ren_ex_toke
 import { RepublicTokenArtifact } from "./bindings/republic_token";
 
 const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
-const DGXMock = artifacts.require("DGXMock") as DGXMockArtifact;
+const DGXToken = artifacts.require("DGXToken") as DGXTokenArtifact;
 const DarknodeRegistry = artifacts.require("DarknodeRegistry") as DarknodeRegistryArtifact;
 const Orderbook = artifacts.require("Orderbook") as OrderbookArtifact;
 const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
@@ -47,7 +47,7 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
             .set(TokenCodes.BTC, testUtils.MockBTC)
             .set(TokenCodes.ETH, testUtils.MockETH)
             .set(TokenCodes.LTC, testUtils.MockBTC)
-            .set(TokenCodes.DGX, await DGXMock.deployed())
+            .set(TokenCodes.DGX, await DGXToken.deployed())
             .set(TokenCodes.REN, ren);
 
         dnr = await DarknodeRegistry.deployed();
@@ -76,7 +76,10 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
 
         eth_address = tokenInstances.get(TokenCodes.ETH).address;
 
-        details = [buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenInstances, orderbook, true];
+        details = [
+            buyer, seller, darknode, broker, renExSettlement, renExBalances,
+            tokenInstances, orderbook, renExBrokerVerifier, true,
+        ];
     });
 
     it("should correctly relocate fees", async () => {

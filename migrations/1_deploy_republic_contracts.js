@@ -15,7 +15,7 @@ module.exports = async function (deployer, network) {
     await deployer
         .deploy(
             RepublicToken, {
-                overwrite: network !== "f0"
+                overwrite: network === "development"
             }
         )
         .then(() => deployer.deploy(
@@ -61,6 +61,5 @@ module.exports = async function (deployer, network) {
         .then(async () => {
             const darknodeRegistry = await DarknodeRegistry.at(DarknodeRegistry.address);
             await darknodeRegistry.updateSlasher(DarknodeSlasher.address);
-        })
-        ;
+        });
 }

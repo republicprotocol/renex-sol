@@ -246,7 +246,7 @@ contract("RenExBalances", function (accounts: string[]) {
             0,
             testUtils.NULL, // fails to approve to 0x0
             { from: auth }
-        ).should.be.rejectedWith(null, /fee approve failed/);
+        ).should.be.rejectedWith(null, /approve failed/);
 
         // Revert change
         await renExBalances.updateRenExSettlementContract(renExSettlement.address);

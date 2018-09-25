@@ -22,7 +22,9 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
         const swapID = randomID(), secret = randomID();
         const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
 
-        await swap.initiate(swapID, bob, secretLock, secondsFromNow(60 * 60 * 24), { from: alice, value: 100000 });
+        await swap.initiate(
+            swapID, bob, secretLock, await secondsFromNow(60 * 60 * 24), { from: alice, value: 100000 }
+        );
 
         await swap.audit(swapID);
 
@@ -44,8 +46,8 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
         const secretLock = `0x${SHA256(HEX.parse(secret.slice(2))).toString()}`;
 
         // Can only initiate for INVALID swaps
-        await swap.initiate(swapID, bob, secretLock, secondsFromNow(1), { from: alice, value: 100000 });
-        await swap.initiate(swapID, bob, secretLock, secondsFromNow(1), { from: alice, value: 100000 })
+        await swap.initiate(swapID, bob, secretLock, await secondsFromNow(1), { from: alice, value: 100000 });
+        await swap.initiate(swapID, bob, secretLock, await secondsFromNow(1), { from: alice, value: 100000 })
             .should.be.rejectedWith(null, /swap opened previously/);
 
         await swap.auditSecret(swapID)
@@ -71,7 +73,7 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
         (await swap.refundable(swapID)).should.be.false;
         (await swap.redeemable(swapID)).should.be.false;
 
-        await swap.initiate(swapID, bob, secretLock, secondsFromNow(1), { from: alice, value: 100000 });
+        await swap.initiate(swapID, bob, secretLock, await secondsFromNow(1), { from: alice, value: 100000 });
 
         (await swap.initiatable(swapID)).should.be.false;
         (await swap.refundable(swapID)).should.be.false;

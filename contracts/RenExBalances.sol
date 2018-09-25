@@ -67,16 +67,18 @@ contract RenExBalances is Ownable {
     /// this will reset the time to zero, writing to storage.
     modifier withBrokerSignatureOrSignal(address _token, bytes _signature) {
         address trader = msg.sender;
-        if (brokerVerifierContract.verifyWithdrawSignature(trader, _signature)) {
-            _;
-        } else {
-            bool hasSignalled = traderWithdrawalSignals[trader][_token] != 0;
+
+        // If a signature has been provided, verify it - otherwise, verify that
+        // the user has signalled the withdraw
+        if (_signature.length > 0) {
+            require (brokerVerifierContract.verifyWithdrawSignature(trader, _signature), "invalid signature");
+        } else  {
+            require(traderWithdrawalSignals[trader][_token] != 0, "not signalled");
             /* solium-disable-next-line security/no-block-members */
-            bool hasWaitedDelay = (now - traderWithdrawalSignals[trader][_token]) > SIGNAL_DELAY;
-            require(hasSignalled && hasWaitedDelay, "not signalled");
+            require((now - traderWithdrawalSignals[trader][_token]) > SIGNAL_DELAY, "signal time remaining");
             traderWithdrawalSignals[trader][_token] = 0;
-            _;
         }
+        _;
     }
 
     /// @notice Allows the owner of the contract to update the address of the
@@ -140,13 +142,14 @@ contract RenExBalances is Ownable {
     function deposit(ERC20 _token, uint256 _value) external payable {
         address trader = msg.sender;
 
+        uint256 receivedValue = _value;
         if (address(_token) == ETHEREUM) {
             require(msg.value == _value, "mismatched value parameter and tx value");
         } else {
             require(msg.value == 0, "unexpected ether transfer");
-            CompatibleERC20(_token).safeTransferFromWithFees(trader, this, _value);
+            receivedValue = CompatibleERC20(_token).safeTransferFromWithFees(trader, this, _value);
         }
-        privateIncrementBalance(trader, _token, _value);
+        privateIncrementBalance(trader, _token, receivedValue);
     }
 
     /// @notice Withdraws ETH or an ERC20 token from the contract. A broker

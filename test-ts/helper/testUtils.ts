@@ -8,6 +8,9 @@ import { BN } from "bn.js";
 import { Log, TransactionReceipt, Tx } from "web3/types";
 
 import { OrderbookContract } from "../bindings/orderbook";
+import { TimeArtifact, TimeContract } from "../bindings/time";
+
+const Time = artifacts.require("Time") as TimeArtifact;
 
 chai.use(chaiAsPromised);
 chai.use(chaiBigNumber(BigNumber));
@@ -64,8 +67,13 @@ export function PUBK(i: string) {
     return web3.utils.sha3(i);
 }
 
-export const secondsFromNow = (seconds: number) => {
-    return Math.round((new Date()).getTime() / 1000) + seconds;
+let time: TimeContract;
+export const secondsFromNow = async (seconds: number): Promise<BN> => {
+    if (!time) {
+        time = await Time.new();
+    }
+    const currentTime = new BN(await time.currentTime());
+    return currentTime.add(new BN(seconds));
 };
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

@@ -10,5 +10,9 @@ cache:
 before_script:
   - truffle version
 script:
+  - cd node_modules
+  - rm -rf republic-sol
+  - git clone -b nightly https://github.com/republicprotocol/republic-sol.git
+  - cd ../
   - npm run coverage
   - cat coverage/lcov.info | ./node_modules/.bin/coveralls

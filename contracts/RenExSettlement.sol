@@ -24,6 +24,8 @@ contract RenExSettlement is Ownable {
 
     // Fees in RenEx are 0.2%. To represent this as integers, it is broken into
     // a numerator and denominator.
+    // DARKNODE_FEES_NUMERATOR must not be greater than
+    // DARKNODE_FEES_DENOMINATOR.
     uint256 constant public DARKNODE_FEES_NUMERATOR = 2;
     uint256 constant public DARKNODE_FEES_DENOMINATOR = 1000;
 
@@ -429,7 +431,7 @@ contract RenExSettlement is Ownable {
 
         // Calculate the mid-price (using numerator and denominator to not loose
         // precision).
-        Fraction memory midPrice = Fraction(orderDetails[_buyID].price + orderDetails[_sellID].price, 2);
+        Fraction memory midPrice = Fraction(orderDetails[_buyID].price.add(orderDetails[_sellID].price), 2);
 
         // Calculate the lower of the two max volumes of each trader
         uint256 commonVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume);
@@ -473,7 +475,7 @@ contract RenExSettlement is Ownable {
 
         // Calculate the mid-price (using numerator and denominator to not loose
         // precision).
-        Fraction memory midPrice = Fraction(orderDetails[_buyID].price + orderDetails[_sellID].price, 2);
+        Fraction memory midPrice = Fraction(orderDetails[_buyID].price.add(orderDetails[_sellID].price), 2);
 
         // Calculate the lower of the two max volumes of each trader
         uint256 commonVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume);
@@ -533,8 +535,8 @@ contract RenExSettlement is Ownable {
 
     /// @return (value - fee, fee) where fee is 0.2% of value
     function subtractDarknodeFee(uint256 _value) private pure returns (ValueWithFees memory) {
-        uint256 newValue = (_value * (DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
-        return ValueWithFees(newValue, _value - newValue);
+        uint256 newValue = (_value.mul(DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
+        return ValueWithFees(newValue, _value.sub(newValue));
     }
 
     /// @notice Gets the order details of the priority and secondary token from

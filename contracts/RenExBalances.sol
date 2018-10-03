@@ -129,7 +129,7 @@ contract RenExBalances is Ownable {
             CompatibleERC20(_token).safeApprove(rewardVaultContract, _fee);
             rewardVaultContract.deposit(_feePayee, ERC20(_token), _fee);
         }
-        privateDecrementBalance(_traderFrom, ERC20(_token), _value + _fee);
+        privateDecrementBalance(_traderFrom, ERC20(_token), _value.add(_fee));
         if (_value > 0) {
             privateIncrementBalance(_traderTo, ERC20(_token), _value);
         }

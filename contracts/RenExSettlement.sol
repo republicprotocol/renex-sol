@@ -149,6 +149,8 @@ contract RenExSettlement is Ownable {
     /// price limit.
     /// @param _newSubmissionGasPriceLimit The new gas price limit.
     function updateSubmissionGasPriceLimit(uint256 _newSubmissionGasPriceLimit) external onlyOwner {
+        // Submission Gas Price Limit must be at least 100000000 wei (0.1 gwei)
+        require(_newSubmissionGasPriceLimit >= 100000000, "invalid new submission gas price limit");
         emit LogSubmissionGasPriceLimitUpdated(submissionGasPriceLimit, _newSubmissionGasPriceLimit);
         submissionGasPriceLimit = _newSubmissionGasPriceLimit;
     }

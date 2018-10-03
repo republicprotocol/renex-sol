@@ -127,12 +127,25 @@ contract("RenExSettlement", function (accounts: string[]) {
     });
 
     it("can update submission gas price limit", async () => {
-        await renExSettlement.updateSubmissionGasPriceLimit(testUtils.NULL);
-        (await renExSettlement.submissionGasPriceLimit()).toString().should.equal("0");
+        const previousGasPriceLimit = await renExSettlement.submissionGasPriceLimit();
+
+        // [ACTION] Update to 0.1 GWEI
+        await renExSettlement.updateSubmissionGasPriceLimit(0.1 * testUtils.GWEI);
+
+        // [CHECK] Should now be 0.1 GWEI
+        (await renExSettlement.submissionGasPriceLimit()).should.be.bignumber.equal(0.1 * testUtils.GWEI);
+
+        // [CHECK] Non-owner can't update
         await renExSettlement.updateSubmissionGasPriceLimit(100 * testUtils.GWEI, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExSettlement.updateSubmissionGasPriceLimit(100 * testUtils.GWEI);
-        (await renExSettlement.submissionGasPriceLimit()).toString().should.equal((100 * testUtils.GWEI).toString());
+
+        // [CHECK] Owner can't set to less than 0.1 GWEI
+        await renExSettlement.updateSubmissionGasPriceLimit(0.01 * testUtils.GWEI)
+            .should.be.rejectedWith(null, /invalid new submission gas price limit/);
+
+        // [SETUP] Reset
+        await renExSettlement.updateSubmissionGasPriceLimit(previousGasPriceLimit);
+        (await renExSettlement.submissionGasPriceLimit()).should.be.bignumber.equal(previousGasPriceLimit);
     });
 
     it("submitOrder", async () => {
@@ -220,14 +233,15 @@ contract("RenExSettlement", function (accounts: string[]) {
     });
 
     it("should fail for excessive gas price", async () => {
-        // Set gas price limit to 0
+        // [SETUP] Set gas price limit to 0
         const previousGasPriceLimit = await renExSettlement.submissionGasPriceLimit();
-        await renExSettlement.updateSubmissionGasPriceLimit(0x0);
+        await renExSettlement.updateSubmissionGasPriceLimit(100000000);
 
+        // [CHECK]
         await renExSettlement.submitOrder.apply(this, [...SELL5])
             .should.be.rejectedWith(null, /gas price too high/);
 
-        // Reset gas price limit
+        // [SETUP] Reset gas price limit
         await renExSettlement.updateSubmissionGasPriceLimit(previousGasPriceLimit);
     });
 });

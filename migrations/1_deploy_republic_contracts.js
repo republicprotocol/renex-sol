@@ -15,7 +15,7 @@ module.exports = async function (deployer, network) {
     await deployer
         .deploy(
             RepublicToken, {
-                overwrite: network === "development"
+                overwrite: /development/.test(network)
             }
         )
         .then(() => deployer.deploy(

@@ -1,6 +1,6 @@
 import * as testUtils from "./helper/testUtils";
 
-import { buyMarket, sellMarket, TokenCodes } from "./helper/testUtils";
+import { buyMarket, sellMarket, TOKEN_CODES } from "./helper/testUtils";
 
 import { DGXTokenArtifact } from "./bindings/d_g_x_token";
 import { DarknodeRegistryArtifact } from "./bindings/darknode_registry";
@@ -24,7 +24,7 @@ contract("RenExSettlement", function (accounts: string[]) {
 
     const darknode = accounts[2];
     const broker = accounts[3];
-    let tokenAddresses: Map<TokenCodes, testUtils.BasicERC20>;
+    let tokenAddresses: Map<number, testUtils.BasicERC20>;
     let orderbook: OrderbookContract;
     let renExSettlement: RenExSettlementContract;
     let renExBalances: RenExBalancesContract;
@@ -36,13 +36,13 @@ contract("RenExSettlement", function (accounts: string[]) {
 
     const BUY1 = [web3.utils.sha3("0"), 1, buyMarket("0x3", "0x7"), 10, 10000, 0];
     const SELL1 = [web3.utils.sha3("1"), 1, sellMarket("0x3", "0x7"), 10, 1000, 0];
-    const BUY2 = [web3.utils.sha3("2"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 10000, 0];
-    const SELL2 = [web3.utils.sha3("3"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 1000, 0];
-    const BUY3 = [web3.utils.sha3("4"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 15, 10000, 0];
-    const SELL3 = [web3.utils.sha3("5"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 10000, 0];
-    const BUY4 = [web3.utils.sha3("6"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 17, 10000, 0];
-    const SELL4 = [web3.utils.sha3("7"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 1000, 0];
-    const SELL5 = [web3.utils.sha3("8"), 2, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 10, 1000, 0];
+    const BUY2 = [web3.utils.sha3("2"), 1, buyMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 12, 10000, 0];
+    const SELL2 = [web3.utils.sha3("3"), 1, sellMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 12, 1000, 0];
+    const BUY3 = [web3.utils.sha3("4"), 1, buyMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 15, 10000, 0];
+    const SELL3 = [web3.utils.sha3("5"), 1, sellMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 12, 10000, 0];
+    const BUY4 = [web3.utils.sha3("6"), 1, buyMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 17, 10000, 0];
+    const SELL4 = [web3.utils.sha3("7"), 1, sellMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 12, 1000, 0];
+    const SELL5 = [web3.utils.sha3("8"), 2, sellMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 10, 1000, 0];
 
     const renexID = testUtils.Settlements.RenEx;
 
@@ -50,10 +50,10 @@ contract("RenExSettlement", function (accounts: string[]) {
         const ren = await RepublicToken.deployed();
 
         tokenAddresses = new Map()
-            .set(TokenCodes.BTC, testUtils.MockBTC)
-            .set(TokenCodes.ETH, testUtils.MockETH)
-            .set(TokenCodes.DGX, await DGXToken.deployed())
-            .set(TokenCodes.REN, ren);
+            .set(TOKEN_CODES.BTC, testUtils.MockBTC)
+            .set(TOKEN_CODES.ETH, testUtils.MockETH)
+            .set(TOKEN_CODES.DGX, await DGXToken.deployed())
+            .set(TOKEN_CODES.REN, ren);
 
         let dnr = await DarknodeRegistry.deployed();
         orderbook = await Orderbook.deployed();
@@ -211,12 +211,12 @@ contract("RenExSettlement", function (accounts: string[]) {
         ).should.be.rejectedWith(null, /unregistered priority token/);
 
         // Sell token that is not registered
-        await renExTokens.deregisterToken(TokenCodes.ETH);
+        await renExTokens.deregisterToken(TOKEN_CODES.ETH);
         await renExSettlement.settle(
             buyID_2,
             sellID_2,
         ).should.be.rejectedWith(null, /unregistered secondary token/);
-        await renExTokens.registerToken(TokenCodes.ETH, tokenAddresses.get(TokenCodes.ETH).address, 18);
+        await renExTokens.registerToken(TOKEN_CODES.ETH, tokenAddresses.get(TOKEN_CODES.ETH).address, 18);
     });
 
     it("should fail for excessive gas price", async () => {

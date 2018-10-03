@@ -7,7 +7,7 @@ These tokens are for testing that the RenEx contracts are compatible with a wide
 import * as testUtils from "./helper/testUtils";
 
 import { settleOrders } from "./helper/settleOrders";
-import { market, TokenCodes } from "./helper/testUtils";
+import { market, TOKEN_CODES } from "./helper/testUtils";
 
 import { DarknodeRegistryArtifact, DarknodeRegistryContract } from "./bindings/darknode_registry";
 import { OMGTokenArtifact } from "./bindings/o_m_g_token";
@@ -36,13 +36,9 @@ contract("Top Tokens", function (accounts: string[]) {
     const seller = accounts[1];
     let details: any[];
 
-    const TUSD_CODE = 0x101;
-    const ZRX_CODE = 0x10001;
-    const OMG_CODE = 0x10002;
-
-    const ETH_TUSD = market(TokenCodes.ETH, TUSD_CODE);
-    const ETH_ZRX = market(TokenCodes.ETH, ZRX_CODE);
-    const ETH_OMG = market(TokenCodes.ETH, OMG_CODE);
+    const ETH_TUSD = market(TOKEN_CODES.ETH, TOKEN_CODES.TUSD);
+    const ETH_ZRX = market(TOKEN_CODES.ETH, TOKEN_CODES.ZRX);
+    const ETH_OMG = market(TOKEN_CODES.ETH, TOKEN_CODES.OMG);
 
     before(async function () {
         const dnr: DarknodeRegistryContract = await DarknodeRegistry.deployed();
@@ -51,12 +47,12 @@ contract("Top Tokens", function (accounts: string[]) {
         const renExBalances: RenExBalancesContract = await RenExBalances.deployed();
 
         const ren: RepublicTokenContract = await RepublicToken.deployed();
-        const tokenAddresses = new Map<TokenCodes, testUtils.BasicERC20>()
-            .set(TokenCodes.ETH, testUtils.MockETH)
-            .set(TokenCodes.REN, ren)
-            .set(TUSD_CODE, await TUSDToken.deployed())
-            .set(ZRX_CODE, await ZRXToken.deployed())
-            .set(OMG_CODE, await OMGToken.deployed())
+        const tokenAddresses = new Map<number, testUtils.BasicERC20>()
+            .set(TOKEN_CODES.ETH, testUtils.MockETH)
+            .set(TOKEN_CODES.REN, ren)
+            .set(TOKEN_CODES.TUSD, await TUSDToken.deployed())
+            .set(TOKEN_CODES.ZRX, await ZRXToken.deployed())
+            .set(TOKEN_CODES.OMG, await OMGToken.deployed())
             ;
 
         // Register darknode

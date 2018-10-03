@@ -42,6 +42,7 @@ module.exports = {
         falcon: KOVAN(process.env.MNEMONIC_FALCON),
         nightly: KOVAN(process.env.MNEMONIC_NIGHTLY),
         mainnet: MAINNET(process.env.MNEMONIC_MAINNET),
+        verify: MAINNET(process.env.MNEMONIC_NIGHTLY),
     },
     mocha: {
         // // Use with `npm run test`, not with `npm run coverage`

@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity ^0.4.24;
 
 /// @notice RenExAtomicSwapper implements the RenEx atomic swapping interface
 /// for Ether values. Does not support ERC20 tokens.

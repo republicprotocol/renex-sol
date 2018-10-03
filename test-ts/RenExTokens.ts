@@ -10,17 +10,15 @@ const RenExTokens = artifacts.require("RenExTokens") as RenExTokensArtifact;
 
 contract("RenExTokens", function (accounts: string[]) {
 
-    const ETH = 0x1;
-    const REN = 0x10000;
-    const tokens = [ETH, REN];
+    const tokens = [testUtils.TOKEN_CODES.ETH, testUtils.TOKEN_CODES.REN];
 
     let renExTokens: RenExTokensContract;
-    let tokenInstances: Map<testUtils.TokenCodes, testUtils.BasicERC20>;
+    let tokenInstances: Map<number, testUtils.BasicERC20>;
 
     before(async function () {
         tokenInstances = new Map()
-            .set(ETH, { address: testUtils.Ox0, decimals: () => Promise.resolve(18) })
-            .set(REN, await RepublicToken.new());
+            .set(testUtils.TOKEN_CODES.ETH, { address: testUtils.Ox0, decimals: () => Promise.resolve(18) })
+            .set(testUtils.TOKEN_CODES.REN, await RepublicToken.new());
 
         renExTokens = await RenExTokens.new("VERSION");
     });

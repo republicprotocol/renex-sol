@@ -3,7 +3,7 @@ import { BN } from "bn.js";
 import * as testUtils from "./helper/testUtils";
 
 import { settleOrders } from "./helper/settleOrders";
-import { market, TokenCodes } from "./helper/testUtils";
+import { market, TOKEN_CODES } from "./helper/testUtils";
 
 import { ApprovingBrokerArtifact } from "./bindings/approving_broker";
 import { BrokerVerifierContract } from "./bindings/broker_verifier";
@@ -36,9 +36,10 @@ contract("RenEx", function (accounts: string[]) {
     const seller = accounts[1];
     let details: any[];
     const VPT = 0x3;
+    const ALTBTC = 0x4;
 
-    const DGX_REN = market(TokenCodes.DGX, TokenCodes.REN);
-    const ETH_REN = market(TokenCodes.ETH, TokenCodes.REN);
+    const DGX_REN = market(TOKEN_CODES.DGX, TOKEN_CODES.REN);
+    const ETH_REN = market(TOKEN_CODES.ETH, TOKEN_CODES.REN);
 
     before(async function () {
         const dnr: DarknodeRegistryContract = await DarknodeRegistry.deployed();
@@ -51,19 +52,19 @@ contract("RenEx", function (accounts: string[]) {
         const preciseToken: PreciseTokenContract = await PreciseToken.new();
 
         const ren: RepublicTokenContract = await RepublicToken.deployed();
-        const tokenAddresses = new Map<TokenCodes, testUtils.BasicERC20>()
-            .set(TokenCodes.BTC, testUtils.MockBTC)
-            .set(TokenCodes.ETH, testUtils.MockETH)
-            .set(TokenCodes.LTC, testUtils.MockBTC)
-            .set(TokenCodes.DGX, await DGXToken.deployed())
-            .set(TokenCodes.REN, ren)
+        const tokenAddresses = new Map<number, testUtils.BasicERC20>()
+            .set(TOKEN_CODES.BTC, testUtils.MockBTC)
+            .set(TOKEN_CODES.ETH, testUtils.MockETH)
+            .set(ALTBTC, testUtils.MockBTC)
+            .set(TOKEN_CODES.DGX, await DGXToken.deployed())
+            .set(TOKEN_CODES.REN, ren)
             .set(VPT, preciseToken);
 
-        // Register LTC
+        // Register ALTBTC
         await renExTokens.registerToken(
-            TokenCodes.LTC,
-            tokenAddresses.get(TokenCodes.LTC).address,
-            new BN(await tokenAddresses.get(TokenCodes.LTC).decimals())
+            ALTBTC,
+            tokenAddresses.get(ALTBTC).address,
+            new BN(await tokenAddresses.get(ALTBTC).decimals())
         );
 
         // Register VPT
@@ -152,7 +153,7 @@ contract("RenEx", function (accounts: string[]) {
     });
 
     it("atomic swap", async () => {
-        const tokens = market(TokenCodes.BTC, TokenCodes.ETH);
+        const tokens = market(TOKEN_CODES.BTC, TOKEN_CODES.ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* REN */ };
 
@@ -161,12 +162,12 @@ contract("RenEx", function (accounts: string[]) {
     });
 
     it("atomic fees are paid in ethereum-based token", async () => {
-        let tokens = market(TokenCodes.ETH, TokenCodes.LTC);
-        let buy = { settlement: 2, tokens, price: 1, volume: 2 /* ETH */, minimumVolume: 1 /* LTC */ };
-        let sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
+        let tokens = market(TOKEN_CODES.ETH, ALTBTC);
+        let buy = { settlement: 2, tokens, price: 1, volume: 2 /* ETH */, minimumVolume: 1 /* ALTBTC */ };
+        let sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ALTBTC */ };
 
         (await settleOrders.apply(this, [buy, sell, ...details]))
-            .should.deep.equal([0.975 /* ETH */, 1 /* LTC */]);
+            .should.deep.equal([0.975 /* ETH */, 1 /* ALTBTC */]);
     });
 
     context("(negative tests)", async () => {
@@ -195,7 +196,7 @@ contract("RenEx", function (accounts: string[]) {
         });
 
         it("Invalid tokens (should be DGX/REN, not REN/DGX)", async () => {
-            const REN_DGX = market(TokenCodes.REN, TokenCodes.DGX);
+            const REN_DGX = market(TOKEN_CODES.REN, TOKEN_CODES.DGX);
             const buy = { tokens: REN_DGX, price: 1, volume: 2 /* DGX */, minimumVolume: 1 /* REN */ };
             const sell = { tokens: REN_DGX, price: 0.95, volume: 1 /* REN */ };
             await settleOrders.apply(this, [buy, sell, ...details])
@@ -224,7 +225,7 @@ contract("RenEx", function (accounts: string[]) {
         });
 
         it("Token with too many decimals", async () => {
-            const ETH_VPT = market(TokenCodes.ETH, VPT);
+            const ETH_VPT = market(TOKEN_CODES.ETH, VPT);
 
             const buy = { tokens: ETH_VPT, price: 1e-12, volume: 1e-12 /* VPT */ };
             const sell = { tokens: ETH_VPT, price: 1e-12, volume: 1e-12 /* VPT */ };
@@ -234,9 +235,9 @@ contract("RenEx", function (accounts: string[]) {
         });
 
         it("Atomic swap not involving Ether", async () => {
-            const BTC_LTC = market(TokenCodes.BTC, TokenCodes.LTC);
-            const buy = { settlement: 2, tokens: BTC_LTC, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* LTC */ };
-            const sell = { settlement: 2, tokens: BTC_LTC, price: 0.95, volume: 1 /* LTC */ };
+            const BTC_ALT = market(TOKEN_CODES.BTC, ALTBTC);
+            const buy = { settlement: 2, tokens: BTC_ALT, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ALT */ };
+            const sell = { settlement: 2, tokens: BTC_ALT, price: 0.95, volume: 1 /* ALTBTC */ };
 
             await settleOrders.apply(this, [buy, sell, ...details])
                 .should.be.rejectedWith(null, /non-eth atomic swaps are not supported/);

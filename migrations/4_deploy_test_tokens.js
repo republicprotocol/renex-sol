@@ -1,16 +1,6 @@
-/*
-
-These tokens are for testing that the RenEx contracts are compatible with a wide variety of token contracts.
-
-*/
-
 const BN = require("bn.js");
 
-// Contracts
-const RenExTokens = artifacts.require("RenExTokens");
-
 // Test tokens
-const RepublicToken = artifacts.require("RepublicToken");
 const DGXToken = artifacts.require("DGXToken");
 const OMGToken = artifacts.require("OMGToken");
 const ZRXToken = artifacts.require("ZRXToken");
@@ -28,40 +18,15 @@ module.exports = async function (deployer, network, accounts) {
 
     const deployerAddress = accounts[0];
 
-    const DGX_CODE = 0x100;
-    const TUSD_CODE = 0x101;
-    const REN_CODE = 0x10000;
-    const ZRX_CODE = 0x10001;
-    const OMG_CODE = 0x10002;
-
-    if (network === "mainnet") {
-        DGXToken.address = "0x4f3AfEC4E5a3F2A6a1A411DEF7D7dFe50eE057bF";
-        RepublicToken.address = "0x408e41876cCCDC0F92210600ef50372656052a38";
-        TUSDToken.address = "0x8dd5fbCe2F6a956C3022bA3663759011Dd51e73E";
-        ZRXToken.address = "0xE41d2489571d322189246DaFA5ebDe1F4699F498";
-        OMGToken.address = "0xd26114cd6EE289AccF82350c8d8487fedB8A0C07";
+    // Do not deploy test tokens on mainnet
+    if (/mainnet/.test(network)) {
+        return;
     }
 
+    // Deploy mock tokens
     await deployer
         // DGX
         .then(() => deployer.deploy(DGXToken))
-        .then(async () => {
-            const token = await DGXToken.at(DGXToken.address);
-            const decimals = (await token.decimals()).toNumber();
-            console.assert(decimals === 9);
-            const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(DGX_CODE, DGXToken.address, decimals);
-        })
-
-        // REN
-        // .then(() => deployer.deploy(RepublicToken))
-        .then(async () => {
-            const token = await RepublicToken.at(RepublicToken.address);
-            const decimals = (await token.decimals()).toNumber();
-            console.assert(decimals === 18);
-            const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(REN_CODE, RepublicToken.address, decimals);
-        })
 
         // OMG
         .then(() => deployer.deploy(OMGToken))
@@ -70,25 +35,9 @@ module.exports = async function (deployer, network, accounts) {
             const decimals = (await token.decimals()).toNumber();
             await token.mint(deployerAddress, toSmallestUnit(decimals, 140245398));
         })
-        .then(async () => {
-            const token = await OMGToken.at(OMGToken.address);
-            const decimals = (await token.decimals()).toNumber();
-            console.assert(decimals === 18);
-            const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(OMG_CODE, token.address, decimals);
-        })
-
 
         // ZRX
         .then(() => deployer.deploy(ZRXToken))
-        .then(async () => {
-            const token = await ZRXToken.at(ZRXToken.address);
-            const decimals = (await token.decimals()).toNumber();
-            console.assert(decimals === 18);
-            const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(ZRX_CODE, token.address, decimals);
-        })
-
 
         // TUSD
         .then(() => deployer.deploy(TUSD_BalanceSheet))
@@ -116,12 +65,5 @@ module.exports = async function (deployer, network, accounts) {
             await token.setAllowanceSheet(allowances.address);
             const decimals = (await token.decimals()).toNumber();
             await token.mint(deployerAddress, toSmallestUnit(decimals, 91259614));
-        })
-        .then(async () => {
-            const token = await TUSDToken.at(TUSDToken.address);
-            const decimals = (await token.decimals()).toNumber();
-            console.assert(decimals === 18);
-            const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(TUSD_CODE, token.address, decimals);
         });
 }

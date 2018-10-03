@@ -171,10 +171,10 @@ contract RenExSettlement is Ownable {
     ///        the first 32 bytes and sell token is encoded as the last 32
     ///        bytes).
     /// @param _price The price of the order. Interpreted as the cost for 1
-    ///        standard unit of the non-priority token, in 1e12 (i.e.
+    ///        standard unit of the secondary token, in 1e12 (i.e.
     ///        PRICE_OFFSET) units of the priority token).
     /// @param _volume The volume of the order. Interpreted as the maximum
-    ///        number of 1e-12 (i.e. VOLUME_OFFSET) units of the non-priority
+    ///        number of 1e-12 (i.e. VOLUME_OFFSET) units of the secondary
     ///        token that can be traded by this order.
     /// @param _minimumVolume The minimum volume the trader is willing to
     ///        accept. Encoded the same as the volume.

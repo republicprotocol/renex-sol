@@ -12,7 +12,9 @@ before_script:
 script:
   - cd node_modules
   - rm -rf republic-sol
-  - git clone -b nightly https://github.com/republicprotocol/republic-sol.git
-  - cd ../
+  - git clone https://github.com/republicprotocol/republic-sol.git
+  - cd republic-sol
+  - git checkout 56dafc8c8aad5136681da01cccc88ec9d0189bc2
+  - cd ../../
   - npm run coverage
   - cat coverage/lcov.info | ./node_modules/.bin/coveralls

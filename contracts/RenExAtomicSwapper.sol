@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
 /// @notice RenExAtomicSwapper implements the RenEx atomic swapping interface
 /// for Ether values. Does not support ERC20 tokens.
@@ -8,10 +8,10 @@ contract RenExAtomicSwapper {
     struct Swap {
         uint256 timelock;
         uint256 value;
-        address ethTrader;
-        address withdrawTrader;
         bytes32 secretLock;
         bytes32 secretKey;
+        address ethTrader;
+        address withdrawTrader;
     }
 
     enum States {

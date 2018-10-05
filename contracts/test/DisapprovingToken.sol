@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
 /// @notice A test ERC20 token with 110 decimals.
 contract DisapprovingToken {

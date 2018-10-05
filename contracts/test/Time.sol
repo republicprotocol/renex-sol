@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
 /// @notice A token for retrieving the current time from the blockchain
 contract Time {

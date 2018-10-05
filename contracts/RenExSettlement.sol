@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -18,16 +18,16 @@ contract RenExSettlement is Ownable {
 
     string public VERSION; // Passed in as a constructor parameter.
 
-    // This contract handles the settlements with ID 1 and 2.
-    uint32 constant public RENEX_SETTLEMENT_ID = 1;
-    uint32 constant public RENEX_ATOMIC_SETTLEMENT_ID = 2;
-
     // Fees in RenEx are 0.2%. To represent this as integers, it is broken into
     // a numerator and denominator.
     // DARKNODE_FEES_NUMERATOR must not be greater than
     // DARKNODE_FEES_DENOMINATOR.
     uint256 constant public DARKNODE_FEES_NUMERATOR = 2;
     uint256 constant public DARKNODE_FEES_DENOMINATOR = 1000;
+
+    // This contract handles the settlements with ID 1 and 2.
+    uint32 constant public RENEX_SETTLEMENT_ID = 1;
+    uint32 constant public RENEX_ATOMIC_SETTLEMENT_ID = 2;
 
     // Constants used in the price / volume inputs.
     int16 constant private PRICE_OFFSET = 12;
@@ -566,7 +566,7 @@ contract RenExSettlement is Ownable {
     /// @return true if _tokenAddress is 0x0, representing a token that is not
     /// on Ethereum
     function isEthereumBased(address _tokenAddress) private pure returns (bool) {
-        return (_tokenAddress != address(0x0));
+        return (_tokenAddress != 0x0);
     }
 
     /// @notice Computes (_numerator / _denominator) * 10 ** _scale

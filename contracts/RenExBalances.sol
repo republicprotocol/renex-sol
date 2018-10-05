@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -22,7 +22,7 @@ contract RenExBalances is Ownable {
     DarknodeRewardVault public rewardVaultContract;
 
     /// @dev Should match the address in the DarknodeRewardVault
-    address constant public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+    address constant public ETHEREUM = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     
     // Delay between a trader calling `withdrawSignal` and being able to call
     // `withdraw` without a broker signature.
@@ -123,13 +123,17 @@ contract RenExBalances is Ownable {
     external onlyRenExSettlementContract {
         require(traderBalances[_traderFrom][_token] >= _fee, "insufficient funds for fee");
 
-        if (address(_token) == ETHEREUM) {
+        // Decrease balance
+        privateDecrementBalance(_traderFrom, ERC20(_token), _value.add(_fee));
+
+        if (_token == ETHEREUM) {
             rewardVaultContract.deposit.value(_fee)(_feePayee, ERC20(_token), _fee);
         } else {
             CompatibleERC20(_token).safeApprove(rewardVaultContract, _fee);
             rewardVaultContract.deposit(_feePayee, ERC20(_token), _fee);
         }
-        privateDecrementBalance(_traderFrom, ERC20(_token), _value.add(_fee));
+        
+        // Increase balance
         if (_value > 0) {
             privateIncrementBalance(_traderTo, ERC20(_token), _value);
         }
@@ -143,7 +147,7 @@ contract RenExBalances is Ownable {
         address trader = msg.sender;
 
         uint256 receivedValue = _value;
-        if (address(_token) == ETHEREUM) {
+        if (_token == ETHEREUM) {
             require(msg.value == _value, "mismatched value parameter and tx value");
         } else {
             require(msg.value == 0, "unexpected ether transfer");
@@ -164,7 +168,7 @@ contract RenExBalances is Ownable {
         address trader = msg.sender;
 
         privateDecrementBalance(trader, _token, _value);
-        if (address(_token) == ETHEREUM) {
+        if (_token == ETHEREUM) {
             trader.transfer(_value);
         } else {
             CompatibleERC20(_token).safeTransfer(trader, _value);

@@ -11,8 +11,7 @@
         "coverage-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && tsc && solidity-coverage); npm run clean",
         "development": "truffle migrate --network development --reset",
         "nightly": "npm run merge ./.merged/nightly && truffle migrate --network nightly --reset",
-        "falcon": "npm run merge ./.merged/falcon && truffle migrate --network falcon --reset",
-        "f0": "npm run merge ./.merged/f0 && truffle migrate --network f0 --reset",
+        "testnet": "npm run merge ./.merged/testnet && truffle migrate --network testnet --reset",
         "mainnet": "npm run merge ./.merged/mainnet && truffle migrate --network mainnet --reset",
         "verify": "truffle migrate --network verify --reset",
         "bindings": "truffle compile && ./node_modules/.bin/abi-gen --abis 'build/contracts/*.json' --output ./test-ts/bindings --template './test-ts/bindings/templates/contract.handlebars' --partials './test-ts/bindings/templates/partials/*.handlebars' 1> /dev/null"
@@ -46,7 +45,7 @@
         "ganache-cli": "^6.1.8",
         "js-sha256": "^0.9.0",
         "sol-merger": "^0.1.2",
-        "solc": "^0.4.24",
+        "solc": "^0.4.25",
         "solc-js": "^0.4.20-browser.1",
         "solidity-coverage": "^0.5.11",
         "truffle": "^5.0.0-beta.1",

@@ -21,21 +21,27 @@ RenEx Sol depends on the [OpenZeppelin Solidity library](https://github.com/Open
 Tests
 -----
 
-Install Truffle and Ganache commands, and the required node modules.
+Install Truffle and Ganache commands, and the required node modules:
 
 ```
 npm install --global truffle ganache-cli
 npm install
 ```
 
-Run the `ganache-cli` or an alternate Ethereum test RPC server on port 8545.
+Run the `ganache-cli` or an alternate Ethereum test RPC server on port 8545:
 
 ```sh
 ganache-cli
 ```
 
-Run the Truffle test suite.
+Run the Truffle test suite:
 
 ```sh
-truffle test
+npm run test
+```
+
+To generate the coverage report, run:
+
+```sh
+npm run coverage
 ```

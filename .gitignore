@@ -12,6 +12,7 @@ coverage.json
 build/*
 test/*
 local_*
+test-ts/bindings/*.ts
 
 !node_modules/openzeppelin-solidity/
 node_modules/openzeppelin-solidity/*

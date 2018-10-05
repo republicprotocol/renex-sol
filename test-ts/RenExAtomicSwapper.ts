@@ -1,9 +1,12 @@
-import { RenExAtomicSwapperContract } from "./bindings/ren_ex_atomic_swapper";
-
-import { SHA256 } from "crypto-js";
 import * as HEX from "crypto-js/enc-hex";
 
-import { randomID, secondsFromNow, sleep, second } from "./helper/testUtils";
+import { SHA256 } from "crypto-js";
+
+import { randomID, second, secondsFromNow, sleep } from "./helper/testUtils";
+
+import { RenExAtomicSwapperArtifact, RenExAtomicSwapperContract } from "./bindings/ren_ex_atomic_swapper";
+
+const RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper") as RenExAtomicSwapperArtifact;
 
 contract("RenExAtomicSwapper", function (accounts: string[]) {
 
@@ -12,7 +15,7 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
     const bob = accounts[2];
 
     before(async function () {
-        swap = await artifacts.require("RenExAtomicSwapper").deployed();
+        swap = await RenExAtomicSwapper.deployed();
     });
 
     it("can perform atomic swap", async () => {

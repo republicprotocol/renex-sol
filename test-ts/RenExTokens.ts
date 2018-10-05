@@ -1,5 +1,12 @@
+import { BN } from "bn.js";
+
 import * as testUtils from "./helper/testUtils";
-import { RenExTokensContract } from "./bindings/ren_ex_tokens";
+
+import { RenExTokensArtifact, RenExTokensContract } from "./bindings/ren_ex_tokens";
+import { RepublicTokenArtifact } from "./bindings/republic_token";
+
+const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
+const RenExTokens = artifacts.require("RenExTokens") as RenExTokensArtifact;
 
 contract("RenExTokens", function (accounts: string[]) {
 
@@ -8,15 +15,14 @@ contract("RenExTokens", function (accounts: string[]) {
     const tokens = [ETH, REN];
 
     let renExTokens: RenExTokensContract;
-    let tokenInstances;
+    let tokenInstances: Map<testUtils.TokenCodes, testUtils.BasicERC20>;
 
     before(async function () {
-        tokenInstances = {
-            [ETH]: { address: testUtils.Ox0, decimals: () => Promise.resolve(18) },
-            [REN]: await artifacts.require("RepublicToken").new(),
-        };
+        tokenInstances = new Map()
+            .set(ETH, { address: testUtils.Ox0, decimals: () => Promise.resolve(18) })
+            .set(REN, await RepublicToken.new());
 
-        renExTokens = await artifacts.require("RenExTokens").new();
+        renExTokens = await RenExTokens.new("VERSION");
     });
 
     it("owner can register and deregister tokens", async () => {
@@ -26,8 +32,8 @@ contract("RenExTokens", function (accounts: string[]) {
         }
 
         for (const token of tokens) {
-            const address = tokenInstances[token].address;
-            const decimals = await tokenInstances[token].decimals();
+            const address = tokenInstances.get(token).address;
+            const decimals = new BN(await tokenInstances.get(token).decimals());
 
             // Register
             await renExTokens.registerToken(
@@ -42,8 +48,8 @@ contract("RenExTokens", function (accounts: string[]) {
             (tokenDetails.registered).should.be.true;
         }
         for (const token of tokens) {
-            const address = tokenInstances[token].address;
-            const decimals = await tokenInstances[token].decimals();
+            const address = tokenInstances.get(token).address;
+            const decimals = new BN(await tokenInstances.get(token).decimals());
 
             // Deregister
             await renExTokens.deregisterToken(token);
@@ -59,8 +65,8 @@ contract("RenExTokens", function (accounts: string[]) {
         for (const token of tokens) {
             await renExTokens.registerToken(
                 token,
-                tokenInstances[token].address,
-                await tokenInstances[token].decimals(),
+                tokenInstances.get(token).address,
+                new BN(await tokenInstances.get(token).decimals()),
                 { from: accounts[1] }
             ).should.be.rejectedWith(null, /revert/); // not owner
         }
@@ -75,18 +81,18 @@ contract("RenExTokens", function (accounts: string[]) {
 
     it("can't register already registered token (as with deregistration)", async () => {
         const token = tokens[0];
-        const address = tokenInstances[token].address;
-        const decimals = await tokenInstances[token].decimals();
+        const address = tokenInstances.get(token).address;
+        const decimals = await tokenInstances.get(token).decimals();
 
         // Never registered - can't deregister
         await renExTokens.deregisterToken(token)
             .should.be.rejectedWith(null, /not registered/);
 
         // Register
-        await renExTokens.registerToken(token, address, decimals);
+        await renExTokens.registerToken(token, address, new BN(decimals));
 
         // Already registered - can't register
-        await renExTokens.registerToken(token, address, decimals)
+        await renExTokens.registerToken(token, address, new BN(decimals))
             .should.be.rejectedWith(null, /already registered/);
 
         // Deregister
@@ -99,8 +105,8 @@ contract("RenExTokens", function (accounts: string[]) {
 
     it("can't change details", async () => {
         const token1 = tokens[0];
-        const address1 = tokenInstances[token1].address;
-        const decimals1 = await tokenInstances[token1].decimals();
+        const address1 = tokenInstances.get(token1).address;
+        const decimals1 = new BN(await tokenInstances.get(token1).decimals());
 
         // Register
         await renExTokens.registerToken(token1, address1, decimals1);
@@ -108,13 +114,13 @@ contract("RenExTokens", function (accounts: string[]) {
         // Deregister
         await renExTokens.deregisterToken(token1);
 
-        // Attempt to reregister with different details
-        await renExTokens.registerToken(token1, tokenInstances[tokens[1]].address, decimals1)
+        // Attempt to re-register with different details
+        await renExTokens.registerToken(token1, tokenInstances.get(tokens[1]).address, decimals1)
             .should.be.rejectedWith(null, /different address/);
         await renExTokens.registerToken(token1, address1, 1)
             .should.be.rejectedWith(null, /different decimals/);
 
-        // Can reregister with the same details
+        // Can re-register with the same details
         await renExTokens.registerToken(token1, address1, decimals1);
 
         const tokenDetails = await renExTokens.tokens(token1);

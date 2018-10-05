@@ -3,18 +3,18 @@ const BN = require("bn.js");
 const GWEI = 1000000000;
 
 module.exports = {
-    MINIMUM_BOND: new BN(100000).pow(new BN(1).pow(new BN(18))),
-    INGRESS_FEE: 10,
-    MINIMUM_POD_SIZE: 3, // 24 in production
-    MINIMUM_EPOCH_INTERVAL: 2, // 14400 in production
-    SUBMIT_ORDER_GAS_LIMIT: 100 * GWEI,
-    SLASHER_ADDRESS: 0x0,
+    VERSION: "1.0.0",
+    MINIMUM_BOND: new BN(100000).mul(new BN(10).pow(new BN(18))),
+    MINIMUM_POD_SIZE: 24, // 24 in production
+    MINIMUM_EPOCH_INTERVAL: 1, // 14400 in production
+    SUBMIT_ORDER_GAS_LIMIT: 10 * GWEI,
+    SLASHER_ADDRESS: "0x565839E16bAC459884b0F0D7377Ac04e04Be150d",
+    OWNER_ADDRESS: "",
 }
 
 /*
 
     const BOND = (new BN(100000)).mul(new BN(10).pow(new BN(18)));
-    const INGRESS_FEE = 0;
     const SLASHER_ADDRESS = 0x0;
 
     let POD_SIZE = 3;

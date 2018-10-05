@@ -1,17 +1,29 @@
-import * as testUtils from "./helper/testUtils";
-import { TokenCodes, market } from "./helper/testUtils";
-
-import { settleOrders } from "./helper/settleOrders";
 import { BN } from "bn.js";
 
-import { RenExBalancesContract } from "./bindings/ren_ex_balances";
-import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
-import { DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
-import { RenExTokensContract } from "./bindings/ren_ex_tokens";
-import { OrderbookContract } from "./bindings/orderbook";
-import { DarknodeRegistryContract } from "./bindings/darknode_registry";
+import * as testUtils from "./helper/testUtils";
 
-contract("Slasher", function (accounts: string[]) {
+import { settleOrders } from "./helper/settleOrders";
+import { market, TokenCodes } from "./helper/testUtils";
+
+import { DGXTokenArtifact } from "./bindings/d_g_x_token";
+import { DarknodeRegistryArtifact, DarknodeRegistryContract } from "./bindings/darknode_registry";
+import { OrderbookArtifact, OrderbookContract } from "./bindings/orderbook";
+import { RenExBalancesArtifact, RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { RenExSettlementArtifact, RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { RenExTokensArtifact, RenExTokensContract } from "./bindings/ren_ex_tokens";
+import { RepublicTokenArtifact } from "./bindings/republic_token";
+
+const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
+const DGXToken = artifacts.require("DGXToken") as DGXTokenArtifact;
+const DarknodeRegistry = artifacts.require("DarknodeRegistry") as DarknodeRegistryArtifact;
+const Orderbook = artifacts.require("Orderbook") as OrderbookArtifact;
+const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
+const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
+const RenExTokens = artifacts.require("RenExTokens") as RenExTokensArtifact;
+const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
+
+contract("Atomic Bond Slashing", function (accounts: string[]) {
 
     const slasher = accounts[0];
     const buyer = accounts[1];
@@ -21,40 +33,34 @@ contract("Slasher", function (accounts: string[]) {
 
     let dnr: DarknodeRegistryContract;
     let orderbook: OrderbookContract;
-    let darknodeRewardVault: DarknodeRewardVaultContract;
     let renExSettlement: RenExSettlementContract;
     let renExBalances: RenExBalancesContract;
     let renExTokens: RenExTokensContract;
+    let renExBrokerVerifier: RenExBrokerVerifierContract;
     let eth_address: string;
-    let details;
+    let details: any[];
 
     before(async function () {
-        const ren = await artifacts.require("RepublicToken").deployed();
+        const ren = await RepublicToken.deployed();
 
-        const tokenAddresses = {
-            [TokenCodes.BTC]: testUtils.MockBTC,
-            [TokenCodes.ETH]: testUtils.MockETH,
-            [TokenCodes.LTC]: testUtils.MockBTC,
-            [TokenCodes.DGX]: await artifacts.require("DGXMock").deployed(),
-            [TokenCodes.REN]: ren,
-        };
+        const tokenInstances = new Map<TokenCodes, testUtils.BasicERC20>()
+            .set(TokenCodes.BTC, testUtils.MockBTC)
+            .set(TokenCodes.ETH, testUtils.MockETH)
+            .set(TokenCodes.LTC, testUtils.MockBTC)
+            .set(TokenCodes.DGX, await DGXToken.deployed())
+            .set(TokenCodes.REN, ren);
 
-        dnr = await artifacts.require("DarknodeRegistry").deployed();
-        orderbook = await artifacts.require("Orderbook").deployed();
-        darknodeRewardVault = await artifacts.require("DarknodeRewardVault").deployed();
-        renExSettlement = await artifacts.require("RenExSettlement").deployed();
-        renExBalances = await artifacts.require("RenExBalances").deployed();
+        dnr = await DarknodeRegistry.deployed();
+        orderbook = await Orderbook.deployed();
+        renExSettlement = await RenExSettlement.deployed();
+        renExBalances = await RenExBalances.deployed();
         // Register extra token
-        renExTokens = await artifacts.require("RenExTokens").deployed();
+        renExTokens = await RenExTokens.deployed();
         renExTokens.registerToken(
             TokenCodes.LTC,
-            tokenAddresses[TokenCodes.LTC].address,
-            await tokenAddresses[TokenCodes.LTC].decimals()
+            tokenInstances.get(TokenCodes.LTC).address,
+            new BN(await tokenInstances.get(TokenCodes.LTC).decimals())
         );
-
-        // Broker
-        await ren.transfer(broker, testUtils.INGRESS_FEE * 100);
-        await ren.approve(orderbook.address, testUtils.INGRESS_FEE * 100, { from: broker });
 
         // Register darknode
         await ren.transfer(darknode, testUtils.MINIMUM_BOND);
@@ -62,11 +68,18 @@ contract("Slasher", function (accounts: string[]) {
         await dnr.register(darknode, testUtils.PUBK("1"), testUtils.MINIMUM_BOND, { from: darknode });
         await testUtils.waitForEpoch(dnr);
 
+        // Register broker
+        renExBrokerVerifier = await RenExBrokerVerifier.deployed();
+        await renExBrokerVerifier.registerBroker(broker);
+
         await renExSettlement.updateSlasher(slasher);
 
-        eth_address = tokenAddresses[TokenCodes.ETH].address;
+        eth_address = tokenInstances.get(TokenCodes.ETH).address;
 
-        details = [buyer, seller, darknode, broker, renExSettlement, renExBalances, tokenAddresses, orderbook, true];
+        details = [
+            buyer, seller, darknode, broker, renExSettlement, renExBalances,
+            tokenInstances, orderbook, renExBrokerVerifier, true,
+        ];
     });
 
     it("should correctly relocate fees", async () => {
@@ -87,7 +100,7 @@ contract("Slasher", function (accounts: string[]) {
         let fees = new BN(web3.utils.toWei(feeNum, "ether")).div(feeDen);
 
         // Store the original balances
-        let beforeBurntBalance = new BN(await darknodeRewardVault.darknodeBalances(slasher, eth_address));
+        let beforeBurntBalance = new BN(await renExBalances.traderBalances(slasher, eth_address));
         let beforeGuiltyBalance = new BN(await renExBalances.traderBalances(guiltyAddress, eth_address));
         let beforeInnocentBalance = new BN(await renExBalances.traderBalances(innocentAddress, eth_address));
 
@@ -95,7 +108,7 @@ contract("Slasher", function (accounts: string[]) {
         await renExSettlement.slash(guiltyOrderID, { from: slasher });
 
         // Check the new balances
-        let afterBurntBalance = new BN(await darknodeRewardVault.darknodeBalances(slasher, eth_address));
+        let afterBurntBalance = new BN(await renExBalances.traderBalances(slasher, eth_address));
         let afterGuiltyBalance = new BN(await renExBalances.traderBalances(guiltyAddress, eth_address));
         let afterInnocentBalance = new BN(await renExBalances.traderBalances(innocentAddress, eth_address));
 
@@ -110,6 +123,13 @@ contract("Slasher", function (accounts: string[]) {
         innocentBalanceDiff.should.bignumber.equal(fees);
         // We expect the guilty trader to have lost fees twice
         guiltyBalanceDiff.should.bignumber.equal(-fees * 2);
+
+        // Withdraw fees and check new ETH balance
+        const beforeEthBalance = new BN(await web3.eth.getBalance(slasher));
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        const gasFee = await testUtils.getFee(renExBalances.withdraw(eth_address, afterBurntBalance, sig));
+        const afterEthBalance = new BN(await web3.eth.getBalance(slasher));
+        afterEthBalance.should.bignumber.equal(beforeEthBalance.sub(gasFee).add(fees));
     });
 
     it("should not slash bonds more than once", async () => {
@@ -141,18 +161,6 @@ contract("Slasher", function (accounts: string[]) {
             .should.not.be.rejected;
     });
 
-    it("should not slash non-ETH atomic swaps", async () => {
-        const tokens = market(TokenCodes.BTC, TokenCodes.LTC);
-        const buy = { settlement: 2, tokens, price: 1, volume: 1 /* BTC */ };
-        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
-
-        let [, , buyOrderID, _] = await settleOrders.apply(this, [buy, sell, ...details]);
-
-        // Slash the fees
-        await renExSettlement.slash(buyOrderID, { from: slasher })
-            .should.be.rejectedWith(null, /non-eth tokens/);
-    });
-
     it("should not slash non-atomic swap orders", async () => {
         const tokens = market(TokenCodes.ETH, TokenCodes.REN);
         // Highest possible price, lowest possible volume
@@ -165,7 +173,7 @@ contract("Slasher", function (accounts: string[]) {
             .should.be.rejectedWith(null, /slashing non-atomic trade/);
     });
 
-    it("should not slash if unauthorised to do so", async () => {
+    it("should not slash if unauthorized to do so", async () => {
         const tokens = market(TokenCodes.BTC, TokenCodes.ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
@@ -176,10 +184,10 @@ contract("Slasher", function (accounts: string[]) {
 
         // The guilty trader might try to dog the innocent trader
         await renExSettlement.slash(sellOrderID, { from: guiltyTrader })
-            .should.be.rejectedWith(null, /unauthorised/);
+            .should.be.rejectedWith(null, /unauthorized/);
 
         // The innocent trader might try to dog the guilty trader
         await renExSettlement.slash(buyOrderID, { from: innocentTrader })
-            .should.be.rejectedWith(null, /unauthorised/);
+            .should.be.rejectedWith(null, /unauthorized/);
     });
 });

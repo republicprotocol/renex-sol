@@ -1,10 +1,25 @@
-import { RenExBalancesContract } from "./bindings/ren_ex_balances";
-import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
-import { DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
-import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { BN } from "bn.js";
 
 import * as testUtils from "./helper/testUtils";
-import { BN } from "bn.js";
+
+import { DGXTokenArtifact } from "./bindings/d_g_x_token";
+import { DarknodeRegistryContract } from "./bindings/darknode_registry";
+import { DarknodeRewardVaultArtifact, DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
+import { DisapprovingTokenArtifact } from "./bindings/disapproving_token";
+import { PausableTokenContract } from "./bindings/pausable_token";
+import { RenExBalancesArtifact, RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { RenExSettlementArtifact, RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { RepublicTokenArtifact } from "./bindings/republic_token";
+import { StandardTokenContract } from "./bindings/standard_token";
+
+const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
+const DGXToken = artifacts.require("DGXToken") as DGXTokenArtifact;
+const DarknodeRewardVault = artifacts.require("DarknodeRewardVault") as DarknodeRewardVaultArtifact;
+const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
+const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
+const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
+const DisapprovingToken = artifacts.require("DisapprovingToken") as DisapprovingTokenArtifact;
 
 contract("RenExBalances", function (accounts: string[]) {
 
@@ -12,20 +27,23 @@ contract("RenExBalances", function (accounts: string[]) {
     let renExSettlement: RenExSettlementContract;
     let rewardVault: DarknodeRewardVaultContract;
     let renExBrokerVerifier: RenExBrokerVerifierContract;
-    let ETH, REN, TOKEN1, TOKEN2;
+    let ETH: testUtils.BasicERC20;
+    let REN: testUtils.BasicERC20;
+    let TOKEN1: PausableTokenContract;
+    let TOKEN2: StandardTokenContract;
     const broker = accounts[9];
 
     before(async function () {
         ETH = testUtils.MockETH;
-        REN = await artifacts.require("RepublicToken").deployed();
-        TOKEN1 = await artifacts.require("RepublicToken").new();
-        TOKEN2 = await artifacts.require("ABCToken").deployed();
-        rewardVault = await artifacts.require("DarknodeRewardVault").deployed();
-        renExBalances = await artifacts.require("RenExBalances").deployed();
-        renExSettlement = await artifacts.require("RenExSettlement").deployed();
+        REN = await RepublicToken.deployed();
+        TOKEN1 = await RepublicToken.new();
+        TOKEN2 = await DGXToken.new();
+        rewardVault = await DarknodeRewardVault.deployed();
+        renExBalances = await RenExBalances.deployed();
+        renExSettlement = await RenExSettlement.deployed();
 
         // Register broker
-        renExBrokerVerifier = await artifacts.require("RenExBrokerVerifier").deployed();
+        renExBrokerVerifier = await RenExBrokerVerifier.deployed();
         await renExBrokerVerifier.registerBroker(broker);
     });
 
@@ -78,6 +96,10 @@ contract("RenExBalances", function (accounts: string[]) {
         // Check that the tokens have been returned
         (await TOKEN1.balanceOf(accounts[0])).should.bignumber.equal(previous1);
         (await TOKEN2.balanceOf(accounts[0])).should.bignumber.equal(previous2);
+
+        // Check that balance in renExBalances is zeroed
+        (await renExBalances.traderBalances(accounts[0], TOKEN1.address)).should.bignumber.equal(0);
+        (await renExBalances.traderBalances(accounts[0], TOKEN2.address)).should.bignumber.equal(0);
     });
 
     it("can hold tokens for multiple traders", async () => {
@@ -197,7 +219,7 @@ contract("RenExBalances", function (accounts: string[]) {
             0,
             testUtils.NULL,
             { from: accounts[1] }
-        ).should.be.rejectedWith(null, /not authorised/);
+        ).should.be.rejectedWith(null, /not authorized/);
     });
 
     it("deposits validates the transfer", async () => {
@@ -209,6 +231,26 @@ contract("RenExBalances", function (accounts: string[]) {
         // ETH
         await renExBalances.deposit(ETH.address, 2, { from: accounts[1], value: 1 })
             .should.be.rejectedWith(null, /mismatched value parameter and tx value/);
+    });
+
+    it("transfer validates the fee approval", async () => {
+        const auth = accounts[8];
+        await renExBalances.updateRenExSettlementContract(auth);
+
+        const token = await DisapprovingToken.new();
+
+        await renExBalances.transferBalanceWithFee(
+            accounts[1],
+            accounts[2],
+            token.address,
+            0,
+            0,
+            testUtils.NULL, // fails to approve to 0x0
+            { from: auth }
+        ).should.be.rejectedWith(null, /approve failed/);
+
+        // Revert change
+        await renExBalances.updateRenExSettlementContract(renExSettlement.address);
     });
 
     it("decrementBalance reverts for invalid withdrawals", async () => {
@@ -260,7 +302,7 @@ contract("RenExBalances", function (accounts: string[]) {
         let i = 0;
         await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
             .should.be.rejectedWith(null, /not signalled/);
-        
+
         await renExBalances.signalBackupWithdraw(TOKEN1.address, { from: accounts[0] });
 
         await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
@@ -272,8 +314,8 @@ contract("RenExBalances", function (accounts: string[]) {
 
         await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
             .should.be.rejectedWith(null, /not signalled/);
-        
-        // Inscrease time by another hour
+
+        // Increase time by another hour
         testUtils.increaseTime(1 * hour + 10);
 
         // Still can't withdraw other tokens
@@ -289,7 +331,7 @@ contract("RenExBalances", function (accounts: string[]) {
 
         // Can only withdraw once
         await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
-        .should.be.rejectedWith(null, /not signalled/);
+            .should.be.rejectedWith(null, /not signalled/);
 
         // Can withdraw normally
         let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);

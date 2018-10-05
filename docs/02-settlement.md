@@ -62,4 +62,17 @@ The nature of an [atomic swap](./03-atomic-swapping.md) is highly interactive. T
 - Both Alice and Bob open their orders using a Settlement Identifier of `2`.
 - Using the Secure Order Matcher, the Darknodes find that these two orders match.
 - Darknodes call `submitOrder` for both orders, and then call `settle`.
-- The call to `settle` immediately pays fees from the [balances](./01-balances.md) of Alice and Bob, however settlement is deferred to an [atomic swap](./03-atomic-swapping.md). The [balances](./01-balances.md) of Alice and Bob are used to pay the 0.04ETH fee. The price point of the atomic swap is set to 2BTC for 10ETH (the midpoint between the two orders). Alice will receive 4BTC in exchange for 20ETH, and Bob receives 20ETH in exchange for 4BTC. 
+- The call to `settle` immediately pays fees from the [balances](./01-balances.md) of Alice and Bob, however settlement is deferred to an [atomic swap](./03-atomic-swapping.md). The [balances](./01-balances.md) of Alice and Bob are used to pay the 0.04ETH fee. The price point of the atomic swap is set to 2BTC for 10ETH (the midpoint between the two orders). Alice will receive 4BTC in exchange for 20ETH, and Bob receives 20ETH in exchange for 4BTC.
+
+## Failure to Settle
+
+Due to the interactive nature of an Atomic Swaps, it is possible that a trader will refuse to participate honestly — resulting in matched orders not being settled.
+
+In these situations, RenEx issues a fine to the dishonest trader as a penality and to discourage dishonest behaviour. Furthermore, the RenEx Broker will blacklist the trader and refuse to approve order openings and withdrawals. This limits the exposure failed settlements.
+
+To enforce that such a fine can be issued, RenEx will refuse to approve the opening of orders unless the trader has a sufficient bond stored in their RenEx Balances.
+
+### Future Improvements to Settlement
+
+1. RenEx is currently being upgraded to utilise zkSNARKs to further reduce the possibility of these actions. A series of chained zkSNARKs will be used to prove, in zero-knowledge, that (a) an order has a reasonable chance of being opened, and (b) the sum of all orders does not exceed the amount held by the trader.
+2. RenEx is currently being upgraded to utilise a BTC multsig contract that will be used by traders to store funds for Atomic Swaps. A signature from the trader and RenEx is required to spend these funds, however, after 72 hours the funds can be returned to the trader. This means that a trader that refuses to participate in an Atomic Swap will not only be fined and blacklisted, but will also have their funds suspended for 72 hours. If there is less than 48 hours remaining in the timeout, RenEx will not consider these funds when verifying the zkSNARK proofs discussed above.

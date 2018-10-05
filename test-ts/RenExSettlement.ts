@@ -184,6 +184,27 @@ contract("RenExSettlement", function (accounts: string[]) {
         (await renExSettlement.submissionGasPriceLimit()).should.be.bignumber.equal(previousGasPriceLimit);
     });
 
+    it("can update slasher address", async () => {
+        const previousSlasher = await renExSettlement.slasherAddress();
+
+        // [CHECK] The function validates the new settlement contract
+        await renExSettlement.updateSlasher(testUtils.NULL)
+            .should.be.rejectedWith(null, /revert/);
+
+        // [ACTION] Update the settlement contract to another address
+        await renExSettlement.updateSlasher(renExSettlement.address);
+        // [CHECK] Verify the settlement contract address has been updated
+        (await renExSettlement.slasherAddress()).should.equal(renExSettlement.address);
+
+        // [CHECK] Only the owner can update the settlement contract
+        await renExSettlement.updateSlasher(previousSlasher, { from: accounts[1] })
+            .should.be.rejectedWith(null, /revert/); // not owner
+
+        // [RESET] Reset the settlement contract to the previous address
+        await renExSettlement.updateSlasher(previousSlasher);
+        (await renExSettlement.slasherAddress()).should.equal(previousSlasher);
+    });
+
     it("submitOrder", async () => {
         // sellID_1?
         await renExSettlement.submitOrder.apply(this, [...SELL1]);

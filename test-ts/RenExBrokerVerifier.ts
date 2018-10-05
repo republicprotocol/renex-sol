@@ -86,6 +86,27 @@ contract("RenExBalances", function (accounts: string[]) {
             await renExBrokerVerifier.updateBalancesContract(previousBalancesContract);
         });
 
+        it("can update RenEx Balances address", async () => {
+            const previousBalancesAddress = await renExBrokerVerifier.balancesContract();
+
+            // [CHECK] The function validates the new balances contract
+            await renExBrokerVerifier.updateBalancesContract(testUtils.NULL)
+                .should.be.rejectedWith(null, /revert/);
+
+            // [ACTION] Update the balances contract to another address
+            await renExBrokerVerifier.updateBalancesContract(renExBrokerVerifier.address);
+            // [CHECK] Verify the balances contract address has been updated
+            (await renExBrokerVerifier.balancesContract()).should.equal(renExBrokerVerifier.address);
+
+            // [CHECK] Only the owner can update the balances contract
+            await renExBrokerVerifier.updateBalancesContract(previousBalancesAddress, { from: accounts[1] })
+                .should.be.rejectedWith(null, /revert/); // not owner
+
+            // [RESET] Reset the balances contract to the previous address
+            await renExBrokerVerifier.updateBalancesContract(previousBalancesAddress);
+            (await renExBrokerVerifier.balancesContract()).should.equal(previousBalancesAddress);
+        });
+
         it("only the balances contract can update the nonce", async () => {
             let goodSig1 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader1, token1);
             await renExBrokerVerifier.verifyWithdrawSignature(trader1, token1, goodSig1, { from: notBalances })

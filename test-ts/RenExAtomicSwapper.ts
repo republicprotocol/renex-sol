@@ -91,4 +91,12 @@ contract("RenExAtomicSwapper", function (accounts: string[]) {
         (await swap.refundable(swapID)).should.be.false;
         (await swap.redeemable(swapID)).should.be.false;
     });
+
+    it("can calculate swap ID", async () => {
+        const secretLock = "0x" + new Buffer("7qZH4ImQZLl2/fALTtuioAaVlstJ0BE2La/Kd6wuihM=", "base64").toString("hex");
+        const swapID = "0x" + new Buffer("qOl6NlnL/1M1AdmJ5CV8Bk1slTJT+N7STKwWFtSYoic=", "base64").toString("hex");
+
+        (await swap.swapID("0x6A7A4957a63B01ABdA0afcCe3312D1aC3e0CDb76", secretLock, 1538810051))
+            .should.equal(swapID);
+    });
 });

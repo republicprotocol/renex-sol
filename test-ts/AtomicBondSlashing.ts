@@ -3,7 +3,7 @@ import { BN } from "bn.js";
 import * as testUtils from "./helper/testUtils";
 
 import { settleOrders } from "./helper/settleOrders";
-import { market, TokenCodes } from "./helper/testUtils";
+import { market, TOKEN_CODES } from "./helper/testUtils";
 
 import { DGXTokenArtifact } from "./bindings/d_g_x_token";
 import { DarknodeRegistryArtifact, DarknodeRegistryContract } from "./bindings/darknode_registry";
@@ -43,12 +43,12 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
     before(async function () {
         const ren = await RepublicToken.deployed();
 
-        const tokenInstances = new Map<TokenCodes, testUtils.BasicERC20>()
-            .set(TokenCodes.BTC, testUtils.MockBTC)
-            .set(TokenCodes.ETH, testUtils.MockETH)
-            .set(TokenCodes.LTC, testUtils.MockBTC)
-            .set(TokenCodes.DGX, await DGXToken.deployed())
-            .set(TokenCodes.REN, ren);
+        const tokenInstances = new Map<number, testUtils.BasicERC20>()
+            .set(TOKEN_CODES.BTC, testUtils.MockBTC)
+            .set(TOKEN_CODES.ETH, testUtils.MockETH)
+            .set(TOKEN_CODES.ALTBTC, testUtils.MockBTC)
+            .set(TOKEN_CODES.DGX, await DGXToken.deployed())
+            .set(TOKEN_CODES.REN, ren);
 
         dnr = await DarknodeRegistry.deployed();
         orderbook = await Orderbook.deployed();
@@ -57,9 +57,9 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
         // Register extra token
         renExTokens = await RenExTokens.deployed();
         renExTokens.registerToken(
-            TokenCodes.LTC,
-            tokenInstances.get(TokenCodes.LTC).address,
-            new BN(await tokenInstances.get(TokenCodes.LTC).decimals())
+            TOKEN_CODES.ALTBTC,
+            tokenInstances.get(TOKEN_CODES.ALTBTC).address,
+            new BN(await tokenInstances.get(TOKEN_CODES.ALTBTC).decimals())
         );
 
         // Register darknode
@@ -74,7 +74,7 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
 
         await renExSettlement.updateSlasher(slasher);
 
-        eth_address = tokenInstances.get(TokenCodes.ETH).address;
+        eth_address = tokenInstances.get(TOKEN_CODES.ETH).address;
 
         details = [
             buyer, seller, darknode, broker, renExSettlement, renExBalances,
@@ -83,7 +83,7 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
     });
 
     it("should correctly relocate fees", async () => {
-        const tokens = market(TokenCodes.BTC, TokenCodes.ETH);
+        const tokens = market(TOKEN_CODES.BTC, TOKEN_CODES.ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
@@ -133,7 +133,7 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
     });
 
     it("should not slash bonds more than once", async () => {
-        const tokens = market(TokenCodes.BTC, TokenCodes.ETH);
+        const tokens = market(TOKEN_CODES.BTC, TOKEN_CODES.ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 
@@ -150,9 +150,9 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
     });
 
     it("should handle orders if ETH is the low token", async () => {
-        const tokens = market(TokenCodes.ETH, TokenCodes.LTC);
-        const buy = { settlement: 2, tokens, price: 1, volume: 2 /* ETH */, minimumVolume: 1 /* LTC */ };
-        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* LTC */ };
+        const tokens = market(TOKEN_CODES.ETH, TOKEN_CODES.ALTBTC);
+        const buy = { settlement: 2, tokens, price: 1, volume: 2 /* ETH */, minimumVolume: 1 /* ALTBTC */ };
+        const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ALTBTC */ };
 
         let [, , buyOrderID, _] = await settleOrders.apply(this, [buy, sell, ...details]);
 
@@ -162,7 +162,7 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
     });
 
     it("should not slash non-atomic swap orders", async () => {
-        const tokens = market(TokenCodes.ETH, TokenCodes.REN);
+        const tokens = market(TOKEN_CODES.ETH, TOKEN_CODES.REN);
         // Highest possible price, lowest possible volume
         const buy = { tokens, price: 1, volume: 2 /* DGX */ };
         const sell = { tokens, price: 0.95, volume: 1 /* REN */ };
@@ -174,7 +174,7 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
     });
 
     it("should not slash if unauthorized to do so", async () => {
-        const tokens = market(TokenCodes.BTC, TokenCodes.ETH);
+        const tokens = market(TOKEN_CODES.BTC, TOKEN_CODES.ETH);
         const buy = { settlement: 2, tokens, price: 1, volume: 2 /* BTC */, minimumVolume: 1 /* ETH */ };
         const sell = { settlement: 2, tokens, price: 0.95, volume: 1 /* ETH */ };
 

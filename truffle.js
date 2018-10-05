@@ -38,10 +38,10 @@ module.exports = {
             gas: 6721975,
             gasPrice: 10 * GWEI,
         },
-        f0: KOVAN(process.env.MNEMONIC_F0),
-        falcon: KOVAN(process.env.MNEMONIC_FALCON),
+        testnet: KOVAN(process.env.MNEMONIC_TESTNET),
         nightly: KOVAN(process.env.MNEMONIC_NIGHTLY),
         mainnet: MAINNET(process.env.MNEMONIC_MAINNET),
+        verify: MAINNET(process.env.MNEMONIC_NIGHTLY),
     },
     mocha: {
         // // Use with `npm run test`, not with `npm run coverage`

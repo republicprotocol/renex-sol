@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
 /// @notice ApprovingBroker implements the BrokerVerifier interface, always
 /// verifying signatures.

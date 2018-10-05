@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
 import "republic-sol/contracts/RepublicToken.sol";
 import "republic-sol/contracts/DarknodeRegistry.sol";

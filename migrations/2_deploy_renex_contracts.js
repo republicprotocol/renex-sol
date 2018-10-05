@@ -9,13 +9,10 @@ const RenExSettlement = artifacts.require("RenExSettlement");
 const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier");
 const SettlementRegistry = artifacts.require("SettlementRegistry");
 
-// Tokens
-const RepublicToken = artifacts.require("RepublicToken");
-
 const config = require("./config.js");
 
 module.exports = async function (deployer, network) {
-    // Network is "development", "nightly", "falcon" or "f0"
+    // Network is "development", "nightly", "testnet" or "mainnet"
 
     const VERSION_STRING = `${network}-${config.VERSION}`;
 
@@ -25,12 +22,6 @@ module.exports = async function (deployer, network) {
             RenExTokens,
             VERSION_STRING,
         ))
-
-        .then(async () => {
-            const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(0, "0x0000000000000000000000000000000000000000", 8);
-            await renExTokens.registerToken(1, "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", 18);
-        })
 
         .then(() => deployer.deploy(
             RenExBrokerVerifier,

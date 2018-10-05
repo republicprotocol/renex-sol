@@ -4,7 +4,7 @@ import BigNumber from "bignumber.js";
 import { BN } from "bn.js";
 
 import * as testUtils from "./testUtils";
-import { market, TokenCodes } from "./testUtils";
+import { market, TOKEN_CODES } from "./testUtils";
 
 import { OrderbookContract } from "../bindings/orderbook";
 import { RenExBalancesContract } from "../bindings/ren_ex_balances";
@@ -18,7 +18,7 @@ export async function settleOrders(
     darknode: string, broker: string,
     renExSettlement: RenExSettlementContract,
     renExBalances: RenExBalancesContract,
-    tokenInstances: Map<TokenCodes, testUtils.BasicERC20>,
+    tokenInstances: Map<number, testUtils.BasicERC20>,
     orderbook: OrderbookContract,
     renExBrokerVerifier: RenExBrokerVerifierContract,
     returnIDs: boolean = false,
@@ -80,9 +80,9 @@ export async function settleOrders(
     sell.opposite = buy.deposit; buy.opposite = sell.deposit;
 
     for (const order of [buy, sell]) {
-        if (order.fromToken !== TokenCodes.ETH &&
-            order.fromToken !== TokenCodes.BTC &&
-            order.fromToken !== TokenCodes.LTC) {
+        if (order.fromToken !== TOKEN_CODES.ETH &&
+            order.fromToken !== TOKEN_CODES.BTC &&
+            order.fromToken !== TOKEN_CODES.ALTBTC) {
             // TODO: Remove hard-coded value
             const fee = order.fromToken === 0x101 ? new BN(3) : new BN(0);
 
@@ -96,9 +96,9 @@ export async function settleOrders(
                 tokenInstances.get(order.fromToken).address, newDeposit, { from: order.trader }
             );
         } else {
-            const deposit = order.fromToken === TokenCodes.ETH ? order.deposit : order.opposite;
+            const deposit = order.fromToken === TOKEN_CODES.ETH ? order.deposit : order.opposite;
             await renExBalances.deposit(
-                tokenInstances.get(TokenCodes.ETH).address,
+                tokenInstances.get(TOKEN_CODES.ETH).address,
                 deposit,
                 { from: order.trader, value: deposit }
             );

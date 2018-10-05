@@ -1,6 +1,6 @@
 import * as testUtils from "./helper/testUtils";
 
-import { buyMarket, sellMarket, TokenCodes } from "./helper/testUtils";
+import { buyMarket, sellMarket, TOKEN_CODES } from "./helper/testUtils";
 
 import { DGXTokenArtifact } from "./bindings/d_g_x_token";
 import { DarknodeRegistryArtifact } from "./bindings/darknode_registry";
@@ -24,7 +24,7 @@ contract("RenExSettlement", function (accounts: string[]) {
 
     const darknode = accounts[2];
     const broker = accounts[3];
-    let tokenAddresses: Map<TokenCodes, testUtils.BasicERC20>;
+    let tokenAddresses: Map<number, testUtils.BasicERC20>;
     let orderbook: OrderbookContract;
     let renExSettlement: RenExSettlementContract;
     let renExBalances: RenExBalancesContract;
@@ -36,13 +36,13 @@ contract("RenExSettlement", function (accounts: string[]) {
 
     const BUY1 = [web3.utils.sha3("0"), 1, buyMarket("0x3", "0x7"), 10, 10000, 0];
     const SELL1 = [web3.utils.sha3("1"), 1, sellMarket("0x3", "0x7"), 10, 1000, 0];
-    const BUY2 = [web3.utils.sha3("2"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 10000, 0];
-    const SELL2 = [web3.utils.sha3("3"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 1000, 0];
-    const BUY3 = [web3.utils.sha3("4"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 15, 10000, 0];
-    const SELL3 = [web3.utils.sha3("5"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 10000, 0];
-    const BUY4 = [web3.utils.sha3("6"), 1, buyMarket(TokenCodes.BTC, TokenCodes.ETH), 17, 10000, 0];
-    const SELL4 = [web3.utils.sha3("7"), 1, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 12, 1000, 0];
-    const SELL5 = [web3.utils.sha3("8"), 2, sellMarket(TokenCodes.BTC, TokenCodes.ETH), 10, 1000, 0];
+    const BUY2 = [web3.utils.sha3("2"), 1, buyMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 12, 10000, 0];
+    const SELL2 = [web3.utils.sha3("3"), 1, sellMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 12, 1000, 0];
+    const BUY3 = [web3.utils.sha3("4"), 1, buyMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 15, 10000, 0];
+    const SELL3 = [web3.utils.sha3("5"), 1, sellMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 12, 10000, 0];
+    const BUY4 = [web3.utils.sha3("6"), 1, buyMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 17, 10000, 0];
+    const SELL4 = [web3.utils.sha3("7"), 1, sellMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 12, 1000, 0];
+    const SELL5 = [web3.utils.sha3("8"), 2, sellMarket(TOKEN_CODES.BTC, TOKEN_CODES.ETH), 10, 1000, 0];
 
     const renexID = testUtils.Settlements.RenEx;
 
@@ -50,10 +50,10 @@ contract("RenExSettlement", function (accounts: string[]) {
         const ren = await RepublicToken.deployed();
 
         tokenAddresses = new Map()
-            .set(TokenCodes.BTC, testUtils.MockBTC)
-            .set(TokenCodes.ETH, testUtils.MockETH)
-            .set(TokenCodes.DGX, await DGXToken.deployed())
-            .set(TokenCodes.REN, ren);
+            .set(TOKEN_CODES.BTC, testUtils.MockBTC)
+            .set(TOKEN_CODES.ETH, testUtils.MockETH)
+            .set(TOKEN_CODES.DGX, await DGXToken.deployed())
+            .set(TOKEN_CODES.REN, ren);
 
         let dnr = await DarknodeRegistry.deployed();
         orderbook = await Orderbook.deployed();
@@ -100,39 +100,88 @@ contract("RenExSettlement", function (accounts: string[]) {
     });
 
     it("can update orderbook", async () => {
-        await renExSettlement.updateOrderbook(testUtils.NULL);
-        (await renExSettlement.orderbookContract()).should.equal(testUtils.Ox0);
-        await renExSettlement.updateOrderbook(orderbook.address, { from: accounts[1] })
+        const previousOrderbook = await renExSettlement.orderbookContract();
+
+        // [CHECK] The function validates the new orderbook
+        await renExSettlement.updateOrderbook(testUtils.NULL)
+            .should.be.rejectedWith(null, /revert/);
+
+        // [ACTION] Update the orderbook to another address
+        await renExSettlement.updateOrderbook(renExSettlement.address);
+        // [CHECK] Verify the orderbook address has been updated
+        (await renExSettlement.orderbookContract()).should.equal(renExSettlement.address);
+
+        // [CHECK] Only the owner can update the orderbook
+        await renExSettlement.updateOrderbook(previousOrderbook, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExSettlement.updateOrderbook(orderbook.address);
-        (await renExSettlement.orderbookContract()).should.equal(orderbook.address);
+
+        // [RESET] Reset the orderbook to the previous address
+        await renExSettlement.updateOrderbook(previousOrderbook);
+        (await renExSettlement.orderbookContract()).should.equal(previousOrderbook);
     });
 
     it("can update renex tokens", async () => {
-        await renExSettlement.updateRenExTokens(testUtils.NULL);
-        (await renExSettlement.renExTokensContract()).should.equal(testUtils.Ox0);
-        await renExSettlement.updateRenExTokens(renExTokens.address, { from: accounts[1] })
+        const previousRenExTokens = await renExSettlement.renExTokensContract();
+
+        // [CHECK] The function validates the new renex tokens
+        await renExSettlement.updateRenExTokens(testUtils.NULL)
+            .should.be.rejectedWith(null, /revert/);
+
+        // [ACTION] Update the renex tokens to another address
+        await renExSettlement.updateRenExTokens(renExSettlement.address);
+        // [CHECK] Verify the renex tokens address has been updated
+        (await renExSettlement.renExTokensContract()).should.equal(renExSettlement.address);
+
+        // [CHECK] Only the owner can update the renex tokens
+        await renExSettlement.updateRenExTokens(previousRenExTokens, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExSettlement.updateRenExTokens(renExTokens.address);
-        (await renExSettlement.renExTokensContract()).should.equal(renExTokens.address);
+
+        // [RESET] Reset the renex tokens to the previous address
+        await renExSettlement.updateRenExTokens(previousRenExTokens);
+        (await renExSettlement.renExTokensContract()).should.equal(previousRenExTokens);
     });
 
     it("can update renex balances", async () => {
-        await renExSettlement.updateRenExBalances(testUtils.NULL);
-        (await renExSettlement.renExBalancesContract()).should.equal(testUtils.Ox0);
-        await renExSettlement.updateRenExBalances(renExBalances.address, { from: accounts[1] })
+        const previousRenExBalances = await renExSettlement.renExBalancesContract();
+
+        // [CHECK] The function validates the new renex balances
+        await renExSettlement.updateRenExBalances(testUtils.NULL)
+            .should.be.rejectedWith(null, /revert/);
+
+        // [ACTION] Update the renex balances to another address
+        await renExSettlement.updateRenExBalances(renExSettlement.address);
+        // [CHECK] Verify the renex balances address has been updated
+        (await renExSettlement.renExBalancesContract()).should.equal(renExSettlement.address);
+
+        // [CHECK] Only the owner can update the renex balances
+        await renExSettlement.updateRenExBalances(previousRenExBalances, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExSettlement.updateRenExBalances(renExBalances.address);
-        (await renExSettlement.renExBalancesContract()).should.equal(renExBalances.address);
+
+        // [RESET] Reset the renex balances to the previous address
+        await renExSettlement.updateRenExBalances(previousRenExBalances);
+        (await renExSettlement.renExBalancesContract()).should.equal(previousRenExBalances);
     });
 
     it("can update submission gas price limit", async () => {
-        await renExSettlement.updateSubmissionGasPriceLimit(testUtils.NULL);
-        (await renExSettlement.submissionGasPriceLimit()).toString().should.equal("0");
+        const previousGasPriceLimit = await renExSettlement.submissionGasPriceLimit();
+
+        // [ACTION] Update to 0.1 GWEI
+        await renExSettlement.updateSubmissionGasPriceLimit(0.1 * testUtils.GWEI);
+
+        // [CHECK] Should now be 0.1 GWEI
+        (await renExSettlement.submissionGasPriceLimit()).should.be.bignumber.equal(0.1 * testUtils.GWEI);
+
+        // [CHECK] Non-owner can't update
         await renExSettlement.updateSubmissionGasPriceLimit(100 * testUtils.GWEI, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExSettlement.updateSubmissionGasPriceLimit(100 * testUtils.GWEI);
-        (await renExSettlement.submissionGasPriceLimit()).toString().should.equal((100 * testUtils.GWEI).toString());
+
+        // [CHECK] Owner can't set to less than 0.1 GWEI
+        await renExSettlement.updateSubmissionGasPriceLimit(0.01 * testUtils.GWEI)
+            .should.be.rejectedWith(null, /invalid new submission gas price limit/);
+
+        // [SETUP] Reset
+        await renExSettlement.updateSubmissionGasPriceLimit(previousGasPriceLimit);
+        (await renExSettlement.submissionGasPriceLimit()).should.be.bignumber.equal(previousGasPriceLimit);
     });
 
     it("submitOrder", async () => {
@@ -211,23 +260,24 @@ contract("RenExSettlement", function (accounts: string[]) {
         ).should.be.rejectedWith(null, /unregistered priority token/);
 
         // Sell token that is not registered
-        await renExTokens.deregisterToken(TokenCodes.ETH);
+        await renExTokens.deregisterToken(TOKEN_CODES.ETH);
         await renExSettlement.settle(
             buyID_2,
             sellID_2,
         ).should.be.rejectedWith(null, /unregistered secondary token/);
-        await renExTokens.registerToken(TokenCodes.ETH, tokenAddresses.get(TokenCodes.ETH).address, 18);
+        await renExTokens.registerToken(TOKEN_CODES.ETH, tokenAddresses.get(TOKEN_CODES.ETH).address, 18);
     });
 
     it("should fail for excessive gas price", async () => {
-        // Set gas price limit to 0
+        // [SETUP] Set gas price limit to 0
         const previousGasPriceLimit = await renExSettlement.submissionGasPriceLimit();
-        await renExSettlement.updateSubmissionGasPriceLimit(0x0);
+        await renExSettlement.updateSubmissionGasPriceLimit(100000000);
 
+        // [CHECK]
         await renExSettlement.submitOrder.apply(this, [...SELL5])
             .should.be.rejectedWith(null, /gas price too high/);
 
-        // Reset gas price limit
+        // [SETUP] Reset gas price limit
         await renExSettlement.updateSubmissionGasPriceLimit(previousGasPriceLimit);
     });
 });

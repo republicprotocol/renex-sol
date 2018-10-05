@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity ^0.4.25;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -18,14 +18,16 @@ contract RenExSettlement is Ownable {
 
     string public VERSION; // Passed in as a constructor parameter.
 
+    // Fees in RenEx are 0.2%. To represent this as integers, it is broken into
+    // a numerator and denominator.
+    // DARKNODE_FEES_NUMERATOR must not be greater than
+    // DARKNODE_FEES_DENOMINATOR.
+    uint256 constant public DARKNODE_FEES_NUMERATOR = 2;
+    uint256 constant public DARKNODE_FEES_DENOMINATOR = 1000;
+
     // This contract handles the settlements with ID 1 and 2.
     uint32 constant public RENEX_SETTLEMENT_ID = 1;
     uint32 constant public RENEX_ATOMIC_SETTLEMENT_ID = 2;
-
-    // Fees in RenEx are 0.2%. To represent this as integers, it is broken into
-    // a numerator and denominator.
-    uint256 constant public DARKNODE_FEES_NUMERATOR = 2;
-    uint256 constant public DARKNODE_FEES_DENOMINATOR = 1000;
 
     // Constants used in the price / volume inputs.
     int16 constant private PRICE_OFFSET = 12;
@@ -125,6 +127,9 @@ contract RenExSettlement is Ownable {
     /// @notice The owner of the contract can update the Orderbook address.
     /// @param _newOrderbookContract The address of the new Orderbook contract.
     function updateOrderbook(Orderbook _newOrderbookContract) external onlyOwner {
+        // Basic validation knowing that Orderbook exposes VERSION
+        require(bytes(_newOrderbookContract.VERSION()).length > 0, "invalid orderbook contract");
+
         emit LogOrderbookUpdated(orderbookContract, _newOrderbookContract);
         orderbookContract = _newOrderbookContract;
     }
@@ -133,6 +138,9 @@ contract RenExSettlement is Ownable {
     /// @param _newRenExTokensContract The address of the new RenExTokens
     ///       contract.
     function updateRenExTokens(RenExTokens _newRenExTokensContract) external onlyOwner {
+        // Basic validation knowing that RenExTokens exposes VERSION
+        require(bytes(_newRenExTokensContract.VERSION()).length > 0, "invalid tokens contract");
+        
         emit LogRenExTokensUpdated(renExTokensContract, _newRenExTokensContract);
         renExTokensContract = _newRenExTokensContract;
     }
@@ -141,6 +149,9 @@ contract RenExSettlement is Ownable {
     /// @param _newRenExBalancesContract The address of the new RenExBalances
     ///       contract.
     function updateRenExBalances(RenExBalances _newRenExBalancesContract) external onlyOwner {
+        // Basic validation knowing that RenExBalances exposes VERSION
+        require(bytes(_newRenExBalancesContract.VERSION()).length > 0, "invalid balances contract");
+
         emit LogRenExBalancesUpdated(renExBalancesContract, _newRenExBalancesContract);
         renExBalancesContract = _newRenExBalancesContract;
     }
@@ -149,6 +160,8 @@ contract RenExSettlement is Ownable {
     /// price limit.
     /// @param _newSubmissionGasPriceLimit The new gas price limit.
     function updateSubmissionGasPriceLimit(uint256 _newSubmissionGasPriceLimit) external onlyOwner {
+        // Submission Gas Price Limit must be at least 100000000 wei (0.1 gwei)
+        require(_newSubmissionGasPriceLimit >= 100000000, "invalid new submission gas price limit");
         emit LogSubmissionGasPriceLimitUpdated(submissionGasPriceLimit, _newSubmissionGasPriceLimit);
         submissionGasPriceLimit = _newSubmissionGasPriceLimit;
     }
@@ -156,6 +169,7 @@ contract RenExSettlement is Ownable {
     /// @notice The owner of the contract can update the slasher address.
     /// @param _newSlasherAddress The new slasher address.
     function updateSlasher(address _newSlasherAddress) external onlyOwner {
+        require(_newSlasherAddress != 0x0, "invalid slasher address");
         emit LogSlasherUpdated(slasherAddress, _newSlasherAddress);
         slasherAddress = _newSlasherAddress;
     }
@@ -169,10 +183,10 @@ contract RenExSettlement is Ownable {
     ///        the first 32 bytes and sell token is encoded as the last 32
     ///        bytes).
     /// @param _price The price of the order. Interpreted as the cost for 1
-    ///        standard unit of the non-priority token, in 1e12 (i.e.
+    ///        standard unit of the secondary token, in 1e12 (i.e.
     ///        PRICE_OFFSET) units of the priority token).
     /// @param _volume The volume of the order. Interpreted as the maximum
-    ///        number of 1e-12 (i.e. VOLUME_OFFSET) units of the non-priority
+    ///        number of 1e-12 (i.e. VOLUME_OFFSET) units of the secondary
     ///        token that can be traded by this order.
     /// @param _minimumVolume The minimum volume the trader is willing to
     ///        accept. Encoded the same as the volume.
@@ -427,7 +441,7 @@ contract RenExSettlement is Ownable {
 
         // Calculate the mid-price (using numerator and denominator to not loose
         // precision).
-        Fraction memory midPrice = Fraction(orderDetails[_buyID].price + orderDetails[_sellID].price, 2);
+        Fraction memory midPrice = Fraction(orderDetails[_buyID].price.add(orderDetails[_sellID].price), 2);
 
         // Calculate the lower of the two max volumes of each trader
         uint256 commonVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume);
@@ -471,7 +485,7 @@ contract RenExSettlement is Ownable {
 
         // Calculate the mid-price (using numerator and denominator to not loose
         // precision).
-        Fraction memory midPrice = Fraction(orderDetails[_buyID].price + orderDetails[_sellID].price, 2);
+        Fraction memory midPrice = Fraction(orderDetails[_buyID].price.add(orderDetails[_sellID].price), 2);
 
         // Calculate the lower of the two max volumes of each trader
         uint256 commonVolume = Math.min256(orderDetails[_buyID].volume, orderDetails[_sellID].volume);
@@ -531,8 +545,8 @@ contract RenExSettlement is Ownable {
 
     /// @return (value - fee, fee) where fee is 0.2% of value
     function subtractDarknodeFee(uint256 _value) private pure returns (ValueWithFees memory) {
-        uint256 newValue = (_value * (DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
-        return ValueWithFees(newValue, _value - newValue);
+        uint256 newValue = (_value.mul(DARKNODE_FEES_DENOMINATOR - DARKNODE_FEES_NUMERATOR)) / DARKNODE_FEES_DENOMINATOR;
+        return ValueWithFees(newValue, _value.sub(newValue));
     }
 
     /// @notice Gets the order details of the priority and secondary token from
@@ -562,7 +576,7 @@ contract RenExSettlement is Ownable {
     /// @return true if _tokenAddress is 0x0, representing a token that is not
     /// on Ethereum
     function isEthereumBased(address _tokenAddress) private pure returns (bool) {
-        return (_tokenAddress != address(0x0));
+        return (_tokenAddress != 0x0);
     }
 
     /// @notice Computes (_numerator / _denominator) * 10 ** _scale

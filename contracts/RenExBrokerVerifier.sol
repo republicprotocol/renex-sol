@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity ^0.4.25;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
@@ -37,6 +37,9 @@ contract RenExBrokerVerifier is Ownable {
     ///
     /// @param _balancesContract The address of the new balances contract
     function updateBalancesContract(address _balancesContract) external onlyOwner {
+        // Basic validation
+        require(_balancesContract != 0x0, "invalid contract address");
+
         emit LogBalancesContractUpdated(balancesContract, _balancesContract);
 
         balancesContract = _balancesContract;

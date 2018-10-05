@@ -8,6 +8,9 @@ import { BN } from "bn.js";
 import { Log, TransactionReceipt, Tx } from "web3/types";
 
 import { OrderbookContract } from "../bindings/orderbook";
+import { TimeArtifact, TimeContract } from "../bindings/time";
+
+const Time = artifacts.require("Time") as TimeArtifact;
 
 chai.use(chaiAsPromised);
 chai.use(chaiBigNumber(BigNumber));
@@ -15,6 +18,9 @@ chai.should();
 
 const config = require("../../migrations/config.js");
 export const { MINIMUM_BOND, MINIMUM_POD_SIZE, MINIMUM_EPOCH_INTERVAL } = config;
+
+export const TOKEN_CODES = config.TOKEN_CODES;
+TOKEN_CODES.ALTBTC = 0x4;
 
 export const NULL = "0x0000000000000000000000000000000000000000";
 export const Ox0 = NULL;
@@ -24,16 +30,6 @@ export const GWEI = 1000000000;
 export enum Settlements {
     RenEx = 1,
     RenExAtomic = 2,
-}
-
-// Tokens used for testing only. These tokens do not represent the tokens that
-// will be supported by RenEx.
-export enum TokenCodes {
-    BTC = 0x0,
-    ETH = 0x1,
-    LTC = 0x2,
-    DGX = 0x100,
-    REN = 0x10000,
 }
 
 export interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
@@ -64,8 +60,14 @@ export function PUBK(i: string) {
     return web3.utils.sha3(i);
 }
 
-export const secondsFromNow = (seconds: number) => {
-    return Math.round((new Date()).getTime() / 1000) + seconds;
+let time: TimeContract;
+export const secondsFromNow = async (seconds: number): Promise<BN> => {
+    if (!time) {
+        time = await Time.new();
+    }
+    await time.newBlock();
+    const currentTime = new BN(await time.currentTime());
+    return currentTime.add(new BN(seconds));
 };
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -100,11 +102,11 @@ export async function waitForEpoch(dnr: any) {
     }
 }
 
-export const market = (low: TokenCodes | string, high: TokenCodes | string) => {
+export const market = (low: number | string, high: number | string) => {
     return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
 };
 export const buyMarket = market;
-export const sellMarket = (high: TokenCodes | string, low: TokenCodes | string) => {
+export const sellMarket = (high: number | string, low: number | string) => {
     return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
 };
 

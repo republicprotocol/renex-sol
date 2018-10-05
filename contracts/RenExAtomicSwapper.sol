@@ -103,14 +103,13 @@ contract RenExAtomicSwapper {
     /// @param _secretKey The secret of the atomic swap.
     function redeem(bytes32 _swapID, bytes32 _secretKey) external onlyOpenSwaps(_swapID) onlyWithSecretKey(_swapID, _secretKey) {
         // Close the swap.
-        Swap memory swap = swaps[_swapID];
         swaps[_swapID].secretKey = _secretKey;
         swapStates[_swapID] = States.CLOSED;
         /* solium-disable-next-line security/no-block-members */
         redeemedAt[_swapID] = now;
 
         // Transfer the ETH funds from this contract to the withdrawing trader.
-        swap.withdrawTrader.transfer(swap.value);
+        swaps[_swapID].withdrawTrader.transfer(swaps[_swapID].value);
 
         // Logs close event
         emit LogClose(_swapID, _secretKey);
@@ -121,11 +120,10 @@ contract RenExAtomicSwapper {
     /// @param _swapID The unique atomic swap id.
     function refund(bytes32 _swapID) external onlyOpenSwaps(_swapID) onlyExpirableSwaps(_swapID) {
         // Expire the swap.
-        Swap memory swap = swaps[_swapID];
         swapStates[_swapID] = States.EXPIRED;
 
         // Transfer the ETH value from this contract back to the ETH trader.
-        swap.ethTrader.transfer(swap.value);
+        swaps[_swapID].ethTrader.transfer(swaps[_swapID].value);
 
         // Logs expire event
         emit LogExpire(_swapID);
@@ -136,15 +134,20 @@ contract RenExAtomicSwapper {
     /// @param _swapID The unique atomic swap id.
     function audit(bytes32 _swapID) external view returns (uint256 timelock, uint256 value, address to, address from, bytes32 secretLock) {
         Swap memory swap = swaps[_swapID];
-        return (swap.timelock, swap.value, swap.withdrawTrader, swap.ethTrader, swap.secretLock);
+        return (
+            swap.timelock,
+            swap.value,
+            swap.withdrawTrader,
+            swap.ethTrader,
+            swap.secretLock
+        );
     }
 
     /// @notice Audits the secret of an atomic swap.
     ///
     /// @param _swapID The unique atomic swap id.
     function auditSecret(bytes32 _swapID) external view onlyClosedSwaps(_swapID) returns (bytes32 secretKey) {
-        Swap memory swap = swaps[_swapID];
-        return swap.secretKey;
+        return swaps[_swapID].secretKey;
     }
 
     /// @notice Checks whether a swap is refundable or not.

@@ -269,12 +269,13 @@ contract("RenExSettlement", function (accounts: string[]) {
     });
 
     it("should fail for excessive gas price", async () => {
-        // [SETUP] Set gas price limit to 0
+        // [SETUP] Set gas price limit to 0.1 GWEI
         const previousGasPriceLimit = await renExSettlement.submissionGasPriceLimit();
-        await renExSettlement.updateSubmissionGasPriceLimit(100000000);
+        const LOW_GAS = 100000000;
+        await renExSettlement.updateSubmissionGasPriceLimit(LOW_GAS);
 
-        // [CHECK]
-        await renExSettlement.submitOrder.apply(this, [...SELL5])
+        // [CHECK] Calling submitOrder with a higher gas will fail
+        await renExSettlement.submitOrder.apply(this, [...SELL5, { gasPrice: LOW_GAS + 1 }])
             .should.be.rejectedWith(null, /gas price too high/);
 
         // [SETUP] Reset gas price limit

@@ -12,12 +12,14 @@ import { RenExSettlementArtifact, RenExSettlementContract } from "./bindings/ren
 import { RepublicTokenArtifact } from "./bindings/republic_token";
 import { StandardTokenContract } from "./bindings/standard_token";
 import { TrueUSDArtifact } from "./bindings/true_u_s_d";
+import { VersionedContractArtifact } from "./bindings/versioned_contract";
 
 const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
 const DGXToken = artifacts.require("DGXToken") as DGXTokenArtifact;
 const DarknodeRewardVault = artifacts.require("DarknodeRewardVault") as DarknodeRewardVaultArtifact;
 const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
 const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
+const VersionedContract = artifacts.require("VersionedContract") as VersionedContractArtifact;
 const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
 const DisapprovingToken = artifacts.require("DisapprovingToken") as DisapprovingTokenArtifact;
 const TUSDToken = artifacts.require("TrueUSD") as TrueUSDArtifact;
@@ -49,21 +51,45 @@ contract("RenExBalances", function (accounts: string[]) {
     });
 
     it("can update Reward Vault address", async () => {
-        await renExBalances.updateRewardVaultContract(testUtils.NULL);
-        (await renExBalances.rewardVaultContract()).should.equal(testUtils.Ox0);
-        await renExBalances.updateRewardVaultContract(rewardVault.address, { from: accounts[1] })
+        const previousRewardVault = await renExBalances.rewardVaultContract();
+
+        // [CHECK] The function validates the new reward vault
+        await renExBalances.updateRewardVaultContract(testUtils.NULL)
+            .should.be.rejectedWith(null, /revert/);
+
+        // [ACTION] Update the reward vault to another address
+        await renExBalances.updateRewardVaultContract(renExBalances.address);
+        // [CHECK] Verify the reward vault address has been updated
+        (await renExBalances.rewardVaultContract()).should.equal(renExBalances.address);
+
+        // [CHECK] Only the owner can update the reward vault
+        await renExBalances.updateRewardVaultContract(previousRewardVault, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExBalances.updateRewardVaultContract(rewardVault.address);
-        (await renExBalances.rewardVaultContract()).should.equal(rewardVault.address);
+
+        // [RESET] Reset the reward vault to the previous address
+        await renExBalances.updateRewardVaultContract(previousRewardVault);
+        (await renExBalances.rewardVaultContract()).should.equal(previousRewardVault);
     });
 
     it("can update Broker Verifier address", async () => {
-        await renExBalances.updateBrokerVerifierContract(testUtils.NULL);
-        (await renExBalances.brokerVerifierContract()).should.equal(testUtils.Ox0);
-        await renExBalances.updateBrokerVerifierContract(renExBrokerVerifier.address, { from: accounts[1] })
+        const previousBrokerVerifier = await renExBalances.brokerVerifierContract();
+
+        // [CHECK] The function validates the new broker verifier
+        await renExBalances.updateBrokerVerifierContract(testUtils.NULL)
+            .should.be.rejectedWith(null, /revert/);
+
+        // [ACTION] Update the broker verifier to another address
+        await renExBalances.updateBrokerVerifierContract(renExBalances.address);
+        // [CHECK] Verify the broker verifier address has been updated
+        (await renExBalances.brokerVerifierContract()).should.equal(renExBalances.address);
+
+        // [CHECK] Only the owner can update the broker verifier
+        await renExBalances.updateBrokerVerifierContract(previousBrokerVerifier, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExBalances.updateBrokerVerifierContract(renExBrokerVerifier.address);
-        (await renExBalances.brokerVerifierContract()).should.equal(renExBrokerVerifier.address);
+
+        // [RESET] Reset the broker verifier to the previous address
+        await renExBalances.updateBrokerVerifierContract(previousBrokerVerifier);
+        (await renExBalances.brokerVerifierContract()).should.equal(previousBrokerVerifier);
     });
 
     it("can hold tokens for a trader", async () => {
@@ -235,19 +261,18 @@ contract("RenExBalances", function (accounts: string[]) {
     });
 
     it("transfer validates the fee approval", async () => {
-        const auth = accounts[8];
-        await renExBalances.updateRenExSettlementContract(auth);
+        const mockSettlement = await VersionedContract.new("VERSION", renExBalances.address);
+        await renExBalances.updateRenExSettlementContract(mockSettlement.address);
 
         const token = await DisapprovingToken.new();
 
-        await renExBalances.transferBalanceWithFee(
+        await mockSettlement.transferBalanceWithFee(
             accounts[1],
             accounts[2],
             token.address,
             0,
             0,
             testUtils.NULL, // fails to approve to 0x0
-            { from: auth }
         ).should.be.rejectedWith(null, /approve failed/);
 
         // Revert change
@@ -255,21 +280,21 @@ contract("RenExBalances", function (accounts: string[]) {
     });
 
     it("decrementBalance reverts for invalid withdrawals", async () => {
-        const auth = accounts[8];
-        await renExBalances.updateRenExSettlementContract(auth);
+        const mockSettlement = await VersionedContract.new("VERSION", renExBalances.address);
+        await renExBalances.updateRenExSettlementContract(mockSettlement.address);
 
         const deposit = new BN("10000000000000000");
         const doubleDeposit = deposit.mul(new BN(2));
         await renExBalances.deposit(ETH.address, deposit, { from: accounts[0], value: deposit.toString() });
 
         // Insufficient balance for fee
-        await renExBalances.transferBalanceWithFee(
-            accounts[0], accounts[1], ETH.address, 0, doubleDeposit, accounts[0], { from: auth }
+        await mockSettlement.transferBalanceWithFee(
+            accounts[0], accounts[1], ETH.address, 0, doubleDeposit, accounts[0],
         ).should.be.rejectedWith(null, /insufficient funds for fee/);
 
         // Insufficient balance for fee
-        await renExBalances.transferBalanceWithFee(
-            accounts[0], accounts[1], ETH.address, doubleDeposit, 0, accounts[0], { from: auth }
+        await mockSettlement.transferBalanceWithFee(
+            accounts[0], accounts[1], ETH.address, doubleDeposit, 0, accounts[0],
         ).should.be.rejectedWith(null, /insufficient funds/);
 
         // Revert change
@@ -391,6 +416,7 @@ contract("RenExBalances", function (accounts: string[]) {
 
     it("withdraw can't be blocked by malicious contract owner", async () => {
         const deposit1 = new BN("100000000000000000");
+        const versionedContract = await VersionedContract.new("VERSION", testUtils.NULL);
 
         // [SETUP] Approve and deposit
         await TOKEN1.approve(renExBalances.address, deposit1, { from: accounts[0] });
@@ -400,9 +426,9 @@ contract("RenExBalances", function (accounts: string[]) {
         const previousSettlementContract = await renExBalances.settlementContract();
         const previousRenExBrokerVerifier = await renExBalances.brokerVerifierContract();
         const previousDarknodeRewardVault = await renExBalances.rewardVaultContract();
-        await renExBalances.updateRenExSettlementContract(testUtils.NULL);
-        await renExBalances.updateRewardVaultContract(testUtils.NULL);
-        await renExBalances.updateBrokerVerifierContract(testUtils.NULL);
+        await renExBalances.updateRenExSettlementContract(versionedContract.address);
+        await renExBalances.updateRewardVaultContract(versionedContract.address);
+        await renExBalances.updateBrokerVerifierContract(versionedContract.address);
 
         // [CHECK] Can't withdraw normally
         const sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
@@ -417,7 +443,7 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] })
             .should.not.be.rejected;
 
-        // [SETUP]
+        // [RESET] Reset the contract addresses to the previous addresses
         await renExBalances.updateRenExSettlementContract(previousSettlementContract);
         await renExBalances.updateRewardVaultContract(previousRenExBrokerVerifier);
         await renExBalances.updateBrokerVerifierContract(previousDarknodeRewardVault);

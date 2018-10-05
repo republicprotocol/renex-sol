@@ -100,30 +100,66 @@ contract("RenExSettlement", function (accounts: string[]) {
     });
 
     it("can update orderbook", async () => {
-        await renExSettlement.updateOrderbook(testUtils.NULL);
-        (await renExSettlement.orderbookContract()).should.equal(testUtils.Ox0);
-        await renExSettlement.updateOrderbook(orderbook.address, { from: accounts[1] })
+        const previousOrderbook = await renExSettlement.orderbookContract();
+
+        // [CHECK] The function validates the new orderbook
+        await renExSettlement.updateOrderbook(testUtils.NULL)
+            .should.be.rejectedWith(null, /revert/);
+
+        // [ACTION] Update the orderbook to another address
+        await renExSettlement.updateOrderbook(renExSettlement.address);
+        // [CHECK] Verify the orderbook address has been updated
+        (await renExSettlement.orderbookContract()).should.equal(renExSettlement.address);
+
+        // [CHECK] Only the owner can update the orderbook
+        await renExSettlement.updateOrderbook(previousOrderbook, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExSettlement.updateOrderbook(orderbook.address);
-        (await renExSettlement.orderbookContract()).should.equal(orderbook.address);
+
+        // [RESET] Reset the orderbook to the previous address
+        await renExSettlement.updateOrderbook(previousOrderbook);
+        (await renExSettlement.orderbookContract()).should.equal(previousOrderbook);
     });
 
     it("can update renex tokens", async () => {
-        await renExSettlement.updateRenExTokens(testUtils.NULL);
-        (await renExSettlement.renExTokensContract()).should.equal(testUtils.Ox0);
-        await renExSettlement.updateRenExTokens(renExTokens.address, { from: accounts[1] })
+        const previousRenExTokens = await renExSettlement.renExTokensContract();
+
+        // [CHECK] The function validates the new renex tokens
+        await renExSettlement.updateRenExTokens(testUtils.NULL)
+            .should.be.rejectedWith(null, /revert/);
+
+        // [ACTION] Update the renex tokens to another address
+        await renExSettlement.updateRenExTokens(renExSettlement.address);
+        // [CHECK] Verify the renex tokens address has been updated
+        (await renExSettlement.renExTokensContract()).should.equal(renExSettlement.address);
+
+        // [CHECK] Only the owner can update the renex tokens
+        await renExSettlement.updateRenExTokens(previousRenExTokens, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExSettlement.updateRenExTokens(renExTokens.address);
-        (await renExSettlement.renExTokensContract()).should.equal(renExTokens.address);
+
+        // [RESET] Reset the renex tokens to the previous address
+        await renExSettlement.updateRenExTokens(previousRenExTokens);
+        (await renExSettlement.renExTokensContract()).should.equal(previousRenExTokens);
     });
 
     it("can update renex balances", async () => {
-        await renExSettlement.updateRenExBalances(testUtils.NULL);
-        (await renExSettlement.renExBalancesContract()).should.equal(testUtils.Ox0);
-        await renExSettlement.updateRenExBalances(renExBalances.address, { from: accounts[1] })
+        const previousRenExBalances = await renExSettlement.renExBalancesContract();
+
+        // [CHECK] The function validates the new renex balances
+        await renExSettlement.updateRenExBalances(testUtils.NULL)
+            .should.be.rejectedWith(null, /revert/);
+
+        // [ACTION] Update the renex balances to another address
+        await renExSettlement.updateRenExBalances(renExSettlement.address);
+        // [CHECK] Verify the renex balances address has been updated
+        (await renExSettlement.renExBalancesContract()).should.equal(renExSettlement.address);
+
+        // [CHECK] Only the owner can update the renex balances
+        await renExSettlement.updateRenExBalances(previousRenExBalances, { from: accounts[1] })
             .should.be.rejectedWith(null, /revert/); // not owner
-        await renExSettlement.updateRenExBalances(renExBalances.address);
-        (await renExSettlement.renExBalancesContract()).should.equal(renExBalances.address);
+
+        // [RESET] Reset the renex balances to the previous address
+        await renExSettlement.updateRenExBalances(previousRenExBalances);
+        (await renExSettlement.renExBalancesContract()).should.equal(previousRenExBalances);
     });
 
     it("can update submission gas price limit", async () => {

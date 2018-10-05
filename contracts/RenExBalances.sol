@@ -86,6 +86,9 @@ contract RenExBalances is Ownable {
     ///
     /// @param _newSettlementContract the address of the new settlement contract
     function updateRenExSettlementContract(RenExSettlement _newSettlementContract) external onlyOwner {
+        // Basic validation knowing that RenExSettlement exposes VERSION
+        require(bytes(_newSettlementContract.VERSION()).length > 0, "invalid settlement contract");
+
         emit LogRenExSettlementContractUpdated(settlementContract, _newSettlementContract);
         settlementContract = _newSettlementContract;
     }
@@ -95,6 +98,9 @@ contract RenExBalances is Ownable {
     ///
     /// @param _newRewardVaultContract the address of the new reward vault contract
     function updateRewardVaultContract(DarknodeRewardVault _newRewardVaultContract) external onlyOwner {
+        // Basic validation knowing that DarknodeRewardVault exposes VERSION
+        require(bytes(_newRewardVaultContract.VERSION()).length > 0, "invalid reward vault contract");
+
         emit LogRewardVaultContractUpdated(rewardVaultContract, _newRewardVaultContract);
         rewardVaultContract = _newRewardVaultContract;
     }
@@ -104,6 +110,9 @@ contract RenExBalances is Ownable {
     ///
     /// @param _newBrokerVerifierContract the address of the new broker verifier contract
     function updateBrokerVerifierContract(RenExBrokerVerifier _newBrokerVerifierContract) external onlyOwner {
+        // Basic validation knowing that RenExBrokerVerifier exposes VERSION
+        require(bytes(_newBrokerVerifierContract.VERSION()).length > 0, "invalid broker verifier contract");        
+
         emit LogBrokerVerifierContractUpdated(brokerVerifierContract, _newBrokerVerifierContract);
         brokerVerifierContract = _newBrokerVerifierContract;
     }

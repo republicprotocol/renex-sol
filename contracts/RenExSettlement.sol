@@ -127,6 +127,9 @@ contract RenExSettlement is Ownable {
     /// @notice The owner of the contract can update the Orderbook address.
     /// @param _newOrderbookContract The address of the new Orderbook contract.
     function updateOrderbook(Orderbook _newOrderbookContract) external onlyOwner {
+        // Basic validation knowing that Orderbook exposes VERSION
+        require(bytes(_newOrderbookContract.VERSION()).length > 0, "invalid orderbook contract");
+
         emit LogOrderbookUpdated(orderbookContract, _newOrderbookContract);
         orderbookContract = _newOrderbookContract;
     }
@@ -135,6 +138,9 @@ contract RenExSettlement is Ownable {
     /// @param _newRenExTokensContract The address of the new RenExTokens
     ///       contract.
     function updateRenExTokens(RenExTokens _newRenExTokensContract) external onlyOwner {
+        // Basic validation knowing that RenExTokens exposes VERSION
+        require(bytes(_newRenExTokensContract.VERSION()).length > 0, "invalid tokens contract");
+        
         emit LogRenExTokensUpdated(renExTokensContract, _newRenExTokensContract);
         renExTokensContract = _newRenExTokensContract;
     }
@@ -143,6 +149,9 @@ contract RenExSettlement is Ownable {
     /// @param _newRenExBalancesContract The address of the new RenExBalances
     ///       contract.
     function updateRenExBalances(RenExBalances _newRenExBalancesContract) external onlyOwner {
+        // Basic validation knowing that RenExBalances exposes VERSION
+        require(bytes(_newRenExBalancesContract.VERSION()).length > 0, "invalid balances contract");
+
         emit LogRenExBalancesUpdated(renExBalancesContract, _newRenExBalancesContract);
         renExBalancesContract = _newRenExBalancesContract;
     }
@@ -160,6 +169,7 @@ contract RenExSettlement is Ownable {
     /// @notice The owner of the contract can update the slasher address.
     /// @param _newSlasherAddress The new slasher address.
     function updateSlasher(address _newSlasherAddress) external onlyOwner {
+        require(_newSlasherAddress != 0x0, "invalid slasher address");
         emit LogSlasherUpdated(slasherAddress, _newSlasherAddress);
         slasherAddress = _newSlasherAddress;
     }

@@ -166,13 +166,13 @@ export async function settleOrders(
     if (buy.settlement === testUtils.Settlements.RenEx) {
         // TODO: Remove hard-coded checks
         if (buy.fromToken !== 0x101 && sell.fromToken !== 0x101) {
-            let sig1 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, buy.trader);
+            let sig1 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, buy.trader, lowTokenInstance.address);
             await renExBalances.withdraw(lowTokenInstance.address, buyerLowAfter.toFixed(), sig1, { from: buy.trader });
-            let sig2 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, sell.trader);
+            let sig2 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, sell.trader, lowTokenInstance.address);
             await renExBalances.withdraw(lowTokenInstance.address, sellerLowAfter.toFixed(), sig2, { from: sell.trader });
-            let sig3 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, buy.trader);
+            let sig3 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, buy.trader, highTokenInstance.address);
             await renExBalances.withdraw(highTokenInstance.address, buyerHighAfter.toFixed(), sig3, { from: buy.trader });
-            let sig4 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, sell.trader);
+            let sig4 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, sell.trader, highTokenInstance.address);
             await renExBalances.withdraw(highTokenInstance.address, sellerHighAfter.toFixed(), sig4, { from: sell.trader });
         }
     }

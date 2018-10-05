@@ -11,7 +11,7 @@ const TUSDToken = artifacts.require("TrueUSD");
 const config = require("./config.js");
 
 module.exports = async function (deployer, network, accounts) {
-    // Network is "development", "nightly", "f0" or "mainnet"
+    // Network is "development", "nightly", "testnet" or "mainnet"
 
     if (/mainnet/.test(network)) {
         DGXToken.address = "0x4f3AfEC4E5a3F2A6a1A411DEF7D7dFe50eE057bF";

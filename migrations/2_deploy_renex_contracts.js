@@ -12,7 +12,7 @@ const SettlementRegistry = artifacts.require("SettlementRegistry");
 const config = require("./config.js");
 
 module.exports = async function (deployer, network) {
-    // Network is "development", "nightly", "falcon" or "f0"
+    // Network is "development", "nightly", "testnet" or "mainnet"
 
     const VERSION_STRING = `${network}-${config.VERSION}`;
 

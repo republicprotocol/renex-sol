@@ -14,7 +14,7 @@ const toSmallestUnit = (decimals, value) => {
 }
 
 module.exports = async function (deployer, network, accounts) {
-    // Network is "development", "nightly", "f0" or "mainnet"
+    // Network is "development", "nightly", "testnet" or "mainnet"
 
     const deployerAddress = accounts[0];
 

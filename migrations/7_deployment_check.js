@@ -26,7 +26,7 @@ const assertAddress = (left, right) => {
 }
 
 module.exports = async function (deployer, network, accounts) {
-    // Network is "development", "nightly", "falcon" or "f0"
+    // Network is "development", "nightly", "testnet" or "mainnet"
     network = /verify/.test(network) ? "mainnet" : network;
 
     await deployer.then(async () => {
@@ -57,7 +57,7 @@ module.exports = async function (deployer, network, accounts) {
         const renExAtomicSwapper = await RenExAtomicSwapper.at(RenExAtomicSwapper.address);
 
         let contractOwnerAddress = accounts[0];
-        if (/mainnet/.test(network)) {
+        if (!/development/.test(network)) {
             contractOwnerAddress = config.OWNER_ADDRESS;
         }
 

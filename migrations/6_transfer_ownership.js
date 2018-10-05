@@ -14,7 +14,7 @@ const SettlementRegistry = artifacts.require("SettlementRegistry");
 const config = require("./config.js");
 
 module.exports = async function (deployer, network, accounts) {
-    // Network is "development", "nightly", "falcon" or "f0"
+    // Network is "development", "nightly", "testnet" or "mainnet"
 
     await deployer.then(async () => {
 
@@ -28,21 +28,21 @@ module.exports = async function (deployer, network, accounts) {
         const renExBalances = await RenExBalances.at(RenExBalances.address);
         const renExSettlement = await RenExSettlement.at(RenExSettlement.address);
 
-        let newOwner = accounts[0];
-        if (/mainnet/.test(network)) {
-            newOwner = config.OWNER_ADDRESS;
+        let contractOwnerAddress = accounts[0];
+        if (!/development/.test(network)) {
+            contractOwnerAddress = config.OWNER_ADDRESS;
         }
 
-        console.assert(!!newOwner);
+        console.assert(!!contractOwnerAddress);
 
-        await darknodeRegistry.transferOwnership(newOwner);
-        await settlementRegistry.transferOwnership(newOwner);
-        await orderbook.transferOwnership(newOwner);
-        await darknodeRewardVault.transferOwnership(newOwner);
-        await darknodeSlasher.transferOwnership(newOwner);
-        await renExTokens.transferOwnership(newOwner);
-        await renExBrokerVerifier.transferOwnership(newOwner);
-        await renExBalances.transferOwnership(newOwner);
-        await renExSettlement.transferOwnership(newOwner);
+        await darknodeRegistry.transferOwnership(contractOwnerAddress);
+        await settlementRegistry.transferOwnership(contractOwnerAddress);
+        await orderbook.transferOwnership(contractOwnerAddress);
+        await darknodeRewardVault.transferOwnership(contractOwnerAddress);
+        await darknodeSlasher.transferOwnership(contractOwnerAddress);
+        await renExTokens.transferOwnership(contractOwnerAddress);
+        await renExBrokerVerifier.transferOwnership(contractOwnerAddress);
+        await renExBalances.transferOwnership(contractOwnerAddress);
+        await renExSettlement.transferOwnership(contractOwnerAddress);
     });
 };

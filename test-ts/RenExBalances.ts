@@ -92,6 +92,27 @@ contract("RenExBalances", function (accounts: string[]) {
         (await renExBalances.brokerVerifierContract()).should.equal(previousBrokerVerifier);
     });
 
+    it("can update RenEx Settlement address", async () => {
+        const previousSettlementContract = await renExBalances.settlementContract();
+
+        // [CHECK] The function validates the new settlement contract
+        await renExBalances.updateRenExSettlementContract(testUtils.NULL)
+            .should.be.rejectedWith(null, /revert/);
+
+        // [ACTION] Update the settlement contract to another address
+        await renExBalances.updateRenExSettlementContract(renExBalances.address);
+        // [CHECK] Verify the settlement contract address has been updated
+        (await renExBalances.settlementContract()).should.equal(renExBalances.address);
+
+        // [CHECK] Only the owner can update the settlement contract
+        await renExBalances.updateRenExSettlementContract(previousSettlementContract, { from: accounts[1] })
+            .should.be.rejectedWith(null, /revert/); // not owner
+
+        // [RESET] Reset the settlement contract to the previous address
+        await renExBalances.updateRenExSettlementContract(previousSettlementContract);
+        (await renExBalances.settlementContract()).should.equal(previousSettlementContract);
+    });
+
     it("can hold tokens for a trader", async () => {
         const deposit1 = new BN("100000000000000000");
         const deposit2 = new BN("50000000000000000");
@@ -115,9 +136,9 @@ contract("RenExBalances", function (accounts: string[]) {
         (await TOKEN2.balanceOf(accounts[0])).should.bignumber.equal(previous2.sub(deposit2));
 
         // Withdraw
-        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] });
-        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN2.address);
         await renExBalances.withdraw(TOKEN2.address, deposit2, sig, { from: accounts[0] });
 
         // Check that the tokens have been returned
@@ -160,9 +181,9 @@ contract("RenExBalances", function (accounts: string[]) {
         (await TOKEN1.balanceOf(TRADER_B)).should.bignumber.equal(previous2.sub(deposit2));
 
         // Withdraw
-        const sigA = await testUtils.signWithdrawal(renExBrokerVerifier, broker, TRADER_A);
+        const sigA = await testUtils.signWithdrawal(renExBrokerVerifier, broker, TRADER_A, TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit1, sigA, { from: TRADER_A });
-        const sigB = await testUtils.signWithdrawal(renExBrokerVerifier, broker, TRADER_B);
+        const sigB = await testUtils.signWithdrawal(renExBrokerVerifier, broker, TRADER_B, TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit2, sigB, { from: TRADER_B });
 
         // Check that the tokens have been returned
@@ -178,23 +199,23 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.deposit(TOKEN1.address, deposit1, { from: accounts[0] });
 
         // Withdraw more than deposited amount
-        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit1.mul(new BN(2)), sig, { from: accounts[0] })
             .should.be.rejectedWith(null, /insufficient funds/);
 
         // Token transfer fails
         await TOKEN1.pause();
-        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] })
             .should.be.rejectedWith(null, /revert/); // ERC20 transfer fails
         await TOKEN1.unpause();
 
         // Withdraw
-        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] });
 
         // Withdraw again
-        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] })
             .should.be.rejectedWith(null, /insufficient funds/);
     });
@@ -209,9 +230,9 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.deposit(TOKEN1.address, deposit2, { from: accounts[0] });
 
         // Withdraw
-        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] });
-        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit2, sig, { from: accounts[0] });
     });
 
@@ -230,7 +251,7 @@ contract("RenExBalances", function (accounts: string[]) {
         after.should.bignumber.equal(previous.sub(fee1).sub(deposit1));
 
         // Withdraw
-        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], ETH.address);
         const fee2 = await testUtils.getFee(renExBalances.withdraw(ETH.address, deposit1, sig, { from: accounts[0] }));
 
         // Balance should be (previous - fee1 - fee2)
@@ -319,7 +340,7 @@ contract("RenExBalances", function (accounts: string[]) {
             .should.be.rejectedWith(null, /invalid signature/);
 
         // Withdraw with invalid signature
-        let invalidSig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[1]);
+        let invalidSig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[1], ETH.address);
         await renExBalances.withdraw(ETH.address, deposit1, invalidSig, { from: accounts[0] })
             .should.be.rejectedWith(null, /invalid signature/);
 
@@ -373,7 +394,7 @@ contract("RenExBalances", function (accounts: string[]) {
             .should.be.rejectedWith(null, /not signalled/);
 
         // Can withdraw normally
-        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] });
     });
 
@@ -403,7 +424,7 @@ contract("RenExBalances", function (accounts: string[]) {
         (await TUSD.balanceOf(trader)).should.bignumber.equal(previous1.sub(deposit1));
 
         // [ACTION] Withdraw - and calculate the second transfer fee
-        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader);
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader, TUSD.address);
         await renExBalances.withdraw(TUSD.address, deposit1.sub(fee1), sig, { from: trader });
         const fee2 = (deposit1.sub(fee1)).mul(fee).div(base);
 
@@ -431,7 +452,7 @@ contract("RenExBalances", function (accounts: string[]) {
         await renExBalances.updateBrokerVerifierContract(versionedContract.address);
 
         // [CHECK] Can't withdraw normally
-        const sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        const sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
         await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] })
             .should.be.rejectedWith(null, /revert/);
 

@@ -60,11 +60,15 @@ contract("RenExBalances", function (accounts: string[]) {
 
     context("can verify withdraw signatures", async () => {
 
-        const trader = accounts[0];
+        const trader1 = accounts[0];
+        const trader2 = accounts[3];
+        const trader3 = accounts[4];
         const notBalances = accounts[1]; // Not authorized to call `verifyWithdrawSignature`
         const broker = accounts[8];
         const notBroker = accounts[9];
         let previousBalancesContract: string;
+        const token1 = testUtils.randomAddress();
+        const token2 = testUtils.randomAddress();
 
         before(async () => {
 
@@ -74,7 +78,7 @@ contract("RenExBalances", function (accounts: string[]) {
             await renExBrokerVerifier.registerBroker(broker);
 
             // Nonce should be 0
-            (await renExBrokerVerifier.traderNonces(trader)).should.bignumber.equal(0);
+            (await renExBrokerVerifier.traderNonces(trader1)).should.bignumber.equal(0);
         });
 
         after(async () => {
@@ -82,50 +86,89 @@ contract("RenExBalances", function (accounts: string[]) {
             await renExBrokerVerifier.updateBalancesContract(previousBalancesContract);
         });
 
+        it("can update RenEx Balances address", async () => {
+            const previousBalancesAddress = await renExBrokerVerifier.balancesContract();
+
+            // [CHECK] The function validates the new balances contract
+            await renExBrokerVerifier.updateBalancesContract(testUtils.NULL)
+                .should.be.rejectedWith(null, /revert/);
+
+            // [ACTION] Update the balances contract to another address
+            await renExBrokerVerifier.updateBalancesContract(renExBrokerVerifier.address);
+            // [CHECK] Verify the balances contract address has been updated
+            (await renExBrokerVerifier.balancesContract()).should.equal(renExBrokerVerifier.address);
+
+            // [CHECK] Only the owner can update the balances contract
+            await renExBrokerVerifier.updateBalancesContract(previousBalancesAddress, { from: accounts[1] })
+                .should.be.rejectedWith(null, /revert/); // not owner
+
+            // [RESET] Reset the balances contract to the previous address
+            await renExBrokerVerifier.updateBalancesContract(previousBalancesAddress);
+            (await renExBrokerVerifier.balancesContract()).should.equal(previousBalancesAddress);
+        });
+
         it("only the balances contract can update the nonce", async () => {
-            let goodSig1 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader);
-            await renExBrokerVerifier.verifyWithdrawSignature(trader, goodSig1, { from: notBalances })
+            let goodSig1 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader1, token1);
+            await renExBrokerVerifier.verifyWithdrawSignature(trader1, token1, goodSig1, { from: notBalances })
                 .should.be.rejectedWith(null, /not authorized/);
 
             // Nonce should still be 0
-            (await renExBrokerVerifier.traderNonces(trader)).should.bignumber.equal(0);
+            (await renExBrokerVerifier.traderNonces(trader1)).should.bignumber.equal(0);
         });
 
         it("returns false for an invalid signature", async () => {
-            let badSig = await testUtils.signWithdrawal(renExBrokerVerifier, notBroker, trader);
-            (await callAndSend(renExBrokerVerifier.verifyWithdrawSignature, [trader, badSig]))
+            let badSig = await testUtils.signWithdrawal(renExBrokerVerifier, notBroker, trader1, token1);
+            (await callAndSend(renExBrokerVerifier.verifyWithdrawSignature, [trader1, token1, badSig]))
                 .should.be.false;
 
             // Nonce should still be 0
-            (await renExBrokerVerifier.traderNonces(trader)).should.bignumber.equal(0);
+            (await renExBrokerVerifier.traderNonces(trader1)).should.bignumber.equal(0);
         });
 
         let goodSig2: string;
         it("returns true and increments the nonce for a valid signature", async () => {
-            goodSig2 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader);
-            (await callAndSend(renExBrokerVerifier.verifyWithdrawSignature, [trader, goodSig2]))
+            goodSig2 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader1, token1);
+            (await callAndSend(renExBrokerVerifier.verifyWithdrawSignature, [trader1, token1, goodSig2]))
                 .should.be.true;
 
             // Nonce should be 1
-            (await renExBrokerVerifier.traderNonces(trader)).should.bignumber.equal(1);
+            (await renExBrokerVerifier.traderNonces(trader1)).should.bignumber.equal(1);
         });
 
         it("returns false for an already-used signature", async () => {
             // Attempt to verify with already-used signature
-            (await callAndSend(renExBrokerVerifier.verifyWithdrawSignature, [trader, goodSig2]))
+            (await callAndSend(renExBrokerVerifier.verifyWithdrawSignature, [trader1, token1, goodSig2]))
                 .should.be.false;
 
             // Nonce should be 1
-            (await renExBrokerVerifier.traderNonces(trader)).should.bignumber.equal(1);
+            (await renExBrokerVerifier.traderNonces(trader1)).should.bignumber.equal(1);
         });
 
         it("can verify a trader's second signature", async () => {
-            let goodSig3 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader);
-            (await callAndSend(renExBrokerVerifier.verifyWithdrawSignature, [trader, goodSig3]))
+            let goodSig3 = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader1, token1);
+            (await callAndSend(renExBrokerVerifier.verifyWithdrawSignature, [trader1, token1, goodSig3]))
                 .should.be.true;
 
             // Nonce should be 2
-            (await renExBrokerVerifier.traderNonces(trader)).should.bignumber.equal(2);
+            (await renExBrokerVerifier.traderNonces(trader1)).should.bignumber.equal(2);
+        });
+
+        it("rejects a another trader's signature", async () => {
+            let trader2Sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader2, token1);
+            (await callAndSend(renExBrokerVerifier.verifyWithdrawSignature, [trader3, token1, trader2Sig]))
+                .should.be.false;
+
+            // Nonce should be 2
+            (await renExBrokerVerifier.traderNonces(trader2)).should.bignumber.equal(0);
+        });
+
+        it("rejects a another token's signature", async () => {
+            let trader2Sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader1, token1);
+            (await callAndSend(renExBrokerVerifier.verifyWithdrawSignature, [trader1, token2, trader2Sig]))
+                .should.be.false;
+
+            // Nonce should be 2
+            (await renExBrokerVerifier.traderNonces(trader1)).should.bignumber.equal(2);
         });
     });
 

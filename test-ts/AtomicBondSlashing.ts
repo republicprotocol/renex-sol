@@ -126,7 +126,7 @@ contract("Atomic Bond Slashing", function (accounts: string[]) {
 
         // Withdraw fees and check new ETH balance
         const beforeEthBalance = new BN(await web3.eth.getBalance(slasher));
-        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0]);
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], eth_address);
         const gasFee = await testUtils.getFee(renExBalances.withdraw(eth_address, afterBurntBalance, sig));
         const afterEthBalance = new BN(await web3.eth.getBalance(slasher));
         afterEthBalance.should.bignumber.equal(beforeEthBalance.sub(gasFee).add(fees));

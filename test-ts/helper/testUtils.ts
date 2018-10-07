@@ -114,6 +114,11 @@ export const randomID = () => {
     return web3.utils.sha3(random().toString());
 };
 
+export const randomAddress = () => {
+    // Remove the last 12 bytes
+    return web3.utils.sha3(random().toString()).slice(0, -24);
+};
+
 var seed = 1;
 function random() {
     var x = Math.sin(seed++) * 10000;
@@ -162,10 +167,12 @@ export function randomNonce() {
     return nonce.toString("hex");
 }
 
-export async function signWithdrawal(brokerVerifier: any, broker: string, trader: string): Promise<string> {
+export async function signWithdrawal(
+    brokerVerifier: any, broker: string, trader: string, token: string,
+): Promise<string> {
     // Get nonce and format as 256bit hex string
     const nonce = new BN(await brokerVerifier.traderNonces(trader)).toArrayLike(Buffer, "be", 32).toString("hex");
-    let bytes = withdrawPrefix + trader.slice(2) + nonce;
+    let bytes = withdrawPrefix + trader.slice(2) + token.slice(2) + nonce;
     let signature = await web3.eth.sign(bytes, broker);
     return signature;
 }

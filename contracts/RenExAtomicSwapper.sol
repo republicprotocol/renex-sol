@@ -172,7 +172,7 @@ contract RenExAtomicSwapper {
         return (swapStates[_swapID] == States.OPEN);
     }
 
-    /// @notice Generates a determenistic swap id using initiate swap details.
+    /// @notice Generates a deterministic swap id using initiate swap details.
     ///
     /// @param _withdrawTrader The address of the withdrawing trader.
     /// @param _secretLock The hash of the secret.

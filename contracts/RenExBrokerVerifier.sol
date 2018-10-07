@@ -88,9 +88,10 @@ contract RenExBrokerVerifier is Ownable {
     /// @return True if the signature is valid, false otherwise.
     function verifyWithdrawSignature(
         address _trader,
+        address _token,
         bytes _signature
     ) external onlyBalancesContract returns (bool) {
-        bytes memory data = abi.encodePacked("Republic Protocol: withdraw: ", _trader, traderNonces[_trader]);
+        bytes memory data = abi.encodePacked("Republic Protocol: withdraw: ", _trader, _token, traderNonces[_trader]);
         address signer = Utils.addr(data, _signature);
         if (brokers[signer]) {
             traderNonces[_trader] += 1;

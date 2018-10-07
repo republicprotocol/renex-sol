@@ -71,7 +71,7 @@ contract RenExBalances is Ownable {
         // If a signature has been provided, verify it - otherwise, verify that
         // the user has signalled the withdraw
         if (_signature.length > 0) {
-            require (brokerVerifierContract.verifyWithdrawSignature(trader, _signature), "invalid signature");
+            require (brokerVerifierContract.verifyWithdrawSignature(trader, _token, _signature), "invalid signature");
         } else  {
             require(traderWithdrawalSignals[trader][_token] != 0, "not signalled");
             /* solium-disable-next-line security/no-block-members */

@@ -8,7 +8,7 @@ At this point in time the match is found, Alice and Bob know each others' order 
 
 **(1) Alice & Bob Communicate Information**
   Bob generates a secret, and the timelock (this should be 48 hours from this point in time). He sends the secret hash, timelock, his sendToAddress(Bitcoin) and receiveFromAddress(Ethereum) to Alice. Alice receives these details, and will send her sendToAddress(Ethereum) and receiveFromAddress(Bitcoin) to Alice. This communication happens via RenEx Ingress (this guarantees the KYC status of both the traders, if one of them acts maliciously at this step RenEx can 
-  find the malicious party and punish him\her).
+  find the malicious party and punish him/her).
 
 **(2) Bob Initiates**
   Bob uses the previously generated secret hash, time lock to initiate the atomic swap for 10 Bitcoin to Alice's sendToAddress on the Bitcoin Blockchain. He does this by creating a Bitcoin script, that can be redeemed by Alice to get the 10 Bitcoins or expires in 48 hours refunding his Bitcoins.
@@ -18,7 +18,7 @@ At this point in time the match is found, Alice and Bob know each others' order 
   script address of this script and checks whether this address' balance is as expected (10 Bitcoins).
 
 **(4) Alice Initiates**
-  If the audit is successful, Alice initiates an atomic swap on Ethereum for 100 Ether to Bob's sendToAddress with the hash she received during the initial information communication step, and sets the expiry to be 24 hours less than that of the timelock she received. The  Alice does this by calling `initiate(address _withdrawTrader, bytes32 _secretLock, uint256 _timelock)` on the RenExAtomicSwapper contract.
+  If the audit is successful, Alice initiates an atomic swap on Ethereum for 100 Ether to Bob's sendToAddress with the hash she received during the initial information communication step, and sets the expiry to be 24 hours less than that of the timelock she received. Alice generates a swap ID which is deterministically generated from the secret hash and the timelock (abi encoded keccak256 hash) she received during the communication process in step 1. This makes sure that Alice will ever initiate one atomic swap for a corresponding atomic swap on the other Blockchain. Alice does this by calling `initiate(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock, uint256 _timelock)` and setting the value to be 100 Ether on the RenExAtomicSwapper contract. The RenExAtomicSwapper makes sure that only one swap can be generated for a single swap id.
   
 **(5) Bob Audits Swap Details**
     Bob calculates the swap ID which is deterministically generated from the timelock and secret hash (abi encoded keccak256 hash) that he sent during the communication step. Bob audits the swap details by calling `audit(bytes32 _swapID)` on the RenExAtomicSwapper contract. 
@@ -64,7 +64,7 @@ The responder audits the secret on the responder's blockchain and redeems the at
 
 ## Warning
 
-* The requestor should initiate within 24 hours of receiving the swap information.
-* The responder should initiate as soon as possible, as the more delay they make the shorter is the time for the responder to redeem.
-* The requestor should redeem the atomic swap before it expires (they should have around 24 hours to do so).
-* The responding trader should refund their atomic swap within 24 Hours of expiry, otherwise they have a risk of loosing their funds.
+* The requestor should initiate within 24 hours of receiving the swap information, failure to do so will result in a fine from RenEx and might result in black listing from the exchange. This will **not** result in loss of funds. 
+* The responder should initiate as soon as possible, as the more delay they make the shorter is the time for the responder to redeem. This will **not** result in loss of funds. 
+* The requestor should redeem the atomic swap before it expires (they should have around 24 hours to do so), failure to do so will result in a fine from RenEx and might result in black listing from the exchange. This will **not** result in loss of funds. 
+* The responding trader should refund their atomic swap within 24 Hours of expiry. This may result in loss of funds.

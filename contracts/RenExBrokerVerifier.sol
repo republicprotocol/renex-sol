@@ -15,8 +15,8 @@ contract RenExBrokerVerifier is Ownable {
     event LogBrokerDeregistered(address broker);
 
     // Storage
-    mapping(address => bool) public brokers;
-    mapping(address => uint256) public traderNonces;
+    mapping(address => bool) public brokerRegistered;
+    mapping(address => mapping(address => uint256)) public traderTokenNonce;
 
     address public balancesContract;
 
@@ -48,16 +48,16 @@ contract RenExBrokerVerifier is Ownable {
     /// @notice Approved an address to sign order-opening and withdrawals.
     /// @param _broker The address of the broker.
     function registerBroker(address _broker) external onlyOwner {
-        require(!brokers[_broker], "already registered");
-        brokers[_broker] = true;
+        require(!brokerRegistered[_broker], "already registered");
+        brokerRegistered[_broker] = true;
         emit LogBrokerRegistered(_broker);
     }
 
     /// @notice Reverts the a broker's registration.
     /// @param _broker The address of the broker.
     function deregisterBroker(address _broker) external onlyOwner {
-        require(brokers[_broker], "not registered");
-        brokers[_broker] = false;
+        require(brokerRegistered[_broker], "not registered");
+        brokerRegistered[_broker] = false;
         emit LogBrokerDeregistered(_broker);
     }
 
@@ -75,13 +75,13 @@ contract RenExBrokerVerifier is Ownable {
     ) external view returns (bool) {
         bytes memory data = abi.encodePacked("Republic Protocol: open: ", _trader, _orderID);
         address signer = Utils.addr(data, _signature);
-        return (brokers[signer] == true);
+        return (brokerRegistered[signer] == true);
     }
 
     /// @notice Verifies a broker's signature for a trader withdrawal.
     /// The data signed by the broker is a prefixed message, the trader address
-    /// and a 256-bit trader nonce, which is incremented every time a valid
-    /// signature is checked.
+    /// and a 256-bit trader token nonce, which is incremented every time a
+    /// valid signature is checked for a specific token.
     ///
     /// @param _trader The trader requesting the withdrawal.
     /// @param _signature 65-byte signature from the broker.
@@ -91,10 +91,15 @@ contract RenExBrokerVerifier is Ownable {
         address _token,
         bytes _signature
     ) external onlyBalancesContract returns (bool) {
-        bytes memory data = abi.encodePacked("Republic Protocol: withdraw: ", _trader, _token, traderNonces[_trader]);
+        bytes memory data = abi.encodePacked(
+            "Republic Protocol: withdraw: ",
+            _trader,
+            _token,
+            traderTokenNonce[_trader][_token]
+        );
         address signer = Utils.addr(data, _signature);
-        if (brokers[signer]) {
-            traderNonces[_trader] += 1;
+        if (brokerRegistered[signer]) {
+            traderTokenNonce[_trader][_token] += 1;
             return true;
         }
         return false;

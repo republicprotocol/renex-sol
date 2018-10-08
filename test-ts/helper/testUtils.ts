@@ -7,7 +7,9 @@ import BigNumber from "bignumber.js";
 import { BN } from "bn.js";
 import { Log, TransactionReceipt, Tx } from "web3/types";
 
+import { DarknodeRegistryContract } from "../bindings/darknode_registry";
 import { OrderbookContract } from "../bindings/orderbook";
+import { RenExBrokerVerifierContract } from "../bindings/ren_ex_broker_verifier";
 import { TimeArtifact, TimeContract } from "../bindings/time";
 
 const Time = artifacts.require("Time") as TimeArtifact;
@@ -87,12 +89,12 @@ export const increaseTime = async (seconds: number) => {
     });
 };
 
-export async function waitForEpoch(dnr: any) {
+export async function waitForEpoch(dnr: DarknodeRegistryContract) {
     const timeout = MINIMUM_EPOCH_INTERVAL * 0.1;
     while (true) {
         // Must be an on-chain call, or the time won't be updated
         try {
-            const tx = await dnr.epoch();
+            await dnr.epoch();
             return;
         } catch (err) {
             // epoch reverted, epoch interval hasn't passed
@@ -168,10 +170,12 @@ export function randomNonce() {
 }
 
 export async function signWithdrawal(
-    brokerVerifier: any, broker: string, trader: string, token: string,
+    brokerVerifier: RenExBrokerVerifierContract, broker: string, trader: string, token: string,
 ): Promise<string> {
     // Get nonce and format as 256bit hex string
-    const nonce = new BN(await brokerVerifier.traderNonces(trader)).toArrayLike(Buffer, "be", 32).toString("hex");
+    const nonce = new BN(
+        await brokerVerifier.traderTokenNonce(trader, token)
+    ).toArrayLike(Buffer, "be", 32).toString("hex");
     let bytes = withdrawPrefix + trader.slice(2) + token.slice(2) + nonce;
     let signature = await web3.eth.sign(bytes, broker);
     return signature;

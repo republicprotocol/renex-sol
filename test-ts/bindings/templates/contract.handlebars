@@ -1,9 +1,20 @@
-import { Tx, TransactionReceipt, Log } from "web3/types";
+// tslint:disable
+
 import { BN } from "bn.js";
+import { Log, Provider, TransactionReceipt, Tx } from "web3/types";
 
 export interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
 
-// tslint:disable:max-line-length
+type BigNumber = string | number | BN;
+
+{{#if events}}
+export const {{contractName}}Events = {
+    {{#each events}}
+    {{> event}}
+    {{/each}}
+};
+{{/if}}
+
 export interface {{contractName}}Contract {
 {{#each methods}}
     {{#this.constant}}
@@ -15,4 +26,11 @@ export interface {{contractName}}Contract {
 {{/each}}
     address: string;
 }
-// tslint:enable:max-line-length
+
+export interface {{contractName}}Artifact {
+    address: string;
+    "new"({{> typed_params inputs=ctor.inputs}}): Promise<{{contractName}}Contract>;
+    at(address: string): Promise<{{contractName}}Contract>;
+    deployed(): Promise<{{contractName}}Contract>;
+    setProvider(provider: Provider): void;
+}

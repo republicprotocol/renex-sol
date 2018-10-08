@@ -1,18 +1,28 @@
-
 import * as chai from "chai";
 import * as chaiAsPromised from "chai-as-promised";
 import * as chaiBigNumber from "chai-bignumber";
 
 import BigNumber from "bignumber.js";
-import { TransactionReceipt, Log } from "web3/types";
+
 import { BN } from "bn.js";
+import { Log, TransactionReceipt, Tx } from "web3/types";
+
+import { DarknodeRegistryContract } from "../bindings/darknode_registry";
+import { OrderbookContract } from "../bindings/orderbook";
+import { RenExBrokerVerifierContract } from "../bindings/ren_ex_broker_verifier";
+import { TimeArtifact, TimeContract } from "../bindings/time";
+
+const Time = artifacts.require("Time") as TimeArtifact;
 
 chai.use(chaiAsPromised);
 chai.use(chaiBigNumber(BigNumber));
 chai.should();
 
 const config = require("../../migrations/config.js");
-export const { MINIMUM_BOND, INGRESS_FEE, MINIMUM_POD_SIZE, MINIMUM_EPOCH_INTERVAL } = config;
+export const { MINIMUM_BOND, MINIMUM_POD_SIZE, MINIMUM_EPOCH_INTERVAL } = config;
+
+export const TOKEN_CODES = config.TOKEN_CODES;
+TOKEN_CODES.ALTBTC = 0x4;
 
 export const NULL = "0x0000000000000000000000000000000000000000";
 export const Ox0 = NULL;
@@ -24,26 +34,27 @@ export enum Settlements {
     RenExAtomic = 2,
 }
 
-// Tokens used for testing only. These tokens do not represent the tokens that
-// will be supported by RenEx.
-export enum TokenCodes {
-    BTC = 0x0,
-    ETH = 0x1,
-    LTC = 0x2,
-    DGX = 0x100,
-    REN = 0x10000,
+export interface Transaction { receipt: TransactionReceipt; tx: string; logs: Log[]; }
+
+export interface BasicERC20 {
+    address: string;
+    decimals(): Promise<BN | number | string>;
+    approve(_spender: string, _value: number | string | BN, options?: Tx): Promise<Transaction>;
+    transfer(_to: string, _value: number | string | BN, options?: Tx): Promise<Transaction>;
 }
 
-export const MockBTC = {
+export const MockBTC: BasicERC20 = {
     address: Ox0,
-    decimals: () => new BN(8),
-    approve: () => null
+    decimals: async () => new BN(8),
+    approve: async () => null,
+    transfer: async () => null,
 };
 
-export const MockETH = {
+export const MockETH: BasicERC20 = {
     address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-    decimals: () => new BN(18),
-    approve: () => null
+    decimals: async () => new BN(18),
+    approve: async () => null,
+    transfer: async () => null,
 };
 
 // Makes a public key for a darknode
@@ -51,8 +62,14 @@ export function PUBK(i: string) {
     return web3.utils.sha3(i);
 }
 
-export const secondsFromNow = (seconds: number) => {
-    return Math.round((new Date()).getTime() / 1000) + seconds;
+let time: TimeContract;
+export const secondsFromNow = async (seconds: number): Promise<BN> => {
+    if (!time) {
+        time = await Time.new();
+    }
+    await time.newBlock();
+    const currentTime = new BN(await time.currentTime());
+    return currentTime.add(new BN(seconds));
 };
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -72,12 +89,12 @@ export const increaseTime = async (seconds: number) => {
     });
 };
 
-export async function waitForEpoch(dnr: any) {
+export async function waitForEpoch(dnr: DarknodeRegistryContract) {
     const timeout = MINIMUM_EPOCH_INTERVAL * 0.1;
     while (true) {
         // Must be an on-chain call, or the time won't be updated
         try {
-            const tx = await dnr.epoch();
+            await dnr.epoch();
             return;
         } catch (err) {
             // epoch reverted, epoch interval hasn't passed
@@ -87,16 +104,21 @@ export async function waitForEpoch(dnr: any) {
     }
 }
 
-export const market = (low, high) => {
+export const market = (low: number | string, high: number | string) => {
     return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
 };
 export const buyMarket = market;
-export const sellMarket = (high, low) => {
+export const sellMarket = (high: number | string, low: number | string) => {
     return new BN(low).mul(new BN(2).pow(new BN(32))).add(new BN(high));
 };
 
 export const randomID = () => {
     return web3.utils.sha3(random().toString());
+};
+
+export const randomAddress = () => {
+    // Remove the last 12 bytes
+    return web3.utils.sha3(random().toString()).slice(0, -24);
 };
 
 var seed = 1;
@@ -109,35 +131,26 @@ export const openPrefix = web3.utils.toHex("Republic Protocol: open: ");
 export const closePrefix = web3.utils.toHex("Republic Protocol: cancel: ");
 export const withdrawPrefix = web3.utils.toHex("Republic Protocol: withdraw: ");
 
-export const openBuyOrder = async (orderbook, broker, account, orderID?) => {
+export const openOrder = async (
+    orderbook: OrderbookContract,
+    settlementID: number,
+    broker: string,
+    trader: string,
+    orderID?: string
+) => {
     if (!orderID) {
         orderID = randomID();
     }
 
-    let bytes = openPrefix + orderID.slice(2);
-    let signature = await web3.eth.sign(bytes, account);
-    await orderbook.openBuyOrder(signature, orderID, { from: broker });
+    let bytes = openPrefix + trader.slice(2) + orderID.slice(2);
+    let signature = await web3.eth.sign(bytes, broker);
+    await orderbook.openOrder(settlementID, signature, orderID, { from: trader });
 
     return orderID;
 };
 
-export const openSellOrder = async (orderbook, broker, account, orderID?) => {
-    if (!orderID) {
-        orderID = randomID();
-    }
-
-    let bytes = openPrefix + orderID.slice(2);
-    let signature = await web3.eth.sign(bytes, account);
-    await orderbook.openSellOrder(signature, orderID, { from: broker });
-
-    return orderID;
-};
-
-export const cancelOrder = async (orderbook, broker, account, orderID) => {
-    // Cancel canceled order
-    const bytes = closePrefix + orderID.slice(2);
-    const signature = await web3.eth.sign(bytes, account);
-    await orderbook.cancelOrder(signature, orderID, { from: broker });
+export const cancelOrder = async (orderbook: OrderbookContract, account: string, orderID: string) => {
+    await orderbook.cancelOrder(orderID, { from: account });
 };
 
 export async function getFee(txP: Promise<{ receipt: TransactionReceipt, tx: string; logs: Log[] }>) {
@@ -156,10 +169,14 @@ export function randomNonce() {
     return nonce.toString("hex");
 }
 
-export async function signWithdrawal(brokerVerifier: any, broker: string, trader: string): Promise<string> {
+export async function signWithdrawal(
+    brokerVerifier: RenExBrokerVerifierContract, broker: string, trader: string, token: string,
+): Promise<string> {
     // Get nonce and format as 256bit hex string
-    const nonce = new BN(await brokerVerifier.traderNonces(trader)).toArrayLike(Buffer, "be", 32).toString("hex");
-    let bytes = withdrawPrefix + trader.slice(2) + nonce;
+    const nonce = new BN(
+        await brokerVerifier.traderTokenNonce(trader, token)
+    ).toArrayLike(Buffer, "be", 32).toString("hex");
+    let bytes = withdrawPrefix + trader.slice(2) + token.slice(2) + nonce;
     let signature = await web3.eth.sign(bytes, broker);
     return signature;
 }

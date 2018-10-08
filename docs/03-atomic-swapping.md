@@ -36,7 +36,7 @@ At this point in time the match is found, Alice and Bob know each others' order 
     Bob audits the swap details he received from the RenExAtomicInfo contract by checking against the Ethereum blockchain(by calling `audit(bytes32 _swapID)` on the RenExAtomicSwapper contract). Bob does this by checking whether the redeemer address is correct, the number of ether is as expected and he has enough time to redeem the atomic swap. 
 
 **(10) Bob Redeems**
-  If the audit is successful,  Bob redeems the atomic swap on Ethereum by calling `redeem(bytes32 _swapID, bytes32 _secret)` on the RenExAtomicSwapper contract. In the process exposing the secret, he generated during step 2 and get's 100 ether.
+  If the audit is successful,  Bob redeems the atomic swap on Ethereum by calling `redeem(bytes32 _swapID, bytes32 _secret)` on the RenExAtomicSwapper contract. In the process exposing the secret, he generated during step 2 and gets 100 ether.
 
 **(11) Alice Audits Secret**
   Alice audits the secret on the Ethereum blockchain by calling `auditSecret(bytes32 _swapID)` on the RenExAtomicSwapper contract. 

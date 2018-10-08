@@ -23,7 +23,7 @@ interface PendingContractFunction {
 }
 
 interface Contract<T> {
-    "new"(...args): Promise<T>,
+    "new"(...args: any[]): Promise<T>,
     deployed(): Promise<T>,
     at(address: string): T,
     address: string,

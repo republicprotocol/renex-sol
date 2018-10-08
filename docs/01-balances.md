@@ -42,3 +42,5 @@ The Ethereum account that calls `signalBackupWithdraw` will be identified as the
 Using the `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` address for `_token` will signal that the trader is withdrawing ETH.
 
 This function is available as a backup for when the official RenEx Broker is not trusted to provide the required signature, or when the official RenEx Broker is erroneously unavailable. After 48 hours, the trader can call `withdraw` and the withdrawal will succeed. During this time, the official RenEx Broker will not provide the required signature for a trader trying to open a new order for this `_token`. This prevents traders from withdrawing tokens while there are still open orders for the `_token`.
+
+Orders have a maximum expire of 24 hours, and the RenEx Broker will not approve the opening of orders if a trader has pending withdrawals. Likewise, the RenEx Broker will not approve withdrawals if the trader has open orders. This prevents traders from withdrawing funds that should be used to settle open orders.

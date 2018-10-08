@@ -1,10 +1,11 @@
-pragma solidity 0.4.24;
+pragma solidity ^0.4.25;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "republic-sol/contracts/DarknodeRewardVault.sol";
+import "republic-sol/contracts/CompatibleERC20.sol";
 
 import "./RenExSettlement.sol";
 import "./RenExBrokerVerifier.sol";
@@ -12,13 +13,16 @@ import "./RenExBrokerVerifier.sol";
 /// @notice RenExBalances is responsible for holding RenEx trader funds.
 contract RenExBalances is Ownable {
     using SafeMath for uint256;
+    using CompatibleERC20Functions for CompatibleERC20;
+
+    string public VERSION; // Passed in as a constructor parameter.
 
     RenExSettlement public settlementContract;
     RenExBrokerVerifier public brokerVerifierContract;
     DarknodeRewardVault public rewardVaultContract;
 
     /// @dev Should match the address in the DarknodeRewardVault
-    address constant public ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+    address constant public ETHEREUM = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     
     // Delay between a trader calling `withdrawSignal` and being able to call
     // `withdraw` without a broker signature.
@@ -35,8 +39,16 @@ contract RenExBalances is Ownable {
     mapping(address => mapping(address => uint256)) public traderBalances;
     mapping(address => mapping(address => uint256)) public traderWithdrawalSignals;
 
+    /// @notice The contract constructor.
+    ///
+    /// @param _VERSION A string defining the contract version.
     /// @param _rewardVaultContract The address of the RewardVault contract.
-    constructor(DarknodeRewardVault _rewardVaultContract, RenExBrokerVerifier _brokerVerifierContract) public {
+    constructor(
+        string _VERSION,
+        DarknodeRewardVault _rewardVaultContract,
+        RenExBrokerVerifier _brokerVerifierContract
+    ) public {
+        VERSION = _VERSION;
         rewardVaultContract = _rewardVaultContract;
         brokerVerifierContract = _brokerVerifierContract;
     }
@@ -44,7 +56,7 @@ contract RenExBalances is Ownable {
     /// @notice Restricts a function to only being called by the RenExSettlement
     /// contract.
     modifier onlyRenExSettlementContract() {
-        require(msg.sender == address(settlementContract), "not authorised");
+        require(msg.sender == address(settlementContract), "not authorized");
         _;
     }
 
@@ -55,15 +67,18 @@ contract RenExBalances is Ownable {
     /// this will reset the time to zero, writing to storage.
     modifier withBrokerSignatureOrSignal(address _token, bytes _signature) {
         address trader = msg.sender;
-        if (brokerVerifierContract.verifyWithdrawSignature(trader, _signature)) {
-            _;
-        } else {
-            bool hasSignalled = traderWithdrawalSignals[trader][_token] != 0;
-            bool hasWaitedDelay = (now - traderWithdrawalSignals[trader][_token]) > SIGNAL_DELAY;
-            require(hasSignalled && hasWaitedDelay, "not signalled");
+
+        // If a signature has been provided, verify it - otherwise, verify that
+        // the user has signalled the withdraw
+        if (_signature.length > 0) {
+            require (brokerVerifierContract.verifyWithdrawSignature(trader, _token, _signature), "invalid signature");
+        } else  {
+            require(traderWithdrawalSignals[trader][_token] != 0, "not signalled");
+            /* solium-disable-next-line security/no-block-members */
+            require((now - traderWithdrawalSignals[trader][_token]) > SIGNAL_DELAY, "signal time remaining");
             traderWithdrawalSignals[trader][_token] = 0;
-            _;
         }
+        _;
     }
 
     /// @notice Allows the owner of the contract to update the address of the
@@ -71,6 +86,9 @@ contract RenExBalances is Ownable {
     ///
     /// @param _newSettlementContract the address of the new settlement contract
     function updateRenExSettlementContract(RenExSettlement _newSettlementContract) external onlyOwner {
+        // Basic validation knowing that RenExSettlement exposes VERSION
+        require(bytes(_newSettlementContract.VERSION()).length > 0, "invalid settlement contract");
+
         emit LogRenExSettlementContractUpdated(settlementContract, _newSettlementContract);
         settlementContract = _newSettlementContract;
     }
@@ -80,6 +98,9 @@ contract RenExBalances is Ownable {
     ///
     /// @param _newRewardVaultContract the address of the new reward vault contract
     function updateRewardVaultContract(DarknodeRewardVault _newRewardVaultContract) external onlyOwner {
+        // Basic validation knowing that DarknodeRewardVault exposes VERSION
+        require(bytes(_newRewardVaultContract.VERSION()).length > 0, "invalid reward vault contract");
+
         emit LogRewardVaultContractUpdated(rewardVaultContract, _newRewardVaultContract);
         rewardVaultContract = _newRewardVaultContract;
     }
@@ -89,6 +110,9 @@ contract RenExBalances is Ownable {
     ///
     /// @param _newBrokerVerifierContract the address of the new broker verifier contract
     function updateBrokerVerifierContract(RenExBrokerVerifier _newBrokerVerifierContract) external onlyOwner {
+        // Basic validation knowing that RenExBrokerVerifier exposes VERSION
+        require(bytes(_newBrokerVerifierContract.VERSION()).length > 0, "invalid broker verifier contract");        
+
         emit LogBrokerVerifierContractUpdated(brokerVerifierContract, _newBrokerVerifierContract);
         brokerVerifierContract = _newBrokerVerifierContract;
     }
@@ -108,13 +132,17 @@ contract RenExBalances is Ownable {
     external onlyRenExSettlementContract {
         require(traderBalances[_traderFrom][_token] >= _fee, "insufficient funds for fee");
 
-        if (address(_token) == ETHEREUM) {
+        // Decrease balance
+        privateDecrementBalance(_traderFrom, ERC20(_token), _value.add(_fee));
+
+        if (_token == ETHEREUM) {
             rewardVaultContract.deposit.value(_fee)(_feePayee, ERC20(_token), _fee);
         } else {
-            ERC20(_token).approve(rewardVaultContract, _fee);
+            CompatibleERC20(_token).safeApprove(rewardVaultContract, _fee);
             rewardVaultContract.deposit(_feePayee, ERC20(_token), _fee);
         }
-        privateDecrementBalance(_traderFrom, ERC20(_token), _value + _fee);
+        
+        // Increase balance
         if (_value > 0) {
             privateIncrementBalance(_traderTo, ERC20(_token), _value);
         }
@@ -127,13 +155,14 @@ contract RenExBalances is Ownable {
     function deposit(ERC20 _token, uint256 _value) external payable {
         address trader = msg.sender;
 
-        if (address(_token) == ETHEREUM) {
+        uint256 receivedValue = _value;
+        if (_token == ETHEREUM) {
             require(msg.value == _value, "mismatched value parameter and tx value");
         } else {
             require(msg.value == 0, "unexpected ether transfer");
-            require(_token.transferFrom(trader, this, _value), "token trasfer failed");
+            receivedValue = CompatibleERC20(_token).safeTransferFromWithFees(trader, this, _value);
         }
-        privateIncrementBalance(trader, _token, _value);
+        privateIncrementBalance(trader, _token, receivedValue);
     }
 
     /// @notice Withdraws ETH or an ERC20 token from the contract. A broker
@@ -148,10 +177,10 @@ contract RenExBalances is Ownable {
         address trader = msg.sender;
 
         privateDecrementBalance(trader, _token, _value);
-        if (address(_token) == ETHEREUM) {
+        if (_token == ETHEREUM) {
             trader.transfer(_value);
         } else {
-            require(_token.transfer(trader, _value), "token transfer failed");
+            CompatibleERC20(_token).safeTransfer(trader, _value);
         }
     }
 
@@ -164,6 +193,7 @@ contract RenExBalances is Ownable {
     /// trader until the trader has withdrawn, guaranteeing that they won't have
     /// orders open for the particular token.
     function signalBackupWithdraw(address _token) external {
+        /* solium-disable-next-line security/no-block-members */
         traderWithdrawalSignals[msg.sender][_token] = now;
     }
 

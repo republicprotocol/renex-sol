@@ -1,16 +1,17 @@
-pragma solidity 0.4.24;
+pragma solidity ^0.4.25;
 
 /// @notice RenExAtomicSwapper implements the RenEx atomic swapping interface
 /// for Ether values. Does not support ERC20 tokens.
 contract RenExAtomicSwapper {
+    string public VERSION; // Passed in as a constructor parameter.
 
     struct Swap {
         uint256 timelock;
         uint256 value;
-        address ethTrader;
-        address withdrawTrader;
         bytes32 secretLock;
         bytes32 secretKey;
+        address ethTrader;
+        address withdrawTrader;
     }
 
     enum States {
@@ -50,6 +51,7 @@ contract RenExAtomicSwapper {
 
     /// @notice Throws if the swap is not expirable.
     modifier onlyExpirableSwaps(bytes32 _swapID) {
+        /* solium-disable-next-line security/no-block-members */
         require(now >= swaps[_swapID].timelock, "swap not expirable");
         _;
     }
@@ -60,13 +62,25 @@ contract RenExAtomicSwapper {
         _;
     }
 
+    /// @notice The contract constructor.
+    ///
+    /// @param _VERSION A string defining the contract version.
+    constructor(string _VERSION) public {
+        VERSION = _VERSION;
+    }
+
     /// @notice Initiates the atomic swap.
     ///
     /// @param _swapID The unique atomic swap id.
     /// @param _withdrawTrader The address of the withdrawing trader.
     /// @param _secretLock The hash of the secret (Hash Lock).
     /// @param _timelock The unix timestamp when the swap expires.
-    function initiate(bytes32 _swapID, address _withdrawTrader, bytes32 _secretLock, uint256 _timelock) external onlyInvalidSwaps(_swapID) payable {
+    function initiate(
+        bytes32 _swapID,
+        address _withdrawTrader,
+        bytes32 _secretLock,
+        uint256 _timelock
+    ) external onlyInvalidSwaps(_swapID) payable {
         // Store the details of the swap.
         Swap memory swap = Swap({
             timelock: _timelock,
@@ -89,13 +103,13 @@ contract RenExAtomicSwapper {
     /// @param _secretKey The secret of the atomic swap.
     function redeem(bytes32 _swapID, bytes32 _secretKey) external onlyOpenSwaps(_swapID) onlyWithSecretKey(_swapID, _secretKey) {
         // Close the swap.
-        Swap memory swap = swaps[_swapID];
         swaps[_swapID].secretKey = _secretKey;
         swapStates[_swapID] = States.CLOSED;
+        /* solium-disable-next-line security/no-block-members */
         redeemedAt[_swapID] = now;
 
         // Transfer the ETH funds from this contract to the withdrawing trader.
-        swap.withdrawTrader.transfer(swap.value);
+        swaps[_swapID].withdrawTrader.transfer(swaps[_swapID].value);
 
         // Logs close event
         emit LogClose(_swapID, _secretKey);
@@ -106,11 +120,10 @@ contract RenExAtomicSwapper {
     /// @param _swapID The unique atomic swap id.
     function refund(bytes32 _swapID) external onlyOpenSwaps(_swapID) onlyExpirableSwaps(_swapID) {
         // Expire the swap.
-        Swap memory swap = swaps[_swapID];
         swapStates[_swapID] = States.EXPIRED;
 
         // Transfer the ETH value from this contract back to the ETH trader.
-        swap.ethTrader.transfer(swap.value);
+        swaps[_swapID].ethTrader.transfer(swaps[_swapID].value);
 
         // Logs expire event
         emit LogExpire(_swapID);
@@ -121,21 +134,27 @@ contract RenExAtomicSwapper {
     /// @param _swapID The unique atomic swap id.
     function audit(bytes32 _swapID) external view returns (uint256 timelock, uint256 value, address to, address from, bytes32 secretLock) {
         Swap memory swap = swaps[_swapID];
-        return (swap.timelock, swap.value, swap.withdrawTrader, swap.ethTrader, swap.secretLock);
+        return (
+            swap.timelock,
+            swap.value,
+            swap.withdrawTrader,
+            swap.ethTrader,
+            swap.secretLock
+        );
     }
 
     /// @notice Audits the secret of an atomic swap.
     ///
     /// @param _swapID The unique atomic swap id.
     function auditSecret(bytes32 _swapID) external view onlyClosedSwaps(_swapID) returns (bytes32 secretKey) {
-        Swap memory swap = swaps[_swapID];
-        return swap.secretKey;
+        return swaps[_swapID].secretKey;
     }
 
     /// @notice Checks whether a swap is refundable or not.
     ///
     /// @param _swapID The unique atomic swap id.
     function refundable(bytes32 _swapID) external view returns (bool) {
+        /* solium-disable-next-line security/no-block-members */
         return (now >= swaps[_swapID].timelock && swapStates[_swapID] == States.OPEN);
     }
 
@@ -151,5 +170,14 @@ contract RenExAtomicSwapper {
     /// @param _swapID The unique atomic swap id.
     function redeemable(bytes32 _swapID) external view returns (bool) {
         return (swapStates[_swapID] == States.OPEN);
+    }
+
+    /// @notice Generates a deterministic swap id using initiate swap details.
+    ///
+    /// @param _withdrawTrader The address of the withdrawing trader.
+    /// @param _secretLock The hash of the secret.
+    /// @param _timelock The expiry timestamp.
+    function swapID(address _withdrawTrader, bytes32 _secretLock, uint256 _timelock) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_withdrawTrader, _secretLock, _timelock));
     }
 }

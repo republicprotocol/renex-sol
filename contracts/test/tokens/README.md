@@ -1,0 +1,1 @@
+These tokens are for testing that the RenEx contracts are compatible with a wide variety of token contracts.

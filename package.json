@@ -7,14 +7,14 @@
         "coverage": "if [ -d \"test\" ]; then npm run warn; else npm run coverage-ts; fi;",
         "merge": "sol-merger \"./contracts/**/*.sol\"",
         "warn": "echo \"Refusing to overwrite 'test' directory. Run '\\033[1;33mnpm run clean\\033[0m'.\n\"",
-        "test-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && tsc && truffle test); npm run clean",
+        "test-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && tsc && NETWORK=test truffle test); npm run clean",
         "coverage-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && tsc && solidity-coverage); npm run clean",
-        "development": "truffle migrate --network development --reset",
-        "nightly": "npm run merge ./.merged/nightly && truffle migrate --network nightly --reset",
-        "testnet": "npm run merge ./.merged/testnet && truffle migrate --network testnet --reset",
-        "mainnet": "npm run merge ./.merged/mainnet && truffle migrate --network mainnet --reset",
+        "migrate": "npm run merge ./.merged/$NETWORK && truffle migrate --network $NETWORK --reset",
+        "development": "NETWORK=test npm run migrate",
+        "testnet": "NETWORK=testnet npm run migrate",
+        "mainnet": "NETWORK=mainnet npm run migrate",
         "verify": "truffle migrate --network verify --reset",
-        "bindings": "truffle compile && ./node_modules/.bin/abi-gen --abis 'build/contracts/*.json' --output ./test-ts/bindings --template './test-ts/bindings/templates/contract.handlebars' --partials './test-ts/bindings/templates/partials/*.handlebars' 1> /dev/null"
+        "bindings": "NETWORK=test truffle compile && ./node_modules/.bin/abi-gen --abis 'build/contracts/*.json' --output ./test-ts/bindings --template './test-ts/bindings/templates/contract.handlebars' --partials './test-ts/bindings/templates/partials/*.handlebars' 1> /dev/null"
     },
     "repository": {
         "type": "git",

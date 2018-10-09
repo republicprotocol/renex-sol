@@ -11,10 +11,10 @@ const RenExSettlement = artifacts.require("RenExSettlement");
 const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier");
 const SettlementRegistry = artifacts.require("SettlementRegistry");
 
-const config = require("./config.js");
-
 module.exports = async function (deployer, network, accounts) {
     // Network is "development", "nightly", "testnet" or "mainnet"
+
+    const config = require("./config.js")(network);
 
     await deployer.then(async () => {
 
@@ -28,10 +28,7 @@ module.exports = async function (deployer, network, accounts) {
         const renExBalances = await RenExBalances.at(RenExBalances.address);
         const renExSettlement = await RenExSettlement.at(RenExSettlement.address);
 
-        let contractOwnerAddress = accounts[0];
-        if (!/development/.test(network)) {
-            contractOwnerAddress = config.OWNER_ADDRESS;
-        }
+        let contractOwnerAddress = config.owner || accounts[0];
 
         console.assert(!!contractOwnerAddress);
 

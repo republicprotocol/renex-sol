@@ -9,10 +9,10 @@ const RenExSettlement = artifacts.require("RenExSettlement");
 const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier");
 const SettlementRegistry = artifacts.require("SettlementRegistry");
 
-const config = require("./config.js");
-
 module.exports = async function (deployer, network) {
     // Network is "development", "nightly", "testnet" or "mainnet"
+
+    const config = require("./config.js")(network);
 
     const VERSION_STRING = `${network}-${config.VERSION}`;
 
@@ -46,8 +46,8 @@ module.exports = async function (deployer, network) {
             Orderbook.address,
             RenExTokens.address,
             RenExBalances.address,
-            config.SLASHER_ADDRESS,
-            config.SUBMIT_ORDER_GAS_LIMIT,
+            config.settings.renex.watchdogAddress,
+            config.settings.renex.submitOrderGasLimit,
         ))
 
         .then(async () => {

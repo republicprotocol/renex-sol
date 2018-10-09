@@ -57,8 +57,8 @@ contract("Top Tokens", function (accounts: string[]) {
 
         // Register darknode
         const darknode = accounts[2];
-        await ren.transfer(darknode, testUtils.MINIMUM_BOND);
-        await ren.approve(dnr.address, testUtils.MINIMUM_BOND, { from: darknode });
+        await ren.transfer(darknode, testUtils.minimumBond);
+        await ren.approve(dnr.address, testUtils.minimumBond, { from: darknode });
         await dnr.register(darknode, testUtils.PUBK("1"), { from: darknode });
         await testUtils.waitForEpoch(dnr);
 

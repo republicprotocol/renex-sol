@@ -18,10 +18,10 @@ chai.use(chaiAsPromised);
 chai.use(chaiBigNumber(BigNumber));
 chai.should();
 
-const config = require("../../migrations/config.js");
-export const { MINIMUM_BOND, MINIMUM_POD_SIZE, MINIMUM_EPOCH_INTERVAL } = config;
+const config = require("../../migrations/config.js")();
+export const { minimumBond, minimumPodSize, minimumEpochInterval } = config.settings.republic;
 
-export const TOKEN_CODES = config.TOKEN_CODES;
+export const TOKEN_CODES = config.settings.renex.tokens;
 TOKEN_CODES.ALTBTC = 0x4;
 
 export const NULL = "0x0000000000000000000000000000000000000000";
@@ -90,7 +90,7 @@ export const increaseTime = async (seconds: number) => {
 };
 
 export async function waitForEpoch(dnr: DarknodeRegistryContract) {
-    const timeout = MINIMUM_EPOCH_INTERVAL * 0.1;
+    const timeout = minimumEpochInterval * 0.1;
     while (true) {
         // Must be an on-chain call, or the time won't be updated
         try {

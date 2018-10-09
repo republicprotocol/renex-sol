@@ -19,8 +19,6 @@ const RepublicToken = artifacts.require("RepublicToken");
 
 const RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper");
 
-const config = require("./config.js");
-
 const assertAddress = (left, right) => {
     console.assert(left.toLowerCase() === right.toLowerCase(), `expected ${left} to equal ${right}`);
 }
@@ -29,20 +27,9 @@ module.exports = async function (deployer, network, accounts) {
     // Network is "development", "nightly", "testnet" or "mainnet"
     network = /verify/.test(network) ? "mainnet" : network;
 
-    await deployer.then(async () => {
+    const config = require("./config.js")(network);
 
-        // RepublicToken.address = "";
-        // DarknodeRegistryStore.address = "";
-        // DarknodeRegistry.address = "";
-        // SettlementRegistry.address = "";
-        // Orderbook.address = "";
-        // DarknodeRewardVault.address = "";
-        // DarknodeSlasher.address = "";
-        // RenExTokens.address = "";
-        // RenExBrokerVerifier.address = "";
-        // RenExBalances.address = "";
-        // RenExSettlement.address = "";
-        // RenExAtomicSwapper.address = "";
+    await deployer.then(async () => {
 
         const darknodeRegistryStore = await DarknodeRegistryStore.at(DarknodeRegistryStore.address);
         const darknodeRegistry = await DarknodeRegistry.at(DarknodeRegistry.address);
@@ -56,10 +43,7 @@ module.exports = async function (deployer, network, accounts) {
         const renExSettlement = await RenExSettlement.at(RenExSettlement.address);
         const renExAtomicSwapper = await RenExAtomicSwapper.at(RenExAtomicSwapper.address);
 
-        let contractOwnerAddress = accounts[0];
-        if (!/development/.test(network)) {
-            contractOwnerAddress = config.OWNER_ADDRESS;
-        }
+        let contractOwnerAddress = config.owner || accounts[0];
 
         // DarknodeRegistryStore
         console.log(`Verifying DarknodeRegistryStore...`);
@@ -125,11 +109,11 @@ module.exports = async function (deployer, network, accounts) {
         assertAddress(await renExSettlement.orderbookContract(), Orderbook.address);
         assertAddress(await renExSettlement.renExTokensContract(), RenExTokens.address);
         assertAddress(await renExSettlement.renExBalancesContract(), RenExBalances.address);
-        console.assert(((await renExSettlement.slasherAddress()).toLowerCase()) === config.SLASHER_ADDRESS.toLowerCase());
+        console.assert(((await renExSettlement.slasherAddress()).toLowerCase()) === config.settings.renex.watchdogAddress.toLowerCase());
         let gasPrice = new BigNumber(await renExSettlement.submissionGasPriceLimit());
         console.assert(
-            gasPrice.eq(config.SUBMIT_ORDER_GAS_LIMIT),
-            `Expected submission gas price limit to be ${config.SUBMIT_ORDER_GAS_LIMIT} instead of ${gasPrice.toFixed()}`
+            gasPrice.eq(config.settings.renex.submitOrderGasLimit),
+            `Expected submission gas price limit to be ${config.settings.renex.submitOrderGasLimit} instead of ${gasPrice.toFixed()}`
         );
 
         // RenExAtomicSwapper

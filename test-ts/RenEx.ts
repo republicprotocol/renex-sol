@@ -77,7 +77,7 @@ contract("RenEx", function (accounts: string[]) {
         const darknode = accounts[2];
         await ren.transfer(darknode, testUtils.MINIMUM_BOND);
         await ren.approve(dnr.address, testUtils.MINIMUM_BOND, { from: darknode });
-        await dnr.register(darknode, testUtils.PUBK("1"), testUtils.MINIMUM_BOND, { from: darknode });
+        await dnr.register(darknode, testUtils.PUBK("1"), { from: darknode });
         await testUtils.waitForEpoch(dnr);
 
         const broker = accounts[3];

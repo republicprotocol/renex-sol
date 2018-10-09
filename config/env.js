@@ -20,14 +20,14 @@ module.exports = withDefaults({
         provider: function () {
             return new HDWalletProvider(MNEMONIC, `https://${ETH_NETWORK}.infura.io/${INFURA_KEY}`);
         },
-        network_id: ETH_NETWORK_ID,
+        network_id: parseInt(ETH_NETWORK_ID, 10),
         gas: 6721975,
         gasPrice: 10 * GWEI,
     },
     settings: {
         republic: {
-            minimumPodSize: MINIMUM_POD_SIZE,
-            minimumEpochInterval: MINIMUM_EPOCH_INTERVAL,
+            minimumPodSize: MINIMUM_POD_SIZE ? parseInt(MINIMUM_POD_SIZE, 10) : undefined,
+            minimumEpochInterval: MINIMUM_POD_SIZE ? parseInt(MINIMUM_EPOCH_INTERVAL, 10) : undefined,
         },
         renex: {
             watchdogAddress: WATCHDOG_ADDRESS,

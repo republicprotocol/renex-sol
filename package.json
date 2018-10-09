@@ -9,12 +9,12 @@
         "warn": "echo \"Refusing to overwrite 'test' directory. Run '\\033[1;33mnpm run clean\\033[0m'.\n\"",
         "test-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && tsc && NETWORK=test truffle test); npm run clean",
         "coverage-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && tsc && solidity-coverage); npm run clean",
+        "bindings": "NETWORK=test truffle compile && ./node_modules/.bin/abi-gen --abis 'build/contracts/*.json' --output ./test-ts/bindings --template './test-ts/bindings/templates/contract.handlebars' --partials './test-ts/bindings/templates/partials/*.handlebars' 1> /dev/null",
         "migrate": "npm run merge ./.merged/$NETWORK && truffle migrate --network $NETWORK --reset",
+        "deploy": "NETWORK=env npm run migrate",
         "development": "NETWORK=test npm run migrate",
         "testnet": "NETWORK=testnet npm run migrate",
-        "mainnet": "NETWORK=mainnet npm run migrate",
-        "verify": "truffle migrate --network verify --reset",
-        "bindings": "NETWORK=test truffle compile && ./node_modules/.bin/abi-gen --abis 'build/contracts/*.json' --output ./test-ts/bindings --template './test-ts/bindings/templates/contract.handlebars' --partials './test-ts/bindings/templates/partials/*.handlebars' 1> /dev/null"
+        "mainnet": "NETWORK=mainnet npm run migrate"
     },
     "repository": {
         "type": "git",
@@ -49,7 +49,7 @@
         "solc-js": "^0.4.20-browser.1",
         "solidity-coverage": "^0.5.11",
         "truffle": "^5.0.0-beta.1",
-        "truffle-hdwallet-provider": "0.0.7-beta.0",
+        "truffle-hdwallet-provider": "^1.0.0-web3one.0",
         "tslint": "^5.11.0",
         "tslint-react": "^3.6.0",
         "typescript": "^3.1.1",

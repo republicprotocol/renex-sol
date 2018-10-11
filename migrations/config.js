@@ -9,6 +9,6 @@ module.exports = (network) => {
     }
 
     previousNetwork = network;
-    previousConfig = require(`../config/${network.replace(/-fork/, "")}.js`);
+    previousConfig = require(`./config/${network.replace(/-fork/, "")}.js`);
     return previousConfig;
 }

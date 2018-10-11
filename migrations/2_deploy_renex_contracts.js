@@ -38,6 +38,9 @@ module.exports = async function (deployer, network) {
         .then(async () => {
             const renExBrokerVerifier = await RenExBrokerVerifier.at(RenExBrokerVerifier.address);
             await renExBrokerVerifier.updateBalancesContract(RenExBalances.address);
+            if (config.settings.renex.ingressAddress) {
+                await renExBrokerVerifier.registerBroker(config.settings.renex.ingressAddress);
+            }
         })
 
         .then(() => deployer.deploy(

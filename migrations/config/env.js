@@ -11,6 +11,7 @@ const {
     MINIMUM_POD_SIZE,
     MINIMUM_EPOCH_INTERVAL,
     WATCHDOG_ADDRESS,
+    INGRESS_ADDRESS,
 } = process.env;
 
 const GWEI = 1000000000;
@@ -31,6 +32,7 @@ module.exports = withDefaults({
         },
         renex: {
             watchdogAddress: WATCHDOG_ADDRESS,
+            ingressAddress: INGRESS_ADDRESS,
         }
     }
 });

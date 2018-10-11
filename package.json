@@ -7,13 +7,13 @@
         "coverage": "if [ -d \"test\" ]; then npm run warn; else npm run coverage-ts; fi;",
         "merge": "sol-merger \"./contracts/**/*.sol\"",
         "warn": "echo \"Refusing to overwrite 'test' directory. Run '\\033[1;33mnpm run clean\\033[0m'.\n\"",
-        "test-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && tsc && NETWORK=test truffle test); npm run clean",
+        "test-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && tsc && NETWORK=development truffle test); npm run clean",
         "coverage-ts": "trap \"npm run clean\" INT TERM; (npm run bindings && tsc && solidity-coverage); npm run clean",
-        "bindings": "NETWORK=test truffle compile && ./node_modules/.bin/abi-gen --abis 'build/contracts/*.json' --output ./test-ts/bindings --template './test-ts/bindings/templates/contract.handlebars' --partials './test-ts/bindings/templates/partials/*.handlebars' 1> /dev/null",
+        "bindings": "NETWORK=development truffle compile && ./node_modules/.bin/abi-gen --abis 'build/contracts/*.json' --output ./test-ts/bindings --template './test-ts/bindings/templates/contract.handlebars' --partials './test-ts/bindings/templates/partials/*.handlebars' 1> /dev/null",
         "migrate": "npm run merge ./.merged/$NETWORK && truffle migrate --network $NETWORK --reset",
         "deploy": "NETWORK=env npm run migrate",
-        "development": "NETWORK=test npm run migrate",
-        "testnet": "NETWORK=testnet npm run migrate",
+        "development": "NETWORK=development npm run migrate",
+        "testnet": "NETWORK=development npm run migrate",
         "mainnet": "NETWORK=mainnet npm run migrate"
     },
     "repository": {

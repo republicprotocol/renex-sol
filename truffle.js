@@ -1,4 +1,4 @@
-const config = require(`./config/${process.env.NETWORK}.js`);
+const config = require(`./migrations/config/${process.env.NETWORK}.js`);
 
 module.exports = {
     solc: {

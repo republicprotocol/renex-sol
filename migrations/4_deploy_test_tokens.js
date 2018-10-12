@@ -1,20 +1,22 @@
 const BN = require("bn.js");
 
-// Test tokens
-const DGXToken = artifacts.require("DGXToken");
-const OMGToken = artifacts.require("OMGToken");
-const ZRXToken = artifacts.require("ZRXToken");
-const TUSDToken = artifacts.require("TrueUSD");
-const TUSD_BalanceSheet = artifacts.require("TUSD_BalanceSheet");
-const TUSD_AllowanceSheet = artifacts.require("TUSD_AllowanceSheet");
-const TUSD_AddressList = artifacts.require("TUSD_AddressList");
-
 const toSmallestUnit = (decimals, value) => {
     return new BN(value).mul(new BN(10).pow(new BN(decimals))).toString()
 }
 
 module.exports = async function (deployer, network, accounts) {
     // Network is "development", "nightly", "testnet" or "mainnet"
+
+    const {
+        // Test tokens
+        DGXToken,
+        OMGToken,
+        ZRXToken,
+        TUSDToken,
+        TUSD_BalanceSheet,
+        TUSD_AllowanceSheet,
+        TUSD_AddressList,
+    } = require("./artifacts")(network, artifacts);
 
     const deployerAddress = accounts[0];
 

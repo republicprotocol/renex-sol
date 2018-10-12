@@ -12,14 +12,14 @@ import { OrderbookContract } from "../bindings/orderbook";
 import { RenExBrokerVerifierContract } from "../bindings/ren_ex_broker_verifier";
 import { TimeArtifact, TimeContract } from "../bindings/time";
 
-const Time = artifacts.require("Time") as TimeArtifact;
-
 chai.use(chaiAsPromised);
 chai.use(chaiBigNumber(BigNumber));
 chai.should();
 
-const config = require("../../migrations/config.js")();
+const config = require("../../migrations/config.js")(null);
 export const { minimumBond, minimumPodSize, minimumEpochInterval } = config.settings.republic;
+
+export const contracts = require("../../migrations/artifacts.js")(null, artifacts);
 
 export const TOKEN_CODES = config.settings.renex.tokens;
 TOKEN_CODES.ALTBTC = 0x4;
@@ -65,7 +65,7 @@ export function PUBK(i: string) {
 let time: TimeContract;
 export const secondsFromNow = async (seconds: number): Promise<BN> => {
     if (!time) {
-        time = await Time.new();
+        time = await contracts.Time.new();
     }
     await time.newBlock();
     const currentTime = new BN(await time.currentTime());

@@ -1,24 +1,5 @@
 const BigNumber = require("bignumber.js");
 
-// Dependencies
-const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
-const Orderbook = artifacts.require("Orderbook");
-const DarknodeSlasher = artifacts.require("DarknodeSlasher");
-
-// Contracts
-const RenExBalances = artifacts.require("RenExBalances");
-const RenExTokens = artifacts.require("RenExTokens");
-const RenExSettlement = artifacts.require("RenExSettlement");
-const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier");
-const SettlementRegistry = artifacts.require("SettlementRegistry");
-
-// Tokens
-const RepublicToken = artifacts.require("RepublicToken");
-
-const RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper");
-
 const assertAddress = (left, right) => {
     console.assert(left.toLowerCase() === right.toLowerCase(), `expected ${left} to equal ${right}`);
 }
@@ -26,6 +7,26 @@ const assertAddress = (left, right) => {
 module.exports = async function (deployer, network, accounts) {
     // Network is "development", "nightly", "testnet" or "mainnet"
     network = /verify/.test(network) ? "mainnet" : network;
+
+    const {
+        // Republic
+        DarknodeRegistryStore,
+        DarknodeRegistry,
+        DarknodeRewardVault,
+        Orderbook,
+        DarknodeSlasher,
+
+        // RenEx
+        RenExBalances,
+        RenExTokens,
+        RenExSettlement,
+        RenExBrokerVerifier,
+        SettlementRegistry,
+        RenExAtomicSwapper,
+
+        // Tokens
+        RepublicToken,
+    } = require("./artifacts")(network, artifacts);
 
     const config = require("./config.js")(network);
 

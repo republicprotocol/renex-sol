@@ -1,28 +1,30 @@
 const fs = require("fs");
 
-// Republic
-const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
-const Orderbook = artifacts.require("Orderbook");
-const DarknodeSlasher = artifacts.require("DarknodeSlasher");
-const SettlementRegistry = artifacts.require("SettlementRegistry");
-
-// RenEx
-const RenExBalances = artifacts.require("RenExBalances");
-const RenExTokens = artifacts.require("RenExTokens");
-const RenExSettlement = artifacts.require("RenExSettlement");
-const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier");
-const RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper");
-
-// Tokens
-const RepublicToken = artifacts.require("RepublicToken");
-const DGXToken = artifacts.require("DGXToken");
-const OMGToken = artifacts.require("OMGToken");
-const ZRXToken = artifacts.require("ZRXToken");
-const TUSDToken = artifacts.require("TrueUSD");
-
 module.exports = async function (deployer, network, accounts) {
+    const {
+        // Republic
+        DarknodeRegistryStore,
+        DarknodeRegistry,
+        DarknodeRewardVault,
+        Orderbook,
+        DarknodeSlasher,
+        SettlementRegistry,
+
+        // RenEx
+        RenExBalances,
+        RenExTokens,
+        RenExSettlement,
+        RenExBrokerVerifier,
+        RenExAtomicSwapper,
+
+        // Tokens
+        RepublicToken,
+        DGXToken,
+        OMGToken,
+        ZRXToken,
+        TUSDToken,
+    } = require("./artifacts")(network, artifacts);
+
     const addresses = {
         RepublicToken: RepublicToken.address,
         DarknodeRegistryStore: DarknodeRegistryStore.address,

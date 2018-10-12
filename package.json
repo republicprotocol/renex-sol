@@ -13,7 +13,7 @@
         "migrate": "npm run merge ./.merged/$NETWORK && truffle migrate --network $NETWORK --reset",
         "deploy": "NETWORK=env npm run migrate",
         "development": "NETWORK=development npm run migrate",
-        "testnet": "NETWORK=development npm run migrate",
+        "testnet": "NETWORK=testnet npm run migrate",
         "mainnet": "NETWORK=mainnet npm run migrate"
     },
     "repository": {

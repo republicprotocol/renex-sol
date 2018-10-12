@@ -1,12 +1,14 @@
-const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const DarknodeSlasher = artifacts.require("DarknodeSlasher");
-const Orderbook = artifacts.require("Orderbook");
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
-const SettlementRegistry = artifacts.require("SettlementRegistry");
-
 module.exports = async function (deployer, network) {
+
+    const {
+        RepublicToken,
+        DarknodeRegistryStore,
+        DarknodeRegistry,
+        DarknodeSlasher,
+        Orderbook,
+        DarknodeRewardVault,
+        SettlementRegistry,
+    } = require("./artifacts")(network, artifacts);
 
     const config = require("./config.js")(network);
 

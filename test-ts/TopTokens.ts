@@ -9,26 +9,25 @@ import * as testUtils from "./helper/testUtils";
 import { settleOrders } from "./helper/settleOrders";
 import { market, TOKEN_CODES } from "./helper/testUtils";
 
-import { DarknodeRegistryArtifact, DarknodeRegistryContract } from "./bindings/darknode_registry";
-import { OMGTokenArtifact } from "./bindings/o_m_g_token";
-import { OrderbookArtifact, OrderbookContract } from "./bindings/orderbook";
-import { RenExBalancesArtifact, RenExBalancesContract } from "./bindings/ren_ex_balances";
-import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
-import { RenExSettlementArtifact, RenExSettlementContract } from "./bindings/ren_ex_settlement";
-import { RepublicTokenArtifact, RepublicTokenContract } from "./bindings/republic_token";
-import { TrueUSDArtifact } from "./bindings/true_u_s_d";
-import { ZRXTokenArtifact } from "./bindings/zrx_token";
+import { DarknodeRegistryContract } from "./bindings/darknode_registry";
+import { OrderbookContract } from "./bindings/orderbook";
+import { RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { RepublicTokenContract } from "./bindings/republic_token";
 
-const DarknodeRegistry = artifacts.require("DarknodeRegistry") as DarknodeRegistryArtifact;
-const Orderbook = artifacts.require("Orderbook") as OrderbookArtifact;
-const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
-const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
-const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
-const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
+const {
+    DarknodeRegistry,
+    Orderbook,
+    RenExSettlement,
+    RenExBalances,
+    RepublicToken,
+    RenExBrokerVerifier,
 
-const OMGToken = artifacts.require("OMGToken") as OMGTokenArtifact;
-const ZRXToken = artifacts.require("ZRXToken") as ZRXTokenArtifact;
-const TUSDToken = artifacts.require("TrueUSD") as TrueUSDArtifact;
+    OMGToken,
+    ZRXToken,
+    TUSDToken,
+} = testUtils.contracts;
 
 contract("Top Tokens", function (accounts: string[]) {
 

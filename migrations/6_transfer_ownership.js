@@ -1,18 +1,20 @@
-// Dependencies
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
-const Orderbook = artifacts.require("Orderbook");
-const DarknodeSlasher = artifacts.require("DarknodeSlasher");
-
-// Contracts
-const RenExBalances = artifacts.require("RenExBalances");
-const RenExTokens = artifacts.require("RenExTokens");
-const RenExSettlement = artifacts.require("RenExSettlement");
-const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier");
-const SettlementRegistry = artifacts.require("SettlementRegistry");
-
 module.exports = async function (deployer, network, accounts) {
     // Network is "development", "nightly", "testnet" or "mainnet"
+
+    const {
+        // Republic
+        DarknodeRegistry,
+        DarknodeRewardVault,
+        Orderbook,
+        DarknodeSlasher,
+
+        // RenEx
+        RenExBalances,
+        RenExTokens,
+        RenExSettlement,
+        RenExBrokerVerifier,
+        SettlementRegistry,
+    } = require("./artifacts")(network, artifacts);
 
     const config = require("./config.js")(network);
 

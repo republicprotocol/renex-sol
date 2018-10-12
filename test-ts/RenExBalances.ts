@@ -2,33 +2,28 @@ import { BN } from "bn.js";
 
 import * as testUtils from "./helper/testUtils";
 
-import { DGXTokenArtifact } from "./bindings/d_g_x_token";
-import { DarknodeRewardVaultArtifact, DarknodeRewardVaultContract } from "./bindings/darknode_reward_vault";
-import { DisapprovingTokenArtifact } from "./bindings/disapproving_token";
 import { PausableTokenContract } from "./bindings/pausable_token";
-import { RenExBalancesArtifact, RenExBalancesContract } from "./bindings/ren_ex_balances";
-import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
-import { RenExSettlementArtifact, RenExSettlementContract } from "./bindings/ren_ex_settlement";
-import { RepublicTokenArtifact } from "./bindings/republic_token";
+import { RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
 import { StandardTokenContract } from "./bindings/standard_token";
-import { TrueUSDArtifact } from "./bindings/true_u_s_d";
-import { VersionedContractArtifact } from "./bindings/versioned_contract";
+import { VersionedContractContract } from "./bindings/versioned_contract";
 
-const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
-const DGXToken = artifacts.require("DGXToken") as DGXTokenArtifact;
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault") as DarknodeRewardVaultArtifact;
-const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
-const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
-const VersionedContract = artifacts.require("VersionedContract") as VersionedContractArtifact;
-const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
-const DisapprovingToken = artifacts.require("DisapprovingToken") as DisapprovingTokenArtifact;
-const TUSDToken = artifacts.require("TrueUSD") as TrueUSDArtifact;
+const {
+    RepublicToken,
+    DGXToken,
+    RenExBalances,
+    RenExSettlement,
+    VersionedContract,
+    RenExBrokerVerifier,
+    DisapprovingToken,
+    TUSDToken,
+} = testUtils.contracts;
 
 contract("RenExBalances", function (accounts: string[]) {
 
     let renExBalances: RenExBalancesContract;
     let renExSettlement: RenExSettlementContract;
-    let rewardVault: DarknodeRewardVaultContract;
     let renExBrokerVerifier: RenExBrokerVerifierContract;
     let ETH: testUtils.BasicERC20;
     let REN: testUtils.BasicERC20;
@@ -41,7 +36,6 @@ contract("RenExBalances", function (accounts: string[]) {
         REN = await RepublicToken.deployed();
         TOKEN1 = await RepublicToken.new();
         TOKEN2 = await DGXToken.new();
-        rewardVault = await DarknodeRewardVault.deployed();
         renExBalances = await RenExBalances.deployed();
         renExSettlement = await RenExSettlement.deployed();
 
@@ -282,10 +276,10 @@ contract("RenExBalances", function (accounts: string[]) {
     });
 
     it("transfer validates the fee approval", async () => {
-        const mockSettlement = await VersionedContract.new("VERSION", renExBalances.address);
+        const mockSettlement: VersionedContractContract = await VersionedContract.new("VERSION", renExBalances.address);
         await renExBalances.updateRenExSettlementContract(mockSettlement.address);
 
-        const token = await DisapprovingToken.new();
+        const token: testUtils.BasicERC20 = await DisapprovingToken.new();
 
         await mockSettlement.transferBalanceWithFee(
             accounts[1],
@@ -301,7 +295,7 @@ contract("RenExBalances", function (accounts: string[]) {
     });
 
     it("decrementBalance reverts for invalid withdrawals", async () => {
-        const mockSettlement = await VersionedContract.new("VERSION", renExBalances.address);
+        const mockSettlement: VersionedContractContract = await VersionedContract.new("VERSION", renExBalances.address);
         await renExBalances.updateRenExSettlementContract(mockSettlement.address);
 
         const deposit = new BN("10000000000000000");
@@ -437,7 +431,7 @@ contract("RenExBalances", function (accounts: string[]) {
 
     it("withdraw can't be blocked by malicious contract owner", async () => {
         const deposit1 = new BN("100000000000000000");
-        const versionedContract = await VersionedContract.new("VERSION", testUtils.NULL);
+        const versionedContract: VersionedContractContract = await VersionedContract.new("VERSION", testUtils.NULL);
 
         // [SETUP] Approve and deposit
         await TOKEN1.approve(renExBalances.address, deposit1, { from: accounts[0] });

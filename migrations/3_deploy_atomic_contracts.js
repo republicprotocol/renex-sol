@@ -1,6 +1,8 @@
-const RenExAtomicSwapper = artifacts.require("RenExAtomicSwapper");
-
 module.exports = async function (deployer, network) {
+
+    const {
+        RenExAtomicSwapper,
+    } = require("./artifacts")(network, artifacts);
 
     const config = require("./config.js")(network);
 

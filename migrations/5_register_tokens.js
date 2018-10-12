@@ -1,15 +1,17 @@
-// Contracts
-const RenExTokens = artifacts.require("RenExTokens");
-
-// Token contracts
-const RepublicToken = artifacts.require("RepublicToken");
-const DGXToken = artifacts.require("DGXToken");
-const OMGToken = artifacts.require("OMGToken");
-const ZRXToken = artifacts.require("ZRXToken");
-const TUSDToken = artifacts.require("TrueUSD");
-
 module.exports = async function (deployer, network, accounts) {
     // Network is "development", "nightly", "testnet" or "mainnet"
+
+    const {
+        // Contracts
+        RenExTokens,
+
+        // Token contracts
+        RepublicToken,
+        DGXToken,
+        OMGToken,
+        ZRXToken,
+        TUSDToken,
+    } = require("./artifacts")(network, artifacts);
 
     const config = require("./config.js")(network);
     const tokens = config.settings.renex.tokens;

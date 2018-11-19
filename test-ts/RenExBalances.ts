@@ -343,58 +343,55 @@ contract("RenExBalances", function (accounts: string[]) {
             .should.be.rejectedWith(null, /not signalled/);
     });
 
-    it.only("can demurrage DGX token", async () => {
+    it.only("can demurrage DGX tokens", async () => {
+        const DGX = TOKEN2;
         // [ACTION] Update the reward vault to another address
-        await renExBalances.updateDGXContract(TOKEN2.address);
+        await renExBalances.updateDGXContract(DGX.address);
         // [CHECK] Verify the reward vault address has been updated
-        (await renExBalances.DGX()).should.equal(TOKEN2.address);
+        (await renExBalances.DGX()).should.equal(DGX.address);
 
-        const deposit1 = new BN("100000000000000000");
+        const trader = accounts[0];
+
+        (await renExBalances.lastDGXTransaction(trader)).should.bignumber.equal(0);
+        // Deposit 5 DGX
+        const deposit1 = new BN("5000000000");
 
         // Approve and deposit
-        await TOKEN1.approve(renExBalances.address, deposit1.mul(new BN(2)), { from: accounts[0] });
-        await renExBalances.deposit(TOKEN1.address, deposit1.mul(new BN(2)), { from: accounts[0] });
+        console.log(`depositing: ${deposit1}`);
+        await DGX.approve(renExBalances.address, deposit1, { from: trader });
+        await renExBalances.deposit(DGX.address, deposit1, { from: trader });
+        var depositTime = new BN(await renExBalances.lastDGXTransaction(trader));
+        (depositTime.gt(new BN(0))).should.be.true;
 
-        let i = 0;
-        await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
-            .should.be.rejectedWith(null, /invalid signature/);
+        // There should be no demurraging after the first deposit
+        (await renExBalances.traderBalances(trader, DGX.address)).should.bignumber.equal(deposit1);
 
-        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] })
-            .should.be.rejectedWith(null, /not signalled/);
-
-        await renExBalances.signalBackupWithdraw(TOKEN1.address, { from: accounts[0] });
-
-        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] })
-            .should.be.rejectedWith(null, /signal time remaining/);
-
-        // Increase time by 47 hours
+        // Fake time passing
+        const daysElapsed = 3;
         const hour = 60 * 60;
-        testUtils.increaseTime(47 * hour);
+        testUtils.increaseTime(daysElapsed * 24 * hour);
 
-        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] })
-            .should.be.rejectedWith(null, /signal time remaining/);
+        // We should not be able to withdraw the same amount we deposited
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, trader, DGX.address);
+        await renExBalances.withdraw(DGX.address, deposit1, sig, { from: accounts[0] })
+            .should.be.rejectedWith(null, /insufficient balance/);
 
-        // Increase time by another hour
-        testUtils.increaseTime(1 * hour + 10);
+        const demurrageBase = 10000000;
+        const demurrageRate = 165;
+        const demurrageFees = new BN(daysElapsed).mul(deposit1).mul(new BN(demurrageRate)).div(new BN(demurrageBase));
+        console.log(`demurrage fees: ${demurrageFees}`);
 
-        // Still can't withdraw other tokens
-        await renExBalances.withdraw(TOKEN2.address, deposit1, "0x", { from: accounts[0] })
-            .should.be.rejectedWith(null, /not signalled/);
+        // Deposit another 2 DGX
+        const deposit2 = new BN("2000000000");
+        const newBalance = deposit1.sub(demurrageFees).add(deposit2);
 
-        // Other traders can't withdraw token
-        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[1] })
-            .should.be.rejectedWith(null, /not signalled/);
+        // Approve and deposit
+        console.log(`depositing: ${deposit2}`);
+        await DGX.approve(renExBalances.address, deposit2, { from: trader });
+        await renExBalances.deposit(DGX.address, deposit2, { from: trader });
 
-        // Can now withdraw without signature
-        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] });
-
-        // Can only withdraw once
-        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] })
-            .should.be.rejectedWith(null, /not signalled/);
-
-        // Can withdraw normally
-        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
-        await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] });
+        console.log(`expecting balance to be: ${newBalance}`);
+        (await renExBalances.traderBalances(trader, DGX.address)).should.bignumber.equal(newBalance);
     });
 
     it("trade can wait 48 hours", async () => {

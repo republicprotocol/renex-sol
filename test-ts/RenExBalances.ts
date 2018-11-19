@@ -343,6 +343,11 @@ contract("RenExBalances", function (accounts: string[]) {
             .should.be.rejectedWith(null, /not signalled/);
     });
 
+    /**
+     * General info on DGX demurraging: https://gist.github.com/mrenoon/2582fba7b4d457d80f7d37520aabbc08
+     * DGX base and rate variable contract: https://etherscan.io/address/0xbb246ee3fa95b88b3b55a796346313738c6e0150#readContract
+     * Calculate Demurrage Fee function contract: https://etherscan.io/address/0xcd76744cd377707279cd500e40a08d707147c871#readContract
+     */
     it.only("can demurrage DGX tokens", async () => {
         const DGX = TOKEN2;
         // [ACTION] Update the reward vault to another address

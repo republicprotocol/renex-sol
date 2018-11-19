@@ -173,7 +173,27 @@ contract RenExBalances is Ownable {
             require(msg.value == 0, "unexpected ether transfer");
             receivedValue = CompatibleERC20(_token).safeTransferFromWithFees(trader, this, _value);
         }
-        privateIncrementBalance(trader, _token, receivedValue);
+
+        if (_token == DGX)  {
+            uint256 demurrage_fees = 0;
+            uint current = now;
+            uint256 days_elapsed;
+            // We've deposited DGX before
+            if (lastDGXTransaction[trader] != 0) {
+                days_elapsed = (current - lastDGXTransaction[trader]) / 86400;
+                uint256 user_balance = traderBalances[trader][_token];
+                demurrage_fees = days_elapsed * user_balance * 165 / 10000000;
+            }
+            lastDGXTransaction[trader] = current;
+
+            if (demurrage_fees > receivedValue) {
+                privateDecrementBalance(trader, _token, demurrage_fees - receivedValue);
+            } else {
+                privateIncrementBalance(trader, _token, receivedValue - demurrage_fees);
+            }
+        } else {
+            privateIncrementBalance(trader, _token, receivedValue);
+        }
     }
 
     /// @notice Withdraws ETH or an ERC20 token from the contract. A broker
@@ -187,11 +207,24 @@ contract RenExBalances is Ownable {
     function withdraw(ERC20 _token, uint256 _value, bytes _signature) external withBrokerSignatureOrSignal(_token, _signature) {
         address trader = msg.sender;
 
-        privateDecrementBalance(trader, _token, _value);
-        if (_token == ETHEREUM) {
-            trader.transfer(_value);
-        } else {
+        if (_token == DGX)  {
+            uint current = now;
+            uint256 user_balance = traderBalances[trader][_token];
+            uint256 days_elapsed = (current - lastDGXTransaction[trader]) / 86400;
+            uint256 demurrage_fees = days_elapsed * user_balance * 165 / 10000000;
+            lastDGXTransaction[trader] = current;
+
+            require(demurrage_fees + _value <= user_balance, "insufficient balance");
+            // there is sufficient balance for fees + withdrawal
+            privateDecrementBalance(trader, _token, demurrage_fees + _value);
             CompatibleERC20(_token).safeTransfer(trader, _value);
+        } else {
+            privateDecrementBalance(trader, _token, _value);
+            if (_token == ETHEREUM) {
+                trader.transfer(_value);
+            } else {
+                CompatibleERC20(_token).safeTransfer(trader, _value);
+            }
         }
     }
 

@@ -343,6 +343,60 @@ contract("RenExBalances", function (accounts: string[]) {
             .should.be.rejectedWith(null, /not signalled/);
     });
 
+    it.only("can demurrage DGX token", async () => {
+        // [ACTION] Update the reward vault to another address
+        await renExBalances.updateDGXContract(TOKEN2.address);
+        // [CHECK] Verify the reward vault address has been updated
+        (await renExBalances.DGX()).should.equal(TOKEN2.address);
+
+        const deposit1 = new BN("100000000000000000");
+
+        // Approve and deposit
+        await TOKEN1.approve(renExBalances.address, deposit1.mul(new BN(2)), { from: accounts[0] });
+        await renExBalances.deposit(TOKEN1.address, deposit1.mul(new BN(2)), { from: accounts[0] });
+
+        let i = 0;
+        await renExBalances.withdraw(TOKEN1.address, deposit1, testUtils.NULL, { from: accounts[0] })
+            .should.be.rejectedWith(null, /invalid signature/);
+
+        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] })
+            .should.be.rejectedWith(null, /not signalled/);
+
+        await renExBalances.signalBackupWithdraw(TOKEN1.address, { from: accounts[0] });
+
+        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] })
+            .should.be.rejectedWith(null, /signal time remaining/);
+
+        // Increase time by 47 hours
+        const hour = 60 * 60;
+        testUtils.increaseTime(47 * hour);
+
+        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] })
+            .should.be.rejectedWith(null, /signal time remaining/);
+
+        // Increase time by another hour
+        testUtils.increaseTime(1 * hour + 10);
+
+        // Still can't withdraw other tokens
+        await renExBalances.withdraw(TOKEN2.address, deposit1, "0x", { from: accounts[0] })
+            .should.be.rejectedWith(null, /not signalled/);
+
+        // Other traders can't withdraw token
+        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[1] })
+            .should.be.rejectedWith(null, /not signalled/);
+
+        // Can now withdraw without signature
+        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] });
+
+        // Can only withdraw once
+        await renExBalances.withdraw(TOKEN1.address, deposit1, "0x", { from: accounts[0] })
+            .should.be.rejectedWith(null, /not signalled/);
+
+        // Can withdraw normally
+        let sig = await testUtils.signWithdrawal(renExBrokerVerifier, broker, accounts[0], TOKEN1.address);
+        await renExBalances.withdraw(TOKEN1.address, deposit1, sig, { from: accounts[0] });
+    });
+
     it("trade can wait 48 hours", async () => {
         const deposit1 = new BN("100000000000000000");
 

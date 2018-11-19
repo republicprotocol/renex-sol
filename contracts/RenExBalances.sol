@@ -23,6 +23,8 @@ contract RenExBalances is Ownable {
 
     /// @dev Should match the address in the DarknodeRewardVault
     address constant public ETHEREUM = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
+    address public DGX; // passed in as a constructor parameter
     
     // Delay between a trader calling `withdrawSignal` and being able to call
     // `withdraw` without a broker signature.
@@ -36,6 +38,7 @@ contract RenExBalances is Ownable {
     event LogBrokerVerifierContractUpdated(address previousBrokerVerifierContract, address newBrokerVerifierContract);
 
     // Storage
+    mapping(address => uint256) public lastDGXTransaction;
     mapping(address => mapping(address => uint256)) public traderBalances;
     mapping(address => mapping(address => uint256)) public traderWithdrawalSignals;
 
@@ -79,6 +82,14 @@ contract RenExBalances is Ownable {
             traderWithdrawalSignals[trader][_token] = 0;
         }
         _;
+    }
+
+    /// @notice Allows the owner of the contract to update the address of the
+    /// DGX Token contract.
+    ///
+    /// @param _newDGXToken the address of the new settlement contract
+    function updateDGXContract(address _newDGXToken) external onlyOwner {
+        DGX = _newDGXToken;
     }
 
     /// @notice Allows the owner of the contract to update the address of the

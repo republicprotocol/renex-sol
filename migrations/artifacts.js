@@ -22,12 +22,13 @@ module.exports = (network, artifacts) => {
         RenExTokens: artifacts.require("RenExTokens"),
         RenExSettlement: artifacts.require("RenExSettlement"),
         RenExBrokerVerifier: artifacts.require("RenExBrokerVerifier"),
-        SettlementRegistry: artifacts.require("SettlementRegistry"),
         RenExAtomicSwapper: artifacts.require("RenExAtomicSwapper"),
 
         // Token contracts
-        RepublicToken: artifacts.require("RepublicToken"),
-        DGXToken: artifacts.require("DGXToken"),
+        DGXToken: artifacts.require("DigixGoldToken"),
+        DGX_BalanceSheet: artifacts.require("DGX_BalanceSheet"),
+        DGX_AllowanceSheet: artifacts.require("DGX_AllowanceSheet"),
+        DGX_AddressList: artifacts.require("DGX_AddressList"),
         OMGToken: artifacts.require("OMGToken"),
         ZRXToken: artifacts.require("ZRXToken"),
         TUSDToken: artifacts.require("TrueUSD"),

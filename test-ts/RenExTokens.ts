@@ -2,11 +2,12 @@ import { BN } from "bn.js";
 
 import * as testUtils from "./helper/testUtils";
 
-import { RenExTokensArtifact, RenExTokensContract } from "./bindings/ren_ex_tokens";
-import { RepublicTokenArtifact } from "./bindings/republic_token";
+import { RenExTokensContract } from "./bindings/ren_ex_tokens";
 
-const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
-const RenExTokens = artifacts.require("RenExTokens") as RenExTokensArtifact;
+const {
+    RepublicToken,
+    RenExTokens,
+} = testUtils.contracts;
 
 contract("RenExTokens", function (accounts: string[]) {
 

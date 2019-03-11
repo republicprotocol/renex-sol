@@ -1,16 +1,18 @@
-const RepublicToken = artifacts.require("RepublicToken");
-const DarknodeRegistryStore = artifacts.require("DarknodeRegistryStore");
-const DarknodeRegistry = artifacts.require("DarknodeRegistry");
-const DarknodeSlasher = artifacts.require("DarknodeSlasher");
-const Orderbook = artifacts.require("Orderbook");
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
-const SettlementRegistry = artifacts.require("SettlementRegistry");
-
-const config = require("./config.js");
-
 module.exports = async function (deployer, network) {
 
-    const VERSION_STRING = `${network}-${config.VERSION}`;
+    const {
+        RepublicToken,
+        DarknodeRegistryStore,
+        DarknodeRegistry,
+        DarknodeSlasher,
+        Orderbook,
+        DarknodeRewardVault,
+        SettlementRegistry,
+    } = require("./artifacts")(network, artifacts);
+
+    const config = require("./config.js")(network);
+
+    const VERSION_STRING = `${network}-${config.version}`;
 
     await deployer
         .deploy(RepublicToken)
@@ -24,9 +26,9 @@ module.exports = async function (deployer, network) {
             VERSION_STRING,
             RepublicToken.address,
             DarknodeRegistryStore.address,
-            config.MINIMUM_BOND,
-            config.MINIMUM_POD_SIZE,
-            config.MINIMUM_EPOCH_INTERVAL
+            config.settings.republic.minimumBond,
+            config.settings.republic.minimumPodSize,
+            config.settings.republic.minimumEpochInterval,
         ))
         .then(() => deployer.deploy(
             SettlementRegistry,

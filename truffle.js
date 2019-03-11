@@ -1,26 +1,4 @@
-require('dotenv').config()
-
-const HDWalletProvider = require("truffle-hdwallet-provider");
-
-const GWEI = 1000000000;
-
-const KOVAN = (MNEMONIC) => ({
-    provider: function () {
-        return new HDWalletProvider(MNEMONIC, `https://kovan.infura.io/${process.env.INFURA_TOKEN}`);
-    },
-    network_id: 42,
-    gas: 6721975,
-    gasPrice: 10 * GWEI,
-});
-
-const MAINNET = (MNEMONIC) => ({
-    provider: function () {
-        return new HDWalletProvider(MNEMONIC, `https://mainnet.infura.io/${process.env.INFURA_TOKEN}`);
-    },
-    network_id: 1,
-    gas: 6721975,
-    gasPrice: 10 * GWEI,
-});
+const config = require(`./migrations/config/${process.env.NETWORK}.js`);
 
 module.exports = {
     solc: {
@@ -31,17 +9,7 @@ module.exports = {
         }
     },
     networks: {
-        development: {
-            host: "localhost",
-            port: 8545,
-            network_id: "*",
-            gas: 6721975,
-            gasPrice: 10 * GWEI,
-        },
-        testnet: KOVAN(process.env.MNEMONIC_TESTNET),
-        nightly: KOVAN(process.env.MNEMONIC_NIGHTLY),
-        mainnet: MAINNET(process.env.MNEMONIC_MAINNET),
-        verify: MAINNET(process.env.MNEMONIC_NIGHTLY),
+        [process.env.NETWORK]: config.network,
     },
     mocha: {
         // // Use with `npm run test`, not with `npm run coverage`

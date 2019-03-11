@@ -12,16 +12,16 @@ import { OrderbookContract } from "../bindings/orderbook";
 import { RenExBrokerVerifierContract } from "../bindings/ren_ex_broker_verifier";
 import { TimeArtifact, TimeContract } from "../bindings/time";
 
-const Time = artifacts.require("Time") as TimeArtifact;
-
 chai.use(chaiAsPromised);
 chai.use(chaiBigNumber(BigNumber));
 chai.should();
 
-const config = require("../../migrations/config.js");
-export const { MINIMUM_BOND, MINIMUM_POD_SIZE, MINIMUM_EPOCH_INTERVAL } = config;
+const config = require("../../migrations/config.js")(null);
+export const { minimumBond, minimumPodSize, minimumEpochInterval } = config.settings.republic;
 
-export const TOKEN_CODES = config.TOKEN_CODES;
+export const contracts = require("../../migrations/artifacts.js")(null, artifacts);
+
+export const TOKEN_CODES = config.settings.renex.tokens;
 TOKEN_CODES.ALTBTC = 0x4;
 
 export const NULL = "0x0000000000000000000000000000000000000000";
@@ -65,7 +65,7 @@ export function PUBK(i: string) {
 let time: TimeContract;
 export const secondsFromNow = async (seconds: number): Promise<BN> => {
     if (!time) {
-        time = await Time.new();
+        time = await contracts.Time.new();
     }
     await time.newBlock();
     const currentTime = new BN(await time.currentTime());
@@ -90,7 +90,7 @@ export const increaseTime = async (seconds: number) => {
 };
 
 export async function waitForEpoch(dnr: DarknodeRegistryContract) {
-    const timeout = MINIMUM_EPOCH_INTERVAL * 0.1;
+    const timeout = minimumEpochInterval * 0.1;
     while (true) {
         // Must be an on-chain call, or the time won't be updated
         try {

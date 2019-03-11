@@ -5,30 +5,30 @@ import * as testUtils from "./helper/testUtils";
 import { settleOrders } from "./helper/settleOrders";
 import { market, TOKEN_CODES } from "./helper/testUtils";
 
-import { ApprovingBrokerArtifact } from "./bindings/approving_broker";
 import { BrokerVerifierContract } from "./bindings/broker_verifier";
-import { DGXTokenArtifact } from "./bindings/d_g_x_token";
-import { DarknodeRegistryArtifact, DarknodeRegistryContract } from "./bindings/darknode_registry";
-import { OrderbookArtifact, OrderbookContract } from "./bindings/orderbook";
-import { PreciseTokenArtifact, PreciseTokenContract } from "./bindings/precise_token";
-import { RenExBalancesArtifact, RenExBalancesContract } from "./bindings/ren_ex_balances";
-import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
-import { RenExSettlementArtifact, RenExSettlementContract } from "./bindings/ren_ex_settlement";
-import { RenExTokensArtifact, RenExTokensContract } from "./bindings/ren_ex_tokens";
-import { RepublicTokenArtifact, RepublicTokenContract } from "./bindings/republic_token";
-import { SettlementRegistryArtifact, SettlementRegistryContract } from "./bindings/settlement_registry";
+import { DarknodeRegistryContract } from "./bindings/darknode_registry";
+import { OrderbookContract } from "./bindings/orderbook";
+import { PreciseTokenContract } from "./bindings/precise_token";
+import { RenExBalancesContract } from "./bindings/ren_ex_balances";
+import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { RenExSettlementContract } from "./bindings/ren_ex_settlement";
+import { RenExTokensContract } from "./bindings/ren_ex_tokens";
+import { RepublicTokenContract } from "./bindings/republic_token";
+import { SettlementRegistryContract } from "./bindings/settlement_registry";
 
-const DarknodeRegistry = artifacts.require("DarknodeRegistry") as DarknodeRegistryArtifact;
-const Orderbook = artifacts.require("Orderbook") as OrderbookArtifact;
-const RenExSettlement = artifacts.require("RenExSettlement") as RenExSettlementArtifact;
-const RenExBalances = artifacts.require("RenExBalances") as RenExBalancesArtifact;
-const RenExTokens = artifacts.require("RenExTokens") as RenExTokensArtifact;
-const PreciseToken = artifacts.require("PreciseToken") as PreciseTokenArtifact;
-const RepublicToken = artifacts.require("RepublicToken") as RepublicTokenArtifact;
-const DGXToken = artifacts.require("DGXToken") as DGXTokenArtifact;
-const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
-const SettlementRegistry = artifacts.require("SettlementRegistry") as SettlementRegistryArtifact;
-const ApprovingBroker = artifacts.require("ApprovingBroker") as ApprovingBrokerArtifact;
+const {
+    DarknodeRegistry,
+    Orderbook,
+    RenExSettlement,
+    RenExBalances,
+    RenExTokens,
+    PreciseToken,
+    RepublicToken,
+    DGXToken,
+    RenExBrokerVerifier,
+    SettlementRegistry,
+    ApprovingBroker,
+} = testUtils.contracts;
 
 contract("RenEx", function (accounts: string[]) {
 
@@ -75,8 +75,8 @@ contract("RenEx", function (accounts: string[]) {
 
         // Register darknode
         const darknode = accounts[2];
-        await ren.transfer(darknode, testUtils.MINIMUM_BOND);
-        await ren.approve(dnr.address, testUtils.MINIMUM_BOND, { from: darknode });
+        await ren.transfer(darknode, testUtils.minimumBond);
+        await ren.approve(dnr.address, testUtils.minimumBond, { from: darknode });
         await dnr.register(darknode, testUtils.PUBK("1"), { from: darknode });
         await testUtils.waitForEpoch(dnr);
 

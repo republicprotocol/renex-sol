@@ -28,6 +28,7 @@ export interface {{contractName}}Contract {
 }
 
 export interface {{contractName}}Artifact {
+    new(address: string): {{contractName}}Contract;
     address: string;
     "new"({{> typed_params inputs=ctor.inputs}}): Promise<{{contractName}}Contract>;
     at(address: string): Promise<{{contractName}}Contract>;

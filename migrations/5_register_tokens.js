@@ -1,17 +1,20 @@
-// Contracts
-const RenExTokens = artifacts.require("RenExTokens");
-
-// Token contracts
-const RepublicToken = artifacts.require("RepublicToken");
-const DGXToken = artifacts.require("DGXToken");
-const OMGToken = artifacts.require("OMGToken");
-const ZRXToken = artifacts.require("ZRXToken");
-const TUSDToken = artifacts.require("TrueUSD");
-
-const config = require("./config.js");
-
 module.exports = async function (deployer, network, accounts) {
     // Network is "development", "nightly", "testnet" or "mainnet"
+
+    const {
+        // Contracts
+        RenExTokens,
+
+        // Token contracts
+        RepublicToken,
+        DGXToken,
+        OMGToken,
+        ZRXToken,
+        TUSDToken,
+    } = require("./artifacts")(network, artifacts);
+
+    const config = require("./config.js")(network);
+    const tokens = config.settings.renex.tokens;
 
     if (/mainnet/.test(network)) {
         DGXToken.address = "0x4f3AfEC4E5a3F2A6a1A411DEF7D7dFe50eE057bF";
@@ -26,8 +29,8 @@ module.exports = async function (deployer, network, accounts) {
         // ETH and BTC
         .then(async () => {
             const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(config.TOKEN_CODES.BTC, "0x0000000000000000000000000000000000000000", 8);
-            await renExTokens.registerToken(config.TOKEN_CODES.ETH, "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", 18);
+            await renExTokens.registerToken(tokens.BTC, "0x0000000000000000000000000000000000000000", 8);
+            await renExTokens.registerToken(tokens.ETH, "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", 18);
         })
         // DGXToken
         .then(async () => {
@@ -35,7 +38,7 @@ module.exports = async function (deployer, network, accounts) {
             const decimals = (await token.decimals()).toNumber();
             console.assert(decimals === 9);
             const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(config.TOKEN_CODES.DGX, DGXToken.address, decimals);
+            await renExTokens.registerToken(tokens.DGX, DGXToken.address, decimals);
         })
         // RepublicToken
         .then(async () => {
@@ -43,7 +46,7 @@ module.exports = async function (deployer, network, accounts) {
             const decimals = (await token.decimals()).toNumber();
             console.assert(decimals === 18);
             const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(config.TOKEN_CODES.REN, RepublicToken.address, decimals);
+            await renExTokens.registerToken(tokens.REN, RepublicToken.address, decimals);
         })
         // OMGToken
         .then(async () => {
@@ -51,7 +54,7 @@ module.exports = async function (deployer, network, accounts) {
             const decimals = (await token.decimals()).toNumber();
             console.assert(decimals === 18);
             const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(config.TOKEN_CODES.OMG, token.address, decimals);
+            await renExTokens.registerToken(tokens.OMG, token.address, decimals);
         })
         // ZRXToken
         .then(async () => {
@@ -59,7 +62,7 @@ module.exports = async function (deployer, network, accounts) {
             const decimals = (await token.decimals()).toNumber();
             console.assert(decimals === 18);
             const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(config.TOKEN_CODES.ZRX, token.address, decimals);
+            await renExTokens.registerToken(tokens.ZRX, token.address, decimals);
         })
         // TUSDToken
         .then(async () => {
@@ -67,6 +70,6 @@ module.exports = async function (deployer, network, accounts) {
             const decimals = (await token.decimals()).toNumber();
             console.assert(decimals === 18);
             const renExTokens = await RenExTokens.at(RenExTokens.address);
-            await renExTokens.registerToken(config.TOKEN_CODES.TUSD, token.address, decimals);
+            await renExTokens.registerToken(tokens.TUSD, token.address, decimals);
         });
 }

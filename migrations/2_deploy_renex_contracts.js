@@ -1,18 +1,20 @@
-// Dependencies
-const DarknodeRewardVault = artifacts.require("DarknodeRewardVault");
-const Orderbook = artifacts.require("Orderbook");
-
-// Contracts
-const RenExBalances = artifacts.require("RenExBalances");
-const RenExTokens = artifacts.require("RenExTokens");
-const RenExSettlement = artifacts.require("RenExSettlement");
-const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier");
-const SettlementRegistry = artifacts.require("SettlementRegistry");
-
-const config = require("./config.js");
-
 module.exports = async function (deployer, network) {
     // Network is "development", "nightly", "testnet" or "mainnet"
+
+    const {
+        // Republic
+        DarknodeRewardVault,
+        Orderbook,
+
+        // RenEx
+        RenExBalances,
+        RenExTokens,
+        RenExSettlement,
+        RenExBrokerVerifier,
+        SettlementRegistry,
+    } = require("./artifacts")(network, artifacts);
+
+    const config = require("./config.js")(network);
 
     const VERSION_STRING = `${network}-${config.VERSION}`;
 
@@ -38,6 +40,9 @@ module.exports = async function (deployer, network) {
         .then(async () => {
             const renExBrokerVerifier = await RenExBrokerVerifier.at(RenExBrokerVerifier.address);
             await renExBrokerVerifier.updateBalancesContract(RenExBalances.address);
+            if (config.settings.renex.ingressAddress) {
+                await renExBrokerVerifier.registerBroker(config.settings.renex.ingressAddress);
+            }
         })
 
         .then(() => deployer.deploy(
@@ -46,8 +51,8 @@ module.exports = async function (deployer, network) {
             Orderbook.address,
             RenExTokens.address,
             RenExBalances.address,
-            config.SLASHER_ADDRESS,
-            config.SUBMIT_ORDER_GAS_LIMIT,
+            config.settings.renex.watchdogAddress,
+            config.settings.renex.submitOrderGasLimit,
         ))
 
         .then(async () => {

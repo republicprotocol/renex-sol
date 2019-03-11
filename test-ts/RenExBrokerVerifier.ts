@@ -2,9 +2,11 @@ import { BN } from "bn.js";
 
 import * as testUtils from "./helper/testUtils";
 
-import { RenExBrokerVerifierArtifact, RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
+import { RenExBrokerVerifierContract } from "./bindings/ren_ex_broker_verifier";
 
-const RenExBrokerVerifier = artifacts.require("RenExBrokerVerifier") as RenExBrokerVerifierArtifact;
+const {
+    RenExBrokerVerifier,
+} = testUtils.contracts;
 
 contract("RenExBalances", function (accounts: string[]) {
 

@@ -7,7 +7,7 @@ For easier understanding of the concept of atomic swaps, let's look at an exampl
 At this point in time the match is found, Alice and Bob know each others' order ids.
 
 **(1) Alice & Bob Communicate Information**
-  Bob generates a secret, and the timelock (this should be 48 hours from this point in time). He sends the secret hash, timelock, his sendToAddress(Bitcoin) and receiveFromAddress(Ethereum) to Alice. Alice receives these details, and will send her sendToAddress(Ethereum) and receiveFromAddress(Bitcoin) to Alice. This communication happens via RenEx Ingress (this guarantees the KYC status of both the traders, if one of them acts maliciously at this step RenEx can 
+  Bob generates a secret, and the timelock (this should be 48 hours from this point in time). He sends the secret hash, timelock, his sendToAddress(Ethereum) and receiveFromAddress(Bitcoin) to Alice. Alice receives these details, and will send her sendToAddress(Bitcoin) and receiveFromAddress(Ethereum) to Alice. This communication happens via RenEx Ingress (this guarantees the KYC status of both the traders, if one of them acts maliciously at this step RenEx can 
   find the malicious party and punish him/her).
 
 **(2) Bob Initiates**

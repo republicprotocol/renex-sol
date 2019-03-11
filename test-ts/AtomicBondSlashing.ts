@@ -23,7 +23,7 @@ const {
     RenExBrokerVerifier,
 } = testUtils.contracts;
 
-contract("Atomic Bond Slashing", function (accounts: string[]) {
+contract("AtomicBondSlashing", function (accounts: string[]) {
 
     const slasher = accounts[0];
     const buyer = accounts[1];

@@ -11,7 +11,7 @@ import { VersionedContractContract } from "./bindings/versioned_contract";
 
 const {
     RepublicToken,
-    DGXToken,
+    ZRXToken,
     RenExBalances,
     RenExSettlement,
     VersionedContract,
@@ -35,7 +35,7 @@ contract("RenExBalances", function (accounts: string[]) {
         ETH = testUtils.MockETH;
         REN = await RepublicToken.deployed();
         TOKEN1 = await RepublicToken.new();
-        TOKEN2 = await DGXToken.new();
+        TOKEN2 = await ZRXToken.new();
         renExBalances = await RenExBalances.deployed();
         renExSettlement = await RenExSettlement.deployed();
 

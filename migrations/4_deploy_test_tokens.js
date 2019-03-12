@@ -15,7 +15,7 @@ module.exports = async function (deployer, network, accounts) {
         DGX_AddressList,
         OMGToken,
         ZRXToken,
-        TrueUSD,
+        TUSDToken,
         TUSD_BalanceSheet,
         TUSD_AllowanceSheet,
         TUSD_AddressList,
@@ -74,14 +74,14 @@ module.exports = async function (deployer, network, accounts) {
         .then(() => deployer.deploy(TUSD_AllowanceSheet))
         // .then(() => deployer.deploy(TUSD_AddressList, "WITH", false))
         // .then(() => deployer.deploy(TUSD_AddressList, "WITHOUT", false))
-        .then(() => deployer.deploy(TrueUSD))
+        .then(() => deployer.deploy(TUSDToken))
         .then(async () => {
             const balances = await TUSD_BalanceSheet.at(TUSD_BalanceSheet.address);
             const allowances = await TUSD_AllowanceSheet.at(TUSD_AllowanceSheet.address);
             const addressListWithDeployer = await deployer.deploy(TUSD_AddressList, "WITH", false);
             const addressListWithoutDeployer = await deployer.deploy(TUSD_AddressList, "WITHOUT", false);
 
-            const token = await TrueUSD.at(TrueUSD.address);
+            const token = await TUSDToken.at(TUSDToken.address);
             await addressListWithDeployer.changeList(deployerAddress, true);
             await token.setLists(
                 addressListWithDeployer.address, // mint whitelist

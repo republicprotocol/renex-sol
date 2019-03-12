@@ -8,7 +8,7 @@ const {
     RenExBrokerVerifier,
 } = testUtils.contracts;
 
-contract("RenExBalances", function (accounts: string[]) {
+contract("RenExBrokerVerifier", function (accounts: string[]) {
 
     let renExBrokerVerifier: RenExBrokerVerifierContract;
 

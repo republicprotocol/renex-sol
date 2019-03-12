@@ -29,7 +29,7 @@ const {
     TUSDToken,
 } = testUtils.contracts;
 
-contract("Top Tokens", function (accounts: string[]) {
+contract("TopTokens", function (accounts: string[]) {
 
     const buyer = accounts[0];
     const seller = accounts[1];

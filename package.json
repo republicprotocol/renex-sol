@@ -14,7 +14,8 @@
         "deploy": "NETWORK=env npm run migrate",
         "development": "NETWORK=development npm run migrate",
         "testnet": "NETWORK=testnet npm run migrate",
-        "mainnet": "NETWORK=mainnet npm run migrate"
+        "mainnet": "NETWORK=mainnet npm run migrate",
+        "lint": "solhint contracts/*.sol"
     },
     "repository": {
         "type": "git",
@@ -47,6 +48,7 @@
         "sol-merger": "^0.1.2",
         "solc": "^0.4.25",
         "solc-js": "^0.4.20-browser.1",
+        "solhint": "^2.2.0",
         "solidity-coverage": "^0.5.11",
         "truffle": "^5.0.0-beta.1",
         "truffle-hdwallet-provider": "^1.0.0-web3one.0",
